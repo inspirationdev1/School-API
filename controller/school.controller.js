@@ -75,45 +75,64 @@ module.exports = {
 
     },
     loginSchool: async (req, res) => {
-        try {
-            School.find({ email: req.body.email }).then(resp => {
-            if (resp.length > 0) {
-                res.status(200).json({ success: true, message: "Success Login"});
+    try {
 
-                // const isAuth = bcrypt.compareSync(req.body.password, resp[0].password);
-                // if (isAuth) {   
-                //     const token = jwt.sign(
-                //         {
-                //             id: resp[0]._id,
-                //             schoolId:resp[0]._id,
-                //             school_name: resp[0].school_name,
-                //             owner_name:resp[0].owner_name,
-                //             image_url: resp[0].school_image,
-                //             role:'SCHOOL'
-                //         }, jwtSecret );
+        const resp = await School.find({ email: req.body.email });
 
-                //    res.header("Authorization", token);
-                //    res.status(200).json({ success: true, message: "Success Login", 
-                //     user: {
-                //          id: resp[0]._id, 
-                //          owner_name:resp[0].owner_name, 
-                //          school_name: resp[0].school_name,
-                //           image_url: resp[0].school_image, 
-                //           role: "SCHOOL" } })
-                // }else {
-                //     res.status(401).json({ success: false, message: "Password doesn't match." })
-                // }
+        if (resp.length > 0) {
+
+            const isAuth = bcrypt.compareSync(req.body.password, resp[0].password);
+
+            if (isAuth) {
+
+                const token = jwt.sign(
+                    {
+                        id: resp[0]._id,
+                        schoolId: resp[0]._id,
+                        school_name: resp[0].school_name,
+                        owner_name: resp[0].owner_name,
+                        image_url: resp[0].school_image,
+                        role: "SCHOOL"
+                    },
+                    jwtSecret
+                );
+
+                res.header("Authorization", token);
+
+                return res.status(200).json({
+                    success: true,
+                    message: "Success Login",
+                    user: {
+                        id: resp[0]._id,
+                        owner_name: resp[0].owner_name,
+                        school_name: resp[0].school_name,
+                        image_url: resp[0].school_image,
+                        role: "SCHOOL"
+                    }
+                });
 
             } else {
-                res.status(401).json({ success: false, message: "Email not registerd." })
+                return res.status(401).json({
+                    success: false,
+                    message: "Password doesn't match."
+                });
             }
-        })
-        } catch (error) {
-            res.status(500).json({success:false, message:error.message})
+
+        } else {
+            return res.status(401).json({
+                success: false,
+                message: "Email not registered."
+            });
         }
-        
-        
-    },
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+},
     getSchoolOwnData: async(req, res)=>{
         const id = req.user.id;
         School.findById(id).then(resp=>{
