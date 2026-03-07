@@ -83,6 +83,9 @@ app.use('/api/notices', noticeRoutes)
 
 app.get('/api/auth/check',authCheck)
 
+app.get("/", (req, res) => {
+  res.send("School API is running 🚀");
+});
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, ()=>{
