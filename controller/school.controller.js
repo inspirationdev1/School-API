@@ -78,29 +78,31 @@ module.exports = {
         try {
             School.find({ email: req.body.email }).then(resp => {
             if (resp.length > 0) {
-                const isAuth = bcrypt.compareSync(req.body.password, resp[0].password);
-                if (isAuth) {   
-                    const token = jwt.sign(
-                        {
-                            id: resp[0]._id,
-                            schoolId:resp[0]._id,
-                            school_name: resp[0].school_name,
-                            owner_name:resp[0].owner_name,
-                            image_url: resp[0].school_image,
-                            role:'SCHOOL'
-                        }, jwtSecret );
+                res.status(200).json({ success: true, message: "Success Login"});
 
-                   res.header("Authorization", token);
-                   res.status(200).json({ success: true, message: "Success Login", 
-                    user: {
-                         id: resp[0]._id, 
-                         owner_name:resp[0].owner_name, 
-                         school_name: resp[0].school_name,
-                          image_url: resp[0].school_image, 
-                          role: "SCHOOL" } })
-                }else {
-                    res.status(401).json({ success: false, message: "Password doesn't match." })
-                }
+                // const isAuth = bcrypt.compareSync(req.body.password, resp[0].password);
+                // if (isAuth) {   
+                //     const token = jwt.sign(
+                //         {
+                //             id: resp[0]._id,
+                //             schoolId:resp[0]._id,
+                //             school_name: resp[0].school_name,
+                //             owner_name:resp[0].owner_name,
+                //             image_url: resp[0].school_image,
+                //             role:'SCHOOL'
+                //         }, jwtSecret );
+
+                //    res.header("Authorization", token);
+                //    res.status(200).json({ success: true, message: "Success Login", 
+                //     user: {
+                //          id: resp[0]._id, 
+                //          owner_name:resp[0].owner_name, 
+                //          school_name: resp[0].school_name,
+                //           image_url: resp[0].school_image, 
+                //           role: "SCHOOL" } })
+                // }else {
+                //     res.status(401).json({ success: false, message: "Password doesn't match." })
+                // }
 
             } else {
                 res.status(401).json({ success: false, message: "Email not registerd." })
