@@ -1,0 +1,11 @@
+const mongoose = require("mongoose");
+
+const sectionSchema = new mongoose.Schema({
+    school:{type:mongoose.Schema.ObjectId, ref:'School'},
+    section_name:{type:String, required:true},
+    section_code:{type:String,required:true},
+    createdAt:{type:Date, default:new Date()}
+
+})
+
+module.exports = mongoose.model("Section", sectionSchema)

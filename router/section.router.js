@@ -1,0 +1,12 @@
+const express = require("express");
+const router = express.Router();
+const authMiddleware = require('../auth/auth');
+const { createSection, getAllSections, getSectionWithId, updateSectionWithId, deleteSectionWithId } = require("../controller/section.controller");
+
+router.post("/create",authMiddleware(['SCHOOL','USER']), createSection);
+router.get("/fetch-all",authMiddleware(['SCHOOL','USER']),getAllSections);
+router.get("/fetch-single/:id",authMiddleware(['SCHOOL','USER']),  getSectionWithId);
+router.patch("/update/:id",authMiddleware(['SCHOOL','USER']), updateSectionWithId);
+router.delete("/delete/:id",authMiddleware(['SCHOOL','USER']), deleteSectionWithId);
+
+module.exports = router;
