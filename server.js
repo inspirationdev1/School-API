@@ -26,6 +26,7 @@ const employeeRouter = require('./router/employee.router')
 const parentRouter = require('./router/parent.router');
 const userRouter = require('./router/user.router');
 const examRouter =  require('./router/examination.router')
+const questionpaperRouter =  require('./router/questionpaper.router')
 const attendanceRoutes = require('./router/attendance.router');
 const periodRoutes = require("./router/period.router");
 const noticeRoutes = require("./router/notice.router");
@@ -77,6 +78,8 @@ app.use("/api/feestructure", feestructureRouter)
 app.use("/api/salesinvoice", salesinvoiceRouter)
 app.use("/api/receipt", receiptRouter)
 app.use('/api/examination', examRouter)
+app.use('/api/questionpaper', questionpaperRouter)
+
 app.use('/api/attendance', attendanceRoutes)
 app.use('/api/period',  periodRoutes)
 app.use('/api/notices', noticeRoutes)

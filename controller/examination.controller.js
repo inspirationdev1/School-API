@@ -3,6 +3,7 @@ const Examination = require('../model/examination.model');
 module.exports = {
     newExamination: (req, res)=>{
           const newExamination = new Examination({
+              name:req.body.name,
               examDate:req.body.exam_date,
               subject:req.body.subject,
               examtype:req.body.examtype,
@@ -54,8 +55,7 @@ module.exports = {
         try {
             let id = req.params.id;
             console.log(req.body,id)
-            await Examination.findOneAndUpdate({_id:id},{$set:{examDate:req.body.exam_date, subject:req.body.subject, examType:req.body.exam_type}});
-            // const examinationAfterUpdate =await School.findOne({_id:id});
+            await Examination.findOneAndUpdate({_id:id},{$set:{name:req.body.name,examDate:req.body.exam_date, subject:req.body.subject, examtype:req.body.exam_type}});
             res.status(200).json({success:true, message:"Examination Updated."})
         } catch (error) {
             
