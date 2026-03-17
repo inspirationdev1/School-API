@@ -1,30 +1,84 @@
 const Questionpaper = require('../model/questionpaper.model');
+const formidable = require("formidable");
+const fs = require("fs");
+const path = require("path");
 
 module.exports = {
-    newQuestionpaper: (req, res) => {
-        const newQuestionpaper = new Questionpaper({
-            name: req.body.name,
-            description: req.body.description,
-            date: req.body.date,
-            subject: req.body.subject,
-            teacher: req.body.teacher,
-            examination: req.body.examination,
-            examtype: req.body.examtype,
-            class: req.body.class_id,
-            school: req.user.id
-        })
-        newQuestionpaper.save().then(resp => {
-            res.status(200).send({ success: true, message: "Questionpaper Added Successfully." })
-        }).catch(e => {
-            console.log(e)
-            res.status(500).send({ success: false, message: "Failure  in Questionpaper , try later." })
-        })
 
-    },
+
+   
+    newQuestionpaper: (req, res) => {
+
+        const form = new formidable.IncomingForm({
+            multiples: false,
+            keepExtensions: true
+        });
+
+        form.parse(req, (err, fields, files) => {
+
+            if (err) {
+                return res.status(500).send({ success: false, message: "File upload error" });
+            }
+
+            let file = files.image?.[0];
+
+            let fileName = "";
+            let fileType = "";
+
+            if (file) {
+
+                let oldPath = file.filepath;
+
+                fileName = file.originalFilename.replace(/\s/g, "_");
+
+                fileType = path.extname(fileName); // .pdf / .jpg / .png
+
+                let newPath = path.join(
+                    __dirname,
+                    "../../frontend/public/uploads/questionpapers/",
+                    fileName
+                );
+
+                fs.copyFileSync(oldPath, newPath);
+            }
+
+            const newQuestionpaper = new Questionpaper({
+                name: fields.name[0],
+                description: fields.description[0],
+                date: fields.date[0],
+                subject: fields.subject[0],
+                teacher: fields.teacher[0],
+                 class: fields.class[0],
+                examination: fields.examination[0],
+                marksLimit: fields.marksLimit[0],
+                fileName: fileName,
+                fileType: fileType,
+                school: req.user.id
+            });
+
+            newQuestionpaper
+                .save()
+                .then(() => {
+                    res.status(200).send({
+                        success: true,
+                        message: "Questionpaper Added Successfully."
+                    });
+                })
+                .catch((e) => {
+                    console.log(e);
+                    res.status(500).send({
+                        success: false,
+                        message: "Failure in Questionpaper."
+                    });
+                });
+        });
+    }
+
+    ,
     getQuestionpaperByClass: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
-            const questionpaper = await Questionpaper.find({ class: req.params.classId, school: schoolId }).populate("subject").populate("teacher").populate("subject").populate("examination");
+            const questionpaper = await Questionpaper.find({ class: req.params.classId, school: schoolId }).populate("class").populate("subject").populate("teacher").populate("subject").populate("examination");
             res.status(200).json({ success: true, message: "Success in fetching User Applications.", data: questionpaper })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in fetching user applications, try later." })
@@ -40,7 +94,8 @@ module.exports = {
     },
     getQuestionpaperById: async (req, res) => {
         try {
-            const questionpaper = await Questionpaper.findOne({ _id: req.params.id });
+            const questionpaper = await Questionpaper.findOne({ _id: req.params.id })
+            .populate("class").populate("subject").populate("teacher").populate("subject").populate("examination");
             res.status(200).json({ success: true, message: "Success in Fetching Single Questionpaper.", data: questionpaper })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in Fetching Single Questionpaper, try later." })
@@ -54,20 +109,115 @@ module.exports = {
             res.status(500).send({ success: false, message: "Failure  in Deleting Questionpaper, try later." })
         }
     },
+    
     updateQuestionpaperWithId: async (req, res) => {
-        try {
-            let id = req.params.id;
-            console.log(req.body, id)
-            await Questionpaper.findOneAndUpdate({ _id: id }, { $set: { name: req.body.name,description: req.body.description
-                ,date: req.body.date, teacher: req.body.teacher
-                , subject: req.body.subject, examination: req.body.examination, examtype: req.body.examtype } });
-            // const questionpaperAfterUpdate =await School.findOne({_id:id});
-            res.status(200).json({ success: true, message: "Questionpaper Updated." })
-        } catch (error) {
 
-            console.log("Error in updateSchoolWithId", error);
-            res.status(500).json({ success: false, message: "Server Error in Update School. Try later" })
-        }
+        const uploadPath = path.join(
+            __dirname,
+            "../../frontend/public/uploads/questionpapers"
+        );
 
-    },
+        const form = new formidable.IncomingForm({
+            multiples: false,
+            uploadDir: uploadPath,
+            keepExtensions: true
+        });
+
+        form.parse(req, async (err, fields, files) => {
+
+            if (err) {
+                return res.status(400).json({ message: "Error parsing form data." });
+            }
+
+            try {
+
+                const { id } = req.params;
+
+                const questionpaper = await Questionpaper.findById(id);
+
+                if (!questionpaper) {
+                    return res.status(404).json({ message: "Questionpaper not found." });
+                }
+
+                // Update text fields
+                Object.keys(fields).forEach((field) => {
+                    questionpaper[field] = fields[field][0];
+                });
+
+                // Handle File Upload (Image or PDF)
+                if (files.image) {
+
+                    const file = files.image[0];
+
+                    // Delete old file
+                    const oldFilePath = path.join(
+                        uploadPath,
+                        questionpaper.fileName || ""
+                    );
+
+                    if (questionpaper.fileName && fs.existsSync(oldFilePath)) {
+                        fs.unlinkSync(oldFilePath);
+                    }
+
+                    // Prepare new file
+                    const oldPath = file.filepath;
+
+                    const originalFileName = file.originalFilename.replace(/\s/g, "_");
+
+                    const newPath = path.join(uploadPath, originalFileName);
+
+                    // Move file
+                    fs.renameSync(oldPath, newPath);
+
+                    // Save file info
+                    questionpaper.fileName = originalFileName;
+                    questionpaper.fileType = path.extname(originalFileName); // .pdf .jpg etc
+                }
+
+                await questionpaper.save();
+
+                res.status(200).json({
+                    success: true,
+                    message: "Questionpaper Updated Successfully"
+                });
+
+            } catch (e) {
+
+                console.log(e);
+
+                res.status(500).json({
+                    message: "Error updating Questionpaper."
+                });
+
+            }
+
+        });
+    }
+
+    ,
+    getQuestionpaperWithQuery: async(req, res)=>{
+                try {
+                    const filterQuery = {};
+                    const schoolId = req.user.schoolId;
+                    filterQuery['school'] = schoolId;
+                    if(req.query.hasOwnProperty('class')){
+                        filterQuery['class'] = req.query.class
+                    }
+    
+                    if(req.query.hasOwnProperty('subject')){
+                        filterQuery['subject'] = req.query.subject
+                    }
+                    if(req.query.hasOwnProperty('examination')){
+                        filterQuery['examination'] = req.query.examination
+                    }
+                    
+                    const filteredQuestionpapers = await Questionpaper.find(filterQuery);
+                    res.status(200).json({success:true, data:filteredQuestionpapers});
+
+                } catch (error) {
+                    console.log("Error in fetching Employee with query", error);
+                    res.status(500).json({success:false, message:"Error  in fetching Examinations  with query."})
+                }
+        
+            },
 }

@@ -8,8 +8,7 @@ const salesinvoiceSchema = new mongoose.Schema({
         unique: true,      // 👈 unique constraint
         index: true        // 👈 creates index
     },
-    
-siNumber: { type: Number, default: 0 },
+
     siNumber: { type: Number, default: 0 },
     invoiceDate: { type: Date, required: true, },
     invoiceTime: { type: Date, required: true, },
