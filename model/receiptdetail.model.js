@@ -12,6 +12,7 @@ const receiptdetailSchema = new mongoose.Schema({
     paidAmount: { type: Number, default: 0 },
     remarks: { type: String, default: '' },
     status: { type: String, default: 'valid' },
+    year: { type: Number, default: new Date().getFullYear() },
     createdAt: { type: Date, default: new Date() }
 
 })

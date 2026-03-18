@@ -2,9 +2,10 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Marksheet = require("../model/marksheet.model");
 const Marksheetdetail = require("../model/marksheetdetail.model");
-
-
-
+const Salesinvoice = require("../model/salesinvoice.model");
+const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
+const Expense = require("../model/expense.model");
+const Expensedetail = require("../model/expensedetail.model");
 
 module.exports = {
 
@@ -223,19 +224,25 @@ module.exports = {
                 const studentId = req.query.student;
                 filterQuery['student'] = new mongoose.Types.ObjectId(studentId);
             }
+
+            if (req.query.hasOwnProperty('year')) {
+                const year = req.query.year;
+                filterQuery['year'] = year;
+            }
+            
             filterQuery['status'] = "valid";
 
 
             const result = await Marksheetdetail.find(filterQuery)
-  .populate("school")
-  .populate("class")
-  .populate("section")
-  .populate("teacher")
-  .populate("subject")
-  .populate("examination")
-  .populate("questionpaper")
-  .populate("student")
-  .lean();
+                .populate("school")
+                .populate("class")
+                .populate("section")
+                .populate("teacher")
+                .populate("subject")
+                .populate("examination")
+                .populate("questionpaper")
+                .populate("student")
+                .lean();
             console.log(result);
 
             // const result = await Marksheet.aggregate([
@@ -476,4 +483,61 @@ module.exports = {
         }
     },
 
+    getIncomeExpensePrint: async (req, res) => {
+        try {
+            // const id = req.params.id;
+
+
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+            if (req.query.hasOwnProperty('year')) {
+                const year = req.query.year;
+                filterQuery['year'] = year;
+            }
+            filterQuery['status'] = "valid";
+
+             let resultIncome = await Salesinvoicedetail.find(filterQuery)
+                .populate("feestructure")
+                .populate("student")
+                .populate("school")
+                .lean();
+            console.log(resultIncome);
+
+            const resultExpense = await Expensedetail.find(filterQuery)
+                .populate("employee")
+                .populate("expensetype")
+                .populate("school")
+                .lean();
+            console.log(resultExpense);
+
+
+
+            const result = {income: resultIncome,expense: resultExpense};
+            console.log(result);
+
+            
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Marksheet not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains marksheet + marksheetDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getMarksheetPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getMarksheetPrint",
+            });
+        }
+    },
 }

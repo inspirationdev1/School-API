@@ -15,6 +15,7 @@ const questionpaperSchema = new mongoose.Schema({
     docStatus:{type:String, default:'pending'},
     status:{type:String, default:'active'},
     remarks:{type:String, default:''},
+    year: { type: Number, default: new Date().getFullYear() },
     createdAt:{type:Date, default: new Date()}
 })
 

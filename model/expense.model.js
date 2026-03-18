@@ -14,6 +14,7 @@ const expenseSchema = new mongoose.Schema({
     paymentMethod: { type: String, default: 'cash', required: true },
     status: { type: String, default: 'valid' },
     remarks: { type: String, default: '' },
+    year: { type: Number, default: new Date().getFullYear() },
     createdAt: { type: Date, default: new Date() }
 })
 
