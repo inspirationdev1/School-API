@@ -43,11 +43,12 @@ const { authCheck } = require("./controller/auth.controller");
 const app = express();
 
 // middleware 
+const corsOptions = {exposedHeaders:"Authorization"}
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
-const corsOptions = {exposedHeaders:"Authorization"}
-app.use(cors(corsOptions));
+
 
 console.log(process.env.MONGO_URL);
 

@@ -6,7 +6,7 @@ const path = require("path");
 module.exports = {
 
 
-   
+
     newQuestionpaper: (req, res) => {
 
         const form = new formidable.IncomingForm({
@@ -38,8 +38,19 @@ module.exports = {
                     "../../frontend/public/uploads/questionpapers/",
                     fileName
                 );
-
-                fs.copyFileSync(oldPath, newPath);
+                // let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/student', '/', originalFileName);
+                // let photoData = fs.readFileSync(oldPath);
+                //                     fs.writeFile(newPath, photoData, function (err) {
+                console.log("oldPath:", oldPath);
+                console.log("newPath:", newPath);
+                
+                try {
+                    fs.copyFileSync(oldPath, newPath);
+                    console.log("oldPath:", oldPath);
+                    console.log("newPath:", newPath);
+                } catch (error) {
+                    return res.status(500).send({ success: false, message: error.message });
+                }
             }
 
             const newQuestionpaper = new Questionpaper({
@@ -48,7 +59,7 @@ module.exports = {
                 date: fields.date[0],
                 subject: fields.subject[0],
                 teacher: fields.teacher[0],
-                 class: fields.class[0],
+                class: fields.class[0],
                 examination: fields.examination[0],
                 marksLimit: fields.marksLimit[0],
                 fileName: fileName,
@@ -95,7 +106,7 @@ module.exports = {
     getQuestionpaperById: async (req, res) => {
         try {
             const questionpaper = await Questionpaper.findOne({ _id: req.params.id })
-            .populate("class").populate("subject").populate("teacher").populate("subject").populate("examination");
+                .populate("class").populate("subject").populate("teacher").populate("subject").populate("examination");
             res.status(200).json({ success: true, message: "Success in Fetching Single Questionpaper.", data: questionpaper })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in Fetching Single Questionpaper, try later." })
@@ -109,7 +120,7 @@ module.exports = {
             res.status(500).send({ success: false, message: "Failure  in Deleting Questionpaper, try later." })
         }
     },
-    
+
     updateQuestionpaperWithId: async (req, res) => {
 
         const uploadPath = path.join(
@@ -195,29 +206,29 @@ module.exports = {
     }
 
     ,
-    getQuestionpaperWithQuery: async(req, res)=>{
-                try {
-                    const filterQuery = {};
-                    const schoolId = req.user.schoolId;
-                    filterQuery['school'] = schoolId;
-                    if(req.query.hasOwnProperty('class')){
-                        filterQuery['class'] = req.query.class
-                    }
-    
-                    if(req.query.hasOwnProperty('subject')){
-                        filterQuery['subject'] = req.query.subject
-                    }
-                    if(req.query.hasOwnProperty('examination')){
-                        filterQuery['examination'] = req.query.examination
-                    }
-                    
-                    const filteredQuestionpapers = await Questionpaper.find(filterQuery);
-                    res.status(200).json({success:true, data:filteredQuestionpapers});
+    getQuestionpaperWithQuery: async (req, res) => {
+        try {
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            filterQuery['school'] = schoolId;
+            if (req.query.hasOwnProperty('class')) {
+                filterQuery['class'] = req.query.class
+            }
 
-                } catch (error) {
-                    console.log("Error in fetching Employee with query", error);
-                    res.status(500).json({success:false, message:"Error  in fetching Examinations  with query."})
-                }
-        
-            },
+            if (req.query.hasOwnProperty('subject')) {
+                filterQuery['subject'] = req.query.subject
+            }
+            if (req.query.hasOwnProperty('examination')) {
+                filterQuery['examination'] = req.query.examination
+            }
+
+            const filteredQuestionpapers = await Questionpaper.find(filterQuery);
+            res.status(200).json({ success: true, data: filteredQuestionpapers });
+
+        } catch (error) {
+            console.log("Error in fetching Employee with query", error);
+            res.status(500).json({ success: false, message: "Error  in fetching Examinations  with query." })
+        }
+
+    },
 }
