@@ -27,61 +27,102 @@ module.exports = {
 
             if (file) {
 
-                let oldPath = file.filepath;
+            //     let oldPath = file.filepath;
 
                 fileName = file.originalFilename.replace(/\s/g, "_");
 
                 fileType = path.extname(fileName); // .pdf / .jpg / .png
 
-                let newPath = path.join(
-                    __dirname,
-                    "../../frontend/public/uploads/questionpapers/",
-                    fileName
-                );
-                // let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/student', '/', originalFileName);
-                // let photoData = fs.readFileSync(oldPath);
-                //                     fs.writeFile(newPath, photoData, function (err) {
-                console.log("oldPath:", oldPath);
-                console.log("newPath:", newPath);
-                
-                try {
-                    fs.copyFileSync(oldPath, newPath);
-                    console.log("oldPath:", oldPath);
-                    console.log("newPath:", newPath);
-                } catch (error) {
-                    return res.status(500).send({ success: false, message: error.message });
-                }
+            //     let newPath = path.join(
+            //         __dirname,
+            //         "../../frontend/public/uploads/questionpapers/",
+            //         fileName
+            //     );
+            //     // let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/student', '/', originalFileName);
+            //     // let photoData = fs.readFileSync(oldPath);
+            //     //                     fs.writeFile(newPath, photoData, function (err) {
+            //     console.log("oldPath:", oldPath);
+            //     console.log("newPath:", newPath);
+
+            //     try {
+            //         fs.copyFileSync(oldPath, newPath);
+            //         console.log("oldPath:", oldPath);
+            //         console.log("newPath:", newPath);
+            //     } catch (error) {
+            //         return res.status(500).send({ success: false, message: error.message });
+            //     }
             }
+            const photo = files.image[0];
+            let oldPath = photo.filepath;
+            let originalFileName = photo.originalFilename.replace(" ", "_")
 
-            const newQuestionpaper = new Questionpaper({
-                name: fields.name[0],
-                description: fields.description[0],
-                date: fields.date[0],
-                subject: fields.subject[0],
-                teacher: fields.teacher[0],
-                class: fields.class[0],
-                examination: fields.examination[0],
-                marksLimit: fields.marksLimit[0],
-                fileName: fileName,
-                fileType: fileType,
-                school: req.user.id
-            });
+            let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/questionpaper', '/', originalFileName)
 
-            newQuestionpaper
-                .save()
-                .then(() => {
-                    res.status(200).send({
-                        success: true,
-                        message: "Questionpaper Added Successfully."
-                    });
-                })
-                .catch((e) => {
-                    console.log(e);
-                    res.status(500).send({
-                        success: false,
-                        message: "Failure in Questionpaper."
-                    });
+            let photoData = fs.readFileSync(oldPath);
+            fs.writeFile(newPath, photoData, function (err) {
+                if (err) console.log(err);
+
+                const newQuestionpaper = new Questionpaper({
+                    name: fields.name[0],
+                    description: fields.description[0],
+                    date: fields.date[0],
+                    subject: fields.subject[0],
+                    teacher: fields.teacher[0],
+                    class: fields.class[0],
+                    examination: fields.examination[0],
+                    marksLimit: fields.marksLimit[0],
+                    fileName: fileName,
+                    fileType: fileType,
+                    school: req.user.id
                 });
+
+                newQuestionpaper
+                    .save()
+                    .then(() => {
+                        res.status(200).send({
+                            success: true,
+                            message: "Questionpaper Added Successfully."
+                        });
+                    })
+                    .catch((e) => {
+                        console.log(e);
+                        res.status(500).send({
+                            success: false,
+                            message: "Failure in Questionpaper."
+                        });
+                    });
+
+            })
+
+            // const newQuestionpaper = new Questionpaper({
+            //     name: fields.name[0],
+            //     description: fields.description[0],
+            //     date: fields.date[0],
+            //     subject: fields.subject[0],
+            //     teacher: fields.teacher[0],
+            //     class: fields.class[0],
+            //     examination: fields.examination[0],
+            //     marksLimit: fields.marksLimit[0],
+            //     fileName: fileName,
+            //     fileType: fileType,
+            //     school: req.user.id
+            // });
+
+            // newQuestionpaper
+            //     .save()
+            //     .then(() => {
+            //         res.status(200).send({
+            //             success: true,
+            //             message: "Questionpaper Added Successfully."
+            //         });
+            //     })
+            //     .catch((e) => {
+            //         console.log(e);
+            //         res.status(500).send({
+            //             success: false,
+            //             message: "Failure in Questionpaper."
+            //         });
+            //     });
         });
     }
 
