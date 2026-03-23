@@ -7,6 +7,10 @@ const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
 const Expense = require("../model/expense.model");
 const Expensedetail = require("../model/expensedetail.model");
 
+const Receipt = require("../model/receipt.model");
+const Receiptdetail = require("../model/receiptdetail.model");
+
+
 const Attendance = require("../model/attendance.model");
 
 
@@ -805,19 +809,19 @@ module.exports = {
                 });
             }
 
-            
-        const counts = result.reduce(
-          (acc, curr) => {
-            if (curr.status === "Present") acc.present++;
-            if (curr.status === "Absent") acc.absent++;
-            return acc;
-          },
-          { present: 0, absent: 0 }
-        );
 
-        console.log(counts);
-        
-// return res.status(200).json({ success: true, data: result, counts: counts });
+            const counts = result.reduce(
+                (acc, curr) => {
+                    if (curr.status === "Present") acc.present++;
+                    if (curr.status === "Absent") acc.absent++;
+                    return acc;
+                },
+                { present: 0, absent: 0 }
+            );
+
+            console.log(counts);
+
+            // return res.status(200).json({ success: true, data: result, counts: counts });
             res.status(200).json({
                 success: true,
                 data: result, // contains attendance
@@ -832,4 +836,243 @@ module.exports = {
             });
         }
     },
+    getPendingFeesPrint: async (req, res) => {
+        try {
+
+            const schoolId = new mongoose.Types.ObjectId(req.user.schoolId);
+
+            let dateFilter = {};
+
+            if (req.query.fromDate) {
+                let fromDate = new Date(req.query.fromDate);
+                fromDate.setHours(0, 0, 0, 0);
+                dateFilter.$gte = fromDate;
+            }
+
+            if (req.query.toDate) {
+                let toDate = new Date(req.query.toDate);
+                toDate.setHours(23, 59, 59, 999);
+                dateFilter.$lte = toDate;
+            }
+
+            const matchStage = {
+                school: schoolId,
+                status: "valid"
+            };
+
+            // ✅ Attach date filter only if exists
+            if (Object.keys(dateFilter).length > 0) {
+                matchStage.invoiceDate = dateFilter;
+            }
+
+            const result = await Salesinvoice.aggregate([
+
+                {
+                    $match: matchStage
+                },
+
+                {
+                    $lookup: {
+                        from: "salesinvoicedetails",
+                        localField: "_id",
+                        foreignField: "siId",
+                        as: "details"
+                    }
+                },
+
+                {
+                    $unwind: {
+                        path: "$details",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                {
+                    $match: {
+                        "details.status": "valid"
+                    }
+                },
+
+                {
+                    $group: {
+                        _id: "$_id",
+                        siCode: { $first: "$siCode" },
+                        invoiceDate: { $first: "$invoiceDate" },
+                        student: { $first: "$student" },  // ObjectId
+                        school: { $first: "$school" },  // ObjectId
+                        invAmount: { $sum: "$details.netAmount" }
+                    }
+                },
+
+                // ✅ POPULATE STUDENT
+                {
+                    $lookup: {
+                        from: "students",
+                        localField: "student",
+                        foreignField: "_id",
+                        as: "student"
+                    }
+                },
+
+                {
+                    $unwind: {
+                        path: "$student",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // ✅ POPULATE SCHOOL
+                {
+                    $lookup: {
+                        from: "schools",
+                        localField: "school",
+                        foreignField: "_id",
+                        as: "school"
+                    }
+                },
+
+                {
+                    $unwind: {
+                        path: "$school",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                {
+                    $sort: { invoiceDate: -1 }
+                }
+
+            ]);
+
+            console.log(result);
+
+
+            const resultReceipts = await Receiptdetail.aggregate([
+
+                // ✅ Filter first
+                {
+                    $match: {
+                        school: schoolId,
+                        status: "valid"   // if you have status field
+                    }
+                },
+
+                // 📊 Group by siId
+                {
+                    $group: {
+                        _id: "$siId",
+
+                        paidAmount: {
+                            $sum: "$paidAmount"   // 🔁 change field if different
+                        },
+
+                        receipts: {
+                            $push: "$$ROOT"       // optional (full data)
+                        }
+                    }
+                }
+
+            ]);
+
+            console.log(resultReceipts);
+
+            result.forEach((row) => {
+                const siId = row._id.toString();
+
+                row.paidAmount = 0;
+                row.invBal = row.invAmount;
+
+                const receipt = resultReceipts.find(r =>
+                    r._id?.toString() === siId
+                );
+
+                if (receipt) {
+                    row.paidAmount = receipt.paidAmount;
+                    row.invBal -= row.paidAmount;
+                }
+            });
+
+            // ✅ FILTER ONLY BALANCE > 0
+            const filteredResult = result.filter(row => row.invBal > 0);
+
+            console.log(filteredResult);
+
+
+            if (!filteredResult) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Income not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: filteredResult, // contains salesinvoice + salesinvoiceDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getIncomePrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getIncomePrint",
+            });
+        }
+    },
+    getPaidFeesPrint: async (req, res) => {
+        try {
+            // const id = req.params.id;
+
+
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+            if (req.query.hasOwnProperty('year')) {
+                const year = req.query.year;
+                filterQuery['year'] = year;
+            }
+            filterQuery['status'] = "valid";
+
+            let resultIncome = await Salesinvoicedetail.find(filterQuery)
+                .populate("feestructure")
+                .populate("student")
+                .populate("school")
+                .lean();
+            console.log(resultIncome);
+
+            const result = await Expensedetail.find(filterQuery)
+                .populate("employee")
+                .populate("expensetype")
+                .populate("school")
+                .lean();
+            console.log(result);
+
+
+
+            // const result = { income: resultIncome, expense: resultExpense };
+            // console.log(result);
+
+
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Marksheet not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains marksheet + marksheetDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getMarksheetPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getMarksheetPrint",
+            });
+        }
+    },
+
 }
