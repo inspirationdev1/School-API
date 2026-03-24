@@ -10,6 +10,8 @@ const Expensedetail = require("../model/expensedetail.model");
 const Receipt = require("../model/receipt.model");
 const Receiptdetail = require("../model/receiptdetail.model");
 
+const Payment = require("../model/payment.model");
+const Paymentdetail = require("../model/paymentdetail.model");
 
 const Attendance = require("../model/attendance.model");
 
@@ -1017,6 +1019,187 @@ module.exports = {
             });
         }
     },
+    getPendingExpensesPrint: async (req, res) => {
+        try {
+
+            const schoolId = new mongoose.Types.ObjectId(req.user.schoolId);
+
+            let dateFilter = {};
+
+            if (req.query.fromDate) {
+                let fromDate = new Date(req.query.fromDate);
+                fromDate.setHours(0, 0, 0, 0);
+                dateFilter.$gte = fromDate;
+            }
+
+            if (req.query.toDate) {
+                let toDate = new Date(req.query.toDate);
+                toDate.setHours(23, 59, 59, 999);
+                dateFilter.$lte = toDate;
+            }
+
+            const matchStage = {
+                school: schoolId,
+                status: "valid"
+            };
+
+            // ✅ Attach date filter only if exists
+            if (Object.keys(dateFilter).length > 0) {
+                matchStage.expenseDate = dateFilter;
+            }
+
+            const result = await Expense.aggregate([
+
+                {
+                    $match: matchStage
+                },
+
+                {
+                    $lookup: {
+                        from: "expensedetails",
+                        localField: "_id",
+                        foreignField: "expenseId",
+                        as: "details"
+                    }
+                },
+
+                {
+                    $unwind: {
+                        path: "$details",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                {
+                    $match: {
+                        "details.status": "valid"
+                    }
+                },
+
+                {
+                    $group: {
+                        _id: "$_id",
+                        expenseCode: { $first: "$expenseCode" },
+                        expenseDate: { $first: "$expenseDate" },
+                        employee: { $first: "$employee" },  // ObjectId
+                        school: { $first: "$school" },  // ObjectId
+                        expenseAmount: { $sum: "$details.expenseAmount" }
+                    }
+                },
+
+                // ✅ POPULATE STUDENT
+                {
+                    $lookup: {
+                        from: "employees",
+                        localField: "employee",
+                        foreignField: "_id",
+                        as: "employee"
+                    }
+                },
+
+                {
+                    $unwind: {
+                        path: "$employee",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // ✅ POPULATE SCHOOL
+                {
+                    $lookup: {
+                        from: "schools",
+                        localField: "school",
+                        foreignField: "_id",
+                        as: "school"
+                    }
+                },
+
+                {
+                    $unwind: {
+                        path: "$school",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                {
+                    $sort: { expenseDate: -1 }
+                }
+
+            ]);
+
+            console.log(result);
+
+
+            const resultPayments = await Paymentdetail.aggregate([
+
+                // ✅ Filter first
+                {
+                    $match: {
+                        school: schoolId,
+                        status: "valid"   // if you have status field
+                    }
+                },
+
+                // 📊 Group by expenseId
+                {
+                    $group: {
+                        _id: "$expenseId",
+
+                        paidAmount: {
+                            $sum: "$paidAmount"   // 🔁 change field if different
+                        },
+
+                        payments: {
+                            $push: "$$ROOT"       // optional (full data)
+                        }
+                    }
+                }
+
+            ]);
+
+            console.log(resultPayments);
+
+            result.forEach((row) => {
+                const expenseId = row._id.toString();
+
+                row.paidAmount = 0;
+                row.expBal = row.expenseAmount;
+
+                const pay = resultPayments.find(r =>
+                    r._id?.toString() === expenseId
+                );
+
+                if (pay) {
+                    row.paidAmount = pay.paidAmount;
+                    row.expBal -= row.paidAmount;
+                }
+            });
+
+            // ✅ FILTER ONLY BALANCE > 0
+            const filteredResult = result.filter(row => row.expBal > 0);
+
+            console.log(filteredResult);
+
+
+            if (!filteredResult) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Expense not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: filteredResult, // contains expense + expenseDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getIncomePrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getIncomePrint",
+            });
+        }
+    },
     getPaidFeesPrint: async (req, res) => {
         try {
 
@@ -1180,6 +1363,172 @@ module.exports = {
             res.status(500).json({
                 success: false,
                 message: "Error fetching getIncomePrint",
+            });
+        }
+    },
+    getPaidExpensesPrint: async (req, res) => {
+        try {
+
+            const schoolId = new mongoose.Types.ObjectId(req.user.schoolId);
+
+            let dateFilter = {};
+
+            if (req.query.fromDate) {
+                let fromDate = new Date(req.query.fromDate);
+                fromDate.setHours(0, 0, 0, 0);
+                dateFilter.$gte = fromDate;
+            }
+
+            if (req.query.toDate) {
+                let toDate = new Date(req.query.toDate);
+                toDate.setHours(23, 59, 59, 999);
+                dateFilter.$lte = toDate;
+            }
+
+
+
+            
+            const result = await Paymentdetail.aggregate([
+
+                {
+                    $match: {
+                        school: schoolId,
+                        status: "valid"
+                    }
+                },
+
+                // 📊 GROUP BY paymentId
+                {
+                    $group: {
+                        _id: "$paymentId",
+                        totalPaid: { $sum: "$paidAmount" },
+                        expenseIds: { $addToSet: "$expenseId" }
+                    }
+                },
+
+                // 🔗 JOIN RECEIPT
+                {
+                    $lookup: {
+                        from: "payments",
+                        localField: "_id",
+                        foreignField: "_id",
+                        as: "payment"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$payment",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // 🏫 SCHOOL POPULATE
+                {
+                    $lookup: {
+                        from: "schools",
+                        localField: "payment.school",
+                        foreignField: "_id",
+                        as: "school"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$school",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                // 🔥 JOIN EXPENSE USING expenseIds ARRAY
+                {
+                    $lookup: {
+                        from: "expenses",
+                        let: { expenseIds: "$expenseIds" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $in: ["$_id", "$$expenseIds"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    expenseCode: 1,
+                                    expenseDate: 1
+                                }
+                            }
+                        ],
+                        as: "expenses"
+                    }
+                },
+
+                // ✅ OPTIONAL DATE FILTER (paymentDate)
+                ...(Object.keys(dateFilter).length > 0 ? [{
+                    $match: {
+                        "payment.paymentDate": dateFilter
+                    }
+                }] : []),
+
+                // 🎯 FINAL OUTPUT
+                {
+                    $project: {
+                        _id: 1,
+                        totalPaid: 1,
+                        expenses: 1,   // ✅ contains expenseCode + expenseDate
+                        "payment.paymentCode": 1,
+                        "payment.paymentDate": 1,
+                        "payment.paymentMethod": 1,
+                        school: 1
+                    }
+                },
+
+                {
+                    $sort: { "payment.paymentDate": -1 }
+                }
+
+            ]);
+
+
+
+            console.log("result", result);
+
+
+
+
+            result.forEach((row) => {
+                const expenseId = row._id.toString();
+
+
+                const expenses = row.expenses || [];
+                row.expenseCode = "";
+                if (expenses.length > 0) {
+                    expenses.forEach((exp) => {
+                        row.expenseCode = row.expenseCode + "-" + exp.expenseCode;
+                    });
+                }
+            });
+
+
+            console.log(result);
+
+
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Payment not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains expense + expenseDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getPaidExpensesPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getPaidExpensesPrint",
             });
         }
     },

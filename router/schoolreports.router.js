@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require('../auth/auth');
-const { getMarksheetPrint,getProgressCardPrint,getIncomeExpensePrint,getExpensePrint,getIncomePrint,getAttendancePrint,getPendingFeesPrint,getPaidFeesPrint } = require("../controller/schoolreports.controller");
+const { getMarksheetPrint,getProgressCardPrint,getIncomeExpensePrint,getExpensePrint,getIncomePrint,getAttendancePrint,getPendingFeesPrint
+    ,getPaidFeesPrint,getPendingExpensesPrint,getPaidExpensesPrint } = require("../controller/schoolreports.controller");
 
 
 router.get("/fetch-print/:id",authMiddleware(['SCHOOL','USER']),  getMarksheetPrint);
@@ -12,5 +13,7 @@ router.get("/income-print",authMiddleware(['SCHOOL','USER']),  getIncomePrint);
 router.get("/attendance-print",authMiddleware(['SCHOOL','USER']),  getAttendancePrint);
 router.get("/pending-fees-print",authMiddleware(['SCHOOL','USER']),  getPendingFeesPrint);
 router.get("/paid-fees-print",authMiddleware(['SCHOOL','USER']),  getPaidFeesPrint);
+router.get("/pending-expenses-print",authMiddleware(['SCHOOL','USER']),  getPendingExpensesPrint);
+router.get("/paid-expenses-print",authMiddleware(['SCHOOL','USER']),  getPaidExpensesPrint);
 
 module.exports = router;
