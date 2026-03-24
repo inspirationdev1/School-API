@@ -16,7 +16,6 @@ const salesinvoiceSchema = new mongoose.Schema({
     section: { type: mongoose.Schema.ObjectId, ref: "Section", required: true },
     student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
     paymentStatus: { type: String, default: 'pending' },
-    paymentMethod: { type: String, default: 'cash', required: true },
     status: { type: String, default: 'valid' },
     remarks: { type: String, default: '' },
     year: { type: Number, default: new Date().getFullYear() },

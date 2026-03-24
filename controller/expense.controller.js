@@ -2,6 +2,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Expense = require("../model/expense.model");
 const Expensedetail = require("../model/expensedetail.model");
+const paymentdetailModel = require("../model/paymentdetail.model");
 
 
 module.exports = {
@@ -70,7 +71,21 @@ module.exports = {
                         school: new mongoose.Types.ObjectId(schoolId),
                     },
                 },
-
+                // 🧑‍💼 EMPLOYEE POPULATE
+                {
+                    $lookup: {
+                        from: "employees",
+                        localField: "employee",
+                        foreignField: "_id",
+                        as: "employee"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$employee",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
                 {
                     $lookup: {
                         from: "expensedetails", // 👈 collection name (IMPORTANT)
@@ -122,50 +137,6 @@ module.exports = {
                 {
                     $project: {
                         expenseTypeData: 0, // cleanup
-                    },
-                },
-                {
-                    $lookup: {
-                        from: "employees",
-                        localField: "expenseDetails.employee",
-                        foreignField: "_id",
-                        as: "employeeData",
-                    },
-                },
-                {
-                    $addFields: {
-                        expenseDetails: {
-                            $map: {
-                                input: "$expenseDetails",
-                                as: "detail",
-                                in: {
-                                    $mergeObjects: [
-                                        "$$detail",
-                                        {
-                                            employee: {
-                                                $arrayElemAt: [
-                                                    {
-                                                        $filter: {
-                                                            input: "$employeeData",
-                                                            as: "fs",
-                                                            cond: {
-                                                                $eq: ["$$fs._id", "$$detail.employee"],
-                                                            },
-                                                        },
-                                                    },
-                                                    0,
-                                                ],
-                                            },
-                                        },
-                                    ],
-                                },
-                            },
-                        },
-                    },
-                },
-                {
-                    $project: {
-                        employeeData: 0, // cleanup
                     },
                 },
                 {
@@ -276,21 +247,21 @@ module.exports = {
         try {
             const schoolId = req.user.schoolId;
             let id = req.params.id;
-            
-                await Expense.findOneAndUpdate(
-                    { _id: id },
-                    { $set: { status: "cancel" } },
-                    { new: true } // optional: returns updated document
-                );
-                await Expensedetail.updateMany(
-                    { expenseId: id },
-                    { $set: { status: "cancel" } },
-                    { new: true } // optional: returns updated document
-                );
-                // await Expense.findOneAndDelete({ _id: id, school: schoolId });
-                const ExpenseAfterDelete = await Expense.findOne({ _id: id });
-                res.status(200).json({ success: true, message: "Expense Deleted.", data: ExpenseAfterDelete })
-           
+
+            await Expense.findOneAndUpdate(
+                { _id: id },
+                { $set: { status: "cancel" } },
+                { new: true } // optional: returns updated document
+            );
+            await Expensedetail.updateMany(
+                { expenseId: id },
+                { $set: { status: "cancel" } },
+                { new: true } // optional: returns updated document
+            );
+            // await Expense.findOneAndDelete({ _id: id, school: schoolId });
+            const ExpenseAfterDelete = await Expense.findOne({ _id: id });
+            res.status(200).json({ success: true, message: "Expense Deleted.", data: ExpenseAfterDelete })
+
 
 
         } catch (error) {
@@ -300,6 +271,105 @@ module.exports = {
         }
 
     },
+    getExpenseWithEmployeeId: async (req, res) => {
+        try {
+            const id = req.params.id;
+            const schoolId = req.user.schoolId;
+
+            const filterQuery = {};
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+
+            if (req.query.hasOwnProperty('employee')) {
+                const employeeId = req.query.employee;
+                filterQuery['employee'] = new mongoose.Types.ObjectId(employeeId);
+            }
+            filterQuery['status'] = "valid";
+
+            var result = await Expense.aggregate([
+                {
+                    $match: filterQuery,
+                },
+
+                {
+                    $lookup: {
+                        from: "expensedetails", // 👈 collection name (IMPORTANT)
+                        localField: "_id",
+                        foreignField: "expenseId",
+                        as: "expenseDetails",
+                    },
+                },
+                // 🔹 SUM grossAmount
+                {
+                    $addFields: {
+                        totalExpenseAmount: {
+                            $sum: "$expenseDetails.expenseAmount",
+                        },
+                    },
+                },
+            ]);
+
+            if (!result.length) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Salesinvoice not found",
+                });
+            }
+
+            if (result.length > 0) {
+
+                const paymentDetails = await paymentdetailModel.aggregate([
+                    { $match: filterQuery },
+                    {
+                        $group: {
+                            _id: "$expenseId",
+                            expenseCode: { $first: "$expenseCode" },
+                            totalPaidAmount: { $sum: "$paidAmount" },
+                            expenseDetails: { $push: "$$ROOT" }
+                        }
+                    }
+                ]);
+                if (paymentDetails.length > 0) {
+                    console.log("paymentDetails:", paymentDetails);
+                    for (const item of result) {
+                        console.log("SI ID:", item._id);
+                        console.log("Invoice Code:", item.expenseCode);
+                        const expenseId = item._id;
+                        const filtered = paymentDetails.filter(
+                            row => row._id.toString() === expenseId.toString()
+                        );
+                        console.log("filtered:", filtered);
+                        if (filtered.length > 0) {
+                            item.totalPaidAmount = filtered[0].totalPaidAmount || 0;
+                        } else {
+                            item.totalPaidAmount = 0;
+                        }
+                        item.balanceAmount = item.totalExpenseAmount - item.totalPaidAmount;
+                    }
+                    result = result.filter(
+                        row => row.balanceAmount > 0
+                    );
+                    console.log("result:", result);
+
+                }
+            }
+
+
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains invoice + expenseDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getExpenseWithEmployeeId", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching Salesinvoice",
+            });
+        }
+    }
+    ,
     getExpensePrint: async (req, res) => {
         try {
             const id = req.params.id;
@@ -325,58 +395,27 @@ module.exports = {
                     $unwind: "$school",        // convert array → object
                 },
 
-
-
+                // 🧑‍💼 EMPLOYEE POPULATE
+                {
+                    $lookup: {
+                        from: "employees",
+                        localField: "employee",
+                        foreignField: "_id",
+                        as: "employee"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$employee",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
                 {
                     $lookup: {
                         from: "expensedetails", // 👈 collection name (IMPORTANT)
                         localField: "_id",
                         foreignField: "expenseId",
                         as: "expenseDetails",
-                    },
-                },
-                {
-                    $lookup: {
-                        from: "employees",
-                        localField: "expenseDetails.employee",
-                        foreignField: "_id",
-                        as: "employeeData",
-                    },
-                },
-                {
-                    $addFields: {
-                        expenseDetails: {
-                            $map: {
-                                input: "$expenseDetails",
-                                as: "detail",
-                                in: {
-                                    $mergeObjects: [
-                                        "$$detail",
-                                        {
-                                            employee: {
-                                                $arrayElemAt: [
-                                                    {
-                                                        $filter: {
-                                                            input: "$employeeData",
-                                                            as: "fs",
-                                                            cond: {
-                                                                $eq: ["$$fs._id", "$$detail.employee"],
-                                                            },
-                                                        },
-                                                    },
-                                                    0,
-                                                ],
-                                            },
-                                        },
-                                    ],
-                                },
-                            },
-                        },
-                    },
-                },
-                {
-                    $project: {
-                        employeeData: 0, // cleanup
                     },
                 },
                 {
@@ -423,7 +462,7 @@ module.exports = {
                         expenseTypeData: 0, // cleanup
                     },
                 },
-                
+
                 // 🔹 SUM expenseAmount
                 {
                     $addFields: {

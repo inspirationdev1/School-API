@@ -1038,62 +1038,7 @@ module.exports = {
 
 
 
-            // const result = await Receiptdetail.aggregate([
-
-            //     {
-            //         $match: {
-            //             school: schoolId,
-            //             status: "valid"
-            //         }
-            //     },
-
-            //     {
-            //         $group: {
-            //             _id: "$receiptId",
-            //             totalPaid: { $sum: "$paidAmount" }
-            //         }
-            //     },
-
-            //     {
-            //         $lookup: {
-            //             from: "receipts",
-            //             localField: "_id",
-            //             foreignField: "_id",
-            //             as: "receipt"
-            //         }
-            //     },
-
-            //     {
-            //         $unwind: {
-            //             path: "$receipt",
-            //             preserveNullAndEmptyArrays: true
-            //         }
-            //     },
-
-            //     // ✅ FILTER BY receiptDate HERE
-            //     ...(Object.keys(dateFilter).length > 0 ? [{
-            //         $match: {
-            //             "receipt.receiptDate": dateFilter
-            //         }
-            //     }] : []),
-
-            //     {
-            //         $project: {
-            //             _id: 1,
-            //             totalPaid: 1,
-            //             "receipt.receiptCode": 1,
-            //             "receipt.receiptDate": 1,
-            //             "receipt.paymentMethod": 1
-            //         }
-            //     },
-
-            //     {
-            //         $sort: { "receipt.receiptDate": -1 }
-            //     }
-
-            // ]);
-
-
+            
             const result = await Receiptdetail.aggregate([
 
                 {

@@ -35,6 +35,8 @@ const noticeRoutes = require("./router/notice.router");
 
 const expensetypeRouter = require("./router/expensetype.router");
 const expenseRouter = require("./router/expense.router");
+const paymentRouter = require("./router/payment.router");
+
 const schoolreportsRouter = require("./router/schoolreports.router");
 
 const authMiddleware = require("./auth/auth");
@@ -95,6 +97,7 @@ app.use('/api/notices', noticeRoutes)
 
 app.use('/api/expensetype', expensetypeRouter);
 app.use('/api/expense', expenseRouter);
+app.use('/api/payment', paymentRouter);
 app.use('/api/schoolreports', schoolreportsRouter);
 
 app.get('/api/auth/check',authCheck)
