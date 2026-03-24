@@ -1019,58 +1019,222 @@ module.exports = {
     },
     getPaidFeesPrint: async (req, res) => {
         try {
-            // const id = req.params.id;
 
+            const schoolId = new mongoose.Types.ObjectId(req.user.schoolId);
 
+            let dateFilter = {};
 
-            const filterQuery = {};
-            const schoolId = req.user.schoolId;
-            console.log(schoolId, "schoolId")
-            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
-
-            if (req.query.hasOwnProperty('year')) {
-                const year = req.query.year;
-                filterQuery['year'] = year;
+            if (req.query.fromDate) {
+                let fromDate = new Date(req.query.fromDate);
+                fromDate.setHours(0, 0, 0, 0);
+                dateFilter.$gte = fromDate;
             }
-            filterQuery['status'] = "valid";
 
-            let resultIncome = await Salesinvoicedetail.find(filterQuery)
-                .populate("feestructure")
-                .populate("student")
-                .populate("school")
-                .lean();
-            console.log(resultIncome);
+            if (req.query.toDate) {
+                let toDate = new Date(req.query.toDate);
+                toDate.setHours(23, 59, 59, 999);
+                dateFilter.$lte = toDate;
+            }
 
-            const result = await Expensedetail.find(filterQuery)
-                .populate("employee")
-                .populate("expensetype")
-                .populate("school")
-                .lean();
+
+
+            // const result = await Receiptdetail.aggregate([
+
+            //     {
+            //         $match: {
+            //             school: schoolId,
+            //             status: "valid"
+            //         }
+            //     },
+
+            //     {
+            //         $group: {
+            //             _id: "$receiptId",
+            //             totalPaid: { $sum: "$paidAmount" }
+            //         }
+            //     },
+
+            //     {
+            //         $lookup: {
+            //             from: "receipts",
+            //             localField: "_id",
+            //             foreignField: "_id",
+            //             as: "receipt"
+            //         }
+            //     },
+
+            //     {
+            //         $unwind: {
+            //             path: "$receipt",
+            //             preserveNullAndEmptyArrays: true
+            //         }
+            //     },
+
+            //     // ✅ FILTER BY receiptDate HERE
+            //     ...(Object.keys(dateFilter).length > 0 ? [{
+            //         $match: {
+            //             "receipt.receiptDate": dateFilter
+            //         }
+            //     }] : []),
+
+            //     {
+            //         $project: {
+            //             _id: 1,
+            //             totalPaid: 1,
+            //             "receipt.receiptCode": 1,
+            //             "receipt.receiptDate": 1,
+            //             "receipt.paymentMethod": 1
+            //         }
+            //     },
+
+            //     {
+            //         $sort: { "receipt.receiptDate": -1 }
+            //     }
+
+            // ]);
+
+
+            const result = await Receiptdetail.aggregate([
+
+                {
+                    $match: {
+                        school: schoolId,
+                        status: "valid"
+                    }
+                },
+
+                // 📊 GROUP BY receiptId
+                {
+                    $group: {
+                        _id: "$receiptId",
+                        totalPaid: { $sum: "$paidAmount" },
+                        siIds: { $addToSet: "$siId" }
+                    }
+                },
+
+                // 🔗 JOIN RECEIPT
+                {
+                    $lookup: {
+                        from: "receipts",
+                        localField: "_id",
+                        foreignField: "_id",
+                        as: "receipt"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$receipt",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // 🏫 SCHOOL POPULATE
+                {
+                    $lookup: {
+                        from: "schools",
+                        localField: "receipt.school",
+                        foreignField: "_id",
+                        as: "school"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$school",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                // 🔥 JOIN SALESINVOICE USING siIds ARRAY
+                {
+                    $lookup: {
+                        from: "salesinvoices",
+                        let: { siIds: "$siIds" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $in: ["$_id", "$$siIds"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    siCode: 1,
+                                    invoiceDate: 1
+                                }
+                            }
+                        ],
+                        as: "invoices"
+                    }
+                },
+
+                // ✅ OPTIONAL DATE FILTER (receiptDate)
+                ...(Object.keys(dateFilter).length > 0 ? [{
+                    $match: {
+                        "receipt.receiptDate": dateFilter
+                    }
+                }] : []),
+
+                // 🎯 FINAL OUTPUT
+                {
+                    $project: {
+                        _id: 1,
+                        totalPaid: 1,
+                        invoices: 1,   // ✅ contains siCode + invoiceDate
+                        "receipt.receiptCode": 1,
+                        "receipt.receiptDate": 1,
+                        "receipt.paymentMethod": 1,
+                        school: 1
+                    }
+                },
+
+                {
+                    $sort: { "receipt.receiptDate": -1 }
+                }
+
+            ]);
+
+
+
+            console.log("result", result);
+
+
+
+
+            result.forEach((row) => {
+                const siId = row._id.toString();
+
+
+                const invoices = row.invoices || [];
+                row.siCode = "";
+                if (invoices.length > 0) {
+                    invoices.forEach((si) => {
+                        row.siCode = row.siCode + "-" + si.siCode;
+                    });
+                }
+            });
+
+
             console.log(result);
-
-
-
-            // const result = { income: resultIncome, expense: resultExpense };
-            // console.log(result);
 
 
             if (!result) {
                 return res.status(404).json({
                     success: false,
-                    message: "Marksheet not found",
+                    message: "Income not found",
                 });
             }
 
             res.status(200).json({
                 success: true,
-                data: result, // contains marksheet + marksheetDetails[]
+                data: result, // contains salesinvoice + salesinvoiceDetails[]
             });
 
         } catch (e) {
-            console.error("Error in getMarksheetPrint", e);
+            console.error("Error in getIncomePrint", e);
             res.status(500).json({
                 success: false,
-                message: "Error fetching getMarksheetPrint",
+                message: "Error fetching getIncomePrint",
             });
         }
     },
