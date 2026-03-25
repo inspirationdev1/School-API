@@ -59,7 +59,9 @@ module.exports = {
                             qualification:fields.qualification[0],
                             age: fields.age[0],
                             gender: fields.gender[0],
-
+                            dOBDate: fields.dOBDate[0],
+                            joinDate: fields.joinDate[0],
+                            year: fields.year[0],
                             teacher_image: originalFileName,
                             password: hashPassword,
                             school:schoolId
@@ -138,21 +140,7 @@ module.exports = {
         })
     },
 
-    // updateTeacherWithId: async(req, res)=>{
-       
-    //     try {
-    //         let id = req.params.id;
-    //         console.log(req.body)
-    //         await Teacher.findOneAndUpdate({_id:id},{$set:{...req.body}});
-    //         const TeacherAfterUpdate =await Teacher.findOne({_id:id});
-    //         res.status(200).json({success:true, message:"Teacher Updated", data:TeacherAfterUpdate})
-    //     } catch (error) {
-            
-    //         console.log("Error in updateTeacherWithId", error);
-    //         res.status(500).json({success:false, message:"Server Error in Update Teacher. Try later"})
-    //     }
-
-    // },
+    
     updateTeacherWithId: async (req, res) => {
         const form =new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/teacher'), keepExtensions: true });
       

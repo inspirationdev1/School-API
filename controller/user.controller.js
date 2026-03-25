@@ -261,7 +261,9 @@ module.exports = {
                             qualification:fields.qualification[0],
                             age: fields.age[0],
                             gender: fields.gender[0],
-
+                            dOBDate: fields.dOBDate[0],
+                            joinDate: fields.joinDate[0],
+                            year: fields.year[0],
                             user_image: originalFileName,
                             password: hashPassword,
                             school:schoolId
@@ -340,21 +342,7 @@ module.exports = {
         })
     },
 
-    // updateUserWithId: async(req, res)=>{
-       
-    //     try {
-    //         let id = req.params.id;
-    //         console.log(req.body)
-    //         await User.findOneAndUpdate({_id:id},{$set:{...req.body}});
-    //         const UserAfterUpdate =await User.findOne({_id:id});
-    //         res.status(200).json({success:true, message:"User Updated", data:UserAfterUpdate})
-    //     } catch (error) {
-            
-    //         console.log("Error in updateUserWithId", error);
-    //         res.status(500).json({success:false, message:"Server Error in Update User. Try later"})
-    //     }
-
-    // },
+    
     updateUserWithId: async (req, res) => {
         const form =new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/user'), keepExtensions: true });
       
@@ -363,7 +351,8 @@ module.exports = {
             return res.status(400).json({ message: "Error parsing the form data." });
           }
           try {
-            const id  = req.user.id;
+            // const id  = req.user.id;
+            const { id } = req.params;
             // const { id } = req.params;
             const user = await User.findById(id);
       

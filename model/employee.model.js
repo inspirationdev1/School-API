@@ -9,6 +9,7 @@ const employeeSchema = new mongoose.Schema({
     qualification:{type:String, required:true},
     dOBDate: { type: Date, required: true, },
     age:{type:String, required:true},
+    year: { type: Number, default: new Date().getFullYear() },
     joinDate: { type: Date, required: true, },
     gender:{type:String, required:true},
     employee_image:{type:String,  required:true},

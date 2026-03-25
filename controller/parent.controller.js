@@ -70,6 +70,10 @@ module.exports = {
                             qualification:fields.qualification[0],
                             age: fields.age[0],
                             gender: fields.gender[0],
+                            dOBDate: fields.dOBDate[0],
+                            joinDate: fields.joinDate[0],
+                            year: fields.year[0],
+
 
                             parent_image: originalFileName,
                             password: hashPassword,
@@ -149,21 +153,7 @@ module.exports = {
         })
     },
 
-    // updateParentWithId: async(req, res)=>{
-       
-    //     try {
-    //         let id = req.params.id;
-    //         console.log(req.body)
-    //         await Parent.findOneAndUpdate({_id:id},{$set:{...req.body}});
-    //         const ParentAfterUpdate =await Parent.findOne({_id:id});
-    //         res.status(200).json({success:true, message:"Parent Updated", data:ParentAfterUpdate})
-    //     } catch (error) {
-            
-    //         console.log("Error in updateParentWithId", error);
-    //         res.status(500).json({success:false, message:"Server Error in Update Parent. Try later"})
-    //     }
-
-    // },
+    
     updateParentWithId: async (req, res) => {
         const form =new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/parent'), keepExtensions: true });
       

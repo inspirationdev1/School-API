@@ -6,7 +6,8 @@ const authMiddleware = require("../auth/auth");
 router.post('/register', authMiddleware(['SCHOOL','USER']), registerUser);
 router.get("/fetch-with-query", authMiddleware(['SCHOOL','USER']), getUserWithQuery);
 router.post("/login", loginUser);
-router.patch("/update", authMiddleware(['SCHOOL','USER']), updateUserWithId);
+// router.patch("/update", authMiddleware(['SCHOOL','USER']), updateUserWithId);
+router.patch("/update/:id",authMiddleware(['SCHOOL','USER']), updateUserWithId);
 router.get("/fetch-own", authMiddleware(['SCHOOL','USER']), getUserOwnDetails);
 router.get("/fetch-all", authMiddleware(['SCHOOL','USER']), getAllUsers);
 

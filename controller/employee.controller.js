@@ -60,7 +60,9 @@ module.exports = {
                             qualification: fields.qualification[0],
                             age: fields.age[0],
                             gender: fields.gender[0],
-
+                            dOBDate: fields.dOBDate[0],
+                            joinDate: fields.joinDate[0],
+                            year: fields.year[0],
                             employee_image: originalFileName,
                             password: hashPassword,
                             school: schoolId
