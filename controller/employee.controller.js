@@ -16,7 +16,7 @@ module.exports = {
             const schoolId = req.user.schoolId;
             filterQuery['school'] = schoolId;
             if (req.query.hasOwnProperty('search')) {
-                filterQuery['name'] = { $regex: req.query.search, $options: 'i' }
+                filterQuery['employee_name'] = { $regex: req.query.search, $options: 'i' }
             }
 
 
