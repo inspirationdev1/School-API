@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 const jwtSecret = process.env.JWTSECRET;
 
 const Employee = require("../model/employee.model");
+const cloudinary = require("../config/cloudinary");
+
 module.exports = {
 
     getEmployeeWithQuery: async (req, res) => {
@@ -31,63 +33,112 @@ module.exports = {
     },
 
 
+    // registerEmployee: async (req, res) => {
+    //     const form = new formidable.IncomingForm();
+    //     const schoolId = req.user.schoolId;
+    //     form.parse(req, (err, fields, files) => {
+    //         Employee.find({ email: fields.email[0] }).then(resp => {
+    //             if (resp.length > 0) {
+    //                 res.status(500).json({ success: false, message: "Email Already Exist!" })
+    //             } else {
+
+    //                 const photo = files.image[0];
+    //                 let oldPath = photo.filepath;
+    //                 let originalFileName = photo.originalFilename.replace(" ", "_")
+
+    //                 let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/employee', '/', originalFileName)
+
+    //                 let photoData = fs.readFileSync(oldPath);
+    //                 fs.writeFile(newPath, photoData, function (err) {
+    //                     if (err) console.log(err);
+
+    //                     var salt = bcrypt.genSaltSync(10);
+    //                     var hashPassword = bcrypt.hashSync(fields.password[0], salt);
+
+    //                     const newEmployee = new Employee({
+    //                         email: fields.email[0],
+    //                         employee_name: fields.employee_name[0],
+    //                         employee_code: fields.employee_code[0],
+    //                         qualification: fields.qualification[0],
+    //                         age: fields.age[0],
+    //                         gender: fields.gender[0],
+    //                         dOBDate: fields.dOBDate[0],
+    //                         joinDate: fields.joinDate[0],
+    //                         year: fields.year[0],
+    //                         employee_image: originalFileName,
+    //                         password: hashPassword,
+    //                         school: schoolId
+
+    //                     })
+
+    //                     newEmployee.save().then(savedData => {
+    //                         console.log("Date saved", savedData);
+    //                         res.status(200).json({ success: true, data: savedData, message: "Employee is Registered Successfully." })
+    //                     }).catch(e => {
+    //                         console.log("ERRORO in Register", e)
+    //                         res.status(500).json({ success: false, message: "Failed Registration." })
+    //                     })
+
+    //                 })
+
+
+    //             }
+    //         })
+
+    //     })
+
+
+
+    // },
     registerEmployee: async (req, res) => {
         const form = new formidable.IncomingForm();
-        const schoolId = req.user.schoolId;
-        form.parse(req, (err, fields, files) => {
-            Employee.find({ email: fields.email[0] }).then(resp => {
-                if (resp.length > 0) {
-                    res.status(500).json({ success: false, message: "Email Already Exist!" })
-                } else {
 
+        form.parse(req, async (err, fields, files) => {
+            if (err) return res.status(400).json({ success: false, message: "Error parsing form data." });
+
+            try {
+                const existing = await Employee.find({ email: fields.email[0] });
+                if (existing.length > 0) return res.status(500).json({ success: false, message: "Email Already Exist!" });
+
+                let photoUrl = null;
+                if (files.image && files.image[0]) {
                     const photo = files.image[0];
-                    let oldPath = photo.filepath;
-                    let originalFileName = photo.originalFilename.replace(" ", "_")
-
-                    let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/employee', '/', originalFileName)
-
-                    let photoData = fs.readFileSync(oldPath);
-                    fs.writeFile(newPath, photoData, function (err) {
-                        if (err) console.log(err);
-
-                        var salt = bcrypt.genSaltSync(10);
-                        var hashPassword = bcrypt.hashSync(fields.password[0], salt);
-
-                        const newEmployee = new Employee({
-                            email: fields.email[0],
-                            employee_name: fields.employee_name[0],
-                            employee_code: fields.employee_code[0],
-                            qualification: fields.qualification[0],
-                            age: fields.age[0],
-                            gender: fields.gender[0],
-                            dOBDate: fields.dOBDate[0],
-                            joinDate: fields.joinDate[0],
-                            year: fields.year[0],
-                            employee_image: originalFileName,
-                            password: hashPassword,
-                            school: schoolId
-
-                        })
-
-                        newEmployee.save().then(savedData => {
-                            console.log("Date saved", savedData);
-                            res.status(200).json({ success: true, data: savedData, message: "Employee is Registered Successfully." })
-                        }).catch(e => {
-                            console.log("ERRORO in Register", e)
-                            res.status(500).json({ success: false, message: "Failed Registration." })
-                        })
-
-                    })
-
-
+                    const result = await cloudinary.uploader.upload(photo.filepath, {
+                        folder: "employees",
+                        public_id: Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
+                    });
+                    photoUrl = result.secure_url;
                 }
-            })
 
-        })
+                const salt = bcrypt.genSaltSync(10);
+                const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
+                const newEmployee = new Employee({
+                    email: fields.email[0],
+                    employee_name: fields.employee_name[0],
+                    employee_code: fields.employee_code[0],
+                    qualification: fields.qualification[0],
+                    age: fields.age[0],
+                    gender: fields.gender[0],
+                    dOBDate: fields.dOBDate[0],
+                    joinDate: fields.joinDate[0],
+                    year: fields.year[0],
+                    employee_image: photoUrl,
+                    password: hashPassword,
+                    school: schoolId
 
+                })
 
+                const savedData = await newEmployee.save();
+                res.status(200).json({ success: true, data: savedData, message: "Employee is Registered Successfully." });
+
+            } catch (e) {
+                console.log("Error in Register:", e);
+                res.status(500).json({ success: false, message: "Failed Registration." });
+            }
+        });
     },
+
     loginEmployee: async (req, res) => {
         Employee.find({ email: req.body.email }).then(resp => {
             if (resp.length > 0) {
@@ -140,57 +191,94 @@ module.exports = {
             res.status(500).json({ success: false, message: "Error in getting  Employee Data" })
         })
     },
-    updateEmployeeWithId: async (req, res) => {
-        const form = new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/employee'), keepExtensions: true });
+    // updateEmployeeWithId: async (req, res) => {
+    //     const form = new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/employee'), keepExtensions: true });
 
+    //     form.parse(req, async (err, fields, files) => {
+    //         if (err) {
+    //             return res.status(400).json({ message: "Error parsing the form data." });
+    //         }
+    //         try {
+    //             const { id } = req.params;
+    //             const employee = await Employee.findById(id);
+
+    //             if (!employee) {
+    //                 return res.status(404).json({ message: "employee not found." });
+    //             }
+
+    //             // Update text fields
+    //             Object.keys(fields).forEach((field) => {
+    //                 employee[field] = fields[field][0];
+    //             });
+
+    //             // Handle image file if provided
+    //             if (files.image) {
+    //                 // Delete the old image if it exists
+    //                 const oldImagePath = path.join(__dirname, '../../frontend/public/images/uploaded/employee', employee.employee_image);
+
+    //                 if (employee.employee_image && fs.existsSync(oldImagePath)) {
+    //                     fs.unlink(oldImagePath, (unlinkErr) => {
+    //                         if (unlinkErr) console.log("Error deleting old image:", unlinkErr);
+    //                     });
+    //                 }
+
+    //                 // Set the new image filename
+
+    //                 let filepath = files.image[0].filepath;
+    //                 const originalFileName = path.basename(files.image[0].originalFilename.replace(" ", "_"));
+    //                 let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/employee', '/', originalFileName)
+
+    //                 let photoData = fs.readFileSync(filepath);
+
+    //                 fs.writeFileSync(newPath, photoData);
+    //                 employee.employee_image = originalFileName;
+    //             }
+
+    //             // Save the updated employee document
+    //             await employee.save();
+    //             res.status(200).json({ message: "employee updated successfully", data: employee });
+    //         } catch (e) {
+    //             console.log(e);
+    //             res.status(500).json({ message: "Error updating employee details." });
+    //         }
+    //     })
+    // },
+
+    updateEmployeeWithId: async (req, res) => {
+        const form = new formidable.IncomingForm();
         form.parse(req, async (err, fields, files) => {
-            if (err) {
-                return res.status(400).json({ message: "Error parsing the form data." });
-            }
+            if (err) return res.status(400).json({ success: false, message: "Error parsing form data." });
+
             try {
                 const { id } = req.params;
                 const employee = await Employee.findById(id);
-
-                if (!employee) {
-                    return res.status(404).json({ message: "employee not found." });
-                }
+                if (!employee) return res.status(404).json({ success: false, message: "Employee not found." });
 
                 // Update text fields
-                Object.keys(fields).forEach((field) => {
+                Object.keys(fields).forEach(field => {
                     employee[field] = fields[field][0];
                 });
 
-                // Handle image file if provided
-                if (files.image) {
-                    // Delete the old image if it exists
-                    const oldImagePath = path.join(__dirname, '../../frontend/public/images/uploaded/employee', employee.employee_image);
+                // Handle image upload to Cloudinary
+                if (files.image && files.image[0]) {
+                    // Optional: Delete old image from Cloudinary if needed
+                    // if (employee.employee_image) await cloudinary.uploader.destroy(public_id_from_url);
 
-                    if (employee.employee_image && fs.existsSync(oldImagePath)) {
-                        fs.unlink(oldImagePath, (unlinkErr) => {
-                            if (unlinkErr) console.log("Error deleting old image:", unlinkErr);
-                        });
-                    }
-
-                    // Set the new image filename
-
-                    let filepath = files.image[0].filepath;
-                    const originalFileName = path.basename(files.image[0].originalFilename.replace(" ", "_"));
-                    let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/employee', '/', originalFileName)
-
-                    let photoData = fs.readFileSync(filepath);
-
-                    fs.writeFileSync(newPath, photoData);
-                    employee.employee_image = originalFileName;
+                    const photo = files.image[0];
+                    const result = await cloudinary.uploader.upload(photo.filepath, {
+                        folder: "employees",
+                        public_id: Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
+                    });
+                    employee.employee_image = result.secure_url;
                 }
 
-                // Save the updated employee document
                 await employee.save();
-                res.status(200).json({ message: "employee updated successfully", data: employee });
+                res.status(200).json({ success: true, message: "Employee updated successfully", data: employee });
             } catch (e) {
-                console.log(e);
-                res.status(500).json({ message: "Error updating employee details." });
+                console.log("Error updating employee:", e);
+                res.status(500).json({ success: false, message: "Error updating employee details." });
             }
-        })
+        });
     },
     deleteEmployeeWithId: async (req, res) => {
         try {
