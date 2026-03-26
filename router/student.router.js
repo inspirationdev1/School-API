@@ -3,6 +3,7 @@ const { getStudentWithQuery, loginStudent,updateStudentWithId,getStudentWithId,s
 const authMiddleware = require("../auth/auth");
 const router = express.Router();
 
+
 router.post('/register',authMiddleware(['SCHOOL','USER']), registerStudent);
 router.get("/fetch-with-query",authMiddleware(['SCHOOL','TEACHER','PARENT','USER']),getStudentWithQuery);
 router.post("/login", loginStudent);

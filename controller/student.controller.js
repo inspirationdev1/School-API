@@ -9,6 +9,12 @@ const jwtSecret = process.env.JWTSECRET;
 
 const Student = require("../model/student.model");
 const Attendance = require('../model/attendance.model');
+
+const cloudinary = require("../config/cloudinary");
+
+
+
+
 module.exports = {
 
    
@@ -164,75 +170,102 @@ module.exports = {
             res.status(500).json({ success: false, message: "Error in getting  Student Data" })
         })
     },
-    // updateStudentWithId: async(req, res)=>{
-       
-    //     try {
-    //         let id = req.params.id;
-    //         const schoolId =  req.user.schoolId;
-    //         console.log(req.body)
-    //         await Student.findOneAndUpdate({_id:id,school:schoolId},{$set:{...req.body}});
-    //         const StudentAfterUpdate =await Student.findOne({_id:id});
-    //         res.status(200).json({success:true, message:"Student Updated", data:StudentAfterUpdate})
-    //     } catch (error) {
-            
-    //         console.log("Error in updateStudentWithId", error);
-    //         res.status(500).json({success:false, message:"Server Error in Update Student. Try later"})
-    //     }
-
-    // },
-updateStudentWithId : async (req, res) => {
-    const form =new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/student'), keepExtensions: true });
+    
+// updateStudentWithId : async (req, res) => {
+//     // `${frontendUrl}/images/uploaded/school/${reportHeader.school_image}`
+    
+//     console.log(frontendUrl);
+    
+//     console.log(process.env.VITE_FRONTEND_URL);
+//     const form =new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/student'), keepExtensions: true });
   
-    form.parse(req, async (err, fields, files) => {
-      if (err) {
-        return res.status(400).json({ message: "Error parsing the form data." });
-      }
-      try {
-        const { id } = req.params;
-        const student = await Student.findById(id);
+//     form.parse(req, async (err, fields, files) => {
+//       if (err) {
+//         return res.status(400).json({ message: "Error parsing the form data." });
+//       }
+//       try {
+//         const { id } = req.params;
+//         const student = await Student.findById(id);
   
-        if (!student) {
-          return res.status(404).json({ message: "Student not found." });
-        }
+//         if (!student) {
+//           return res.status(404).json({ message: "Student not found." });
+//         }
   
-        // Update text fields
-        Object.keys(fields).forEach((field) => {
-          student[field] = fields[field][0];
-        });
+//         // Update text fields
+//         Object.keys(fields).forEach((field) => {
+//           student[field] = fields[field][0];
+//         });
   
-        // Handle image file if provided
-        if (files.image) {
-          // Delete the old image if it exists
-          const oldImagePath = path.join(__dirname, '../../frontend/public/images/uploaded/student',  student.student_image);
+//         // Handle image file if provided
+//         if (files.image) {
+//           // Delete the old image if it exists
+//           const oldImagePath = path.join(__dirname, '../../frontend/public/images/uploaded/student',  student.student_image);
            
-          if (student.student_image && fs.existsSync(oldImagePath)) {
-            fs.unlink(oldImagePath, (unlinkErr) => {
-              if (unlinkErr) console.log("Error deleting old image:", unlinkErr);
-            });
-          }
+//           if (student.student_image && fs.existsSync(oldImagePath)) {
+//             fs.unlink(oldImagePath, (unlinkErr) => {
+//               if (unlinkErr) console.log("Error deleting old image:", unlinkErr);
+//             });
+//           }
   
-          // Set the new image filename
+//           // Set the new image filename
         
-          let filepath = files.image[0].filepath;
-          const originalFileName = path.basename(files.image[0].originalFilename.replace(" ", "_"));
-          let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/student', '/', originalFileName)
+//           let filepath = files.image[0].filepath;
+//           const originalFileName = path.basename(files.image[0].originalFilename.replace(" ", "_"));
+//           let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/student', '/', originalFileName)
 
-          let photoData = fs.readFileSync(filepath);
+//           let photoData = fs.readFileSync(filepath);
           
-         fs.writeFileSync(newPath, photoData);
-          student.student_image=originalFileName;
-        }
+//          fs.writeFileSync(newPath, photoData);
+//           student.student_image=originalFileName;
+//         }
   
-        // Save the updated student document
-        await student.save();
-        res.status(200).json({ message: "Student updated successfully", data: student });
-      } catch (e) {
-        console.log(e);
-        res.status(500).json({ message: "Error updating student details." });
-      }
+//         // Save the updated student document
+//         await student.save();
+//         res.status(200).json({ message: "Student updated successfully", data: student });
+//       } catch (e) {
+//         console.log(e);
+//         res.status(500).json({ message: "Error updating student details." });
+//       }
+//     });
+//   },
+    
+updateStudentWithId: async (req, res) => {
+    const form = new formidable.IncomingForm();
+    form.parse(req, async (err, fields, files) => {
+        if (err) return res.status(400).json({ success: false, message: "Error parsing form data." });
+
+        try {
+            const { id } = req.params;
+            const student = await Student.findById(id);
+            if (!student) return res.status(404).json({ success: false, message: "Student not found." });
+
+            // Update text fields
+            Object.keys(fields).forEach(field => {
+                student[field] = fields[field][0];
+            });
+
+            // Handle image upload to Cloudinary
+            if (files.image && files.image[0]) {
+                // Optional: Delete old image from Cloudinary if needed
+                // if (student.student_image) await cloudinary.uploader.destroy(public_id_from_url);
+
+                const photo = files.image[0];
+                const result = await cloudinary.uploader.upload(photo.filepath, {
+                    folder: "students",
+                    public_id: Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
+                });
+                student.student_image = result.secure_url;
+            }
+
+            await student.save();
+            res.status(200).json({ success: true, message: "Student updated successfully", data: student });
+        } catch (e) {
+            console.log("Error updating student:", e);
+            res.status(500).json({ success: false, message: "Error updating student details." });
+        }
     });
-  },
-    deleteStudentWithId: async(req, res)=>{
+},
+deleteStudentWithId: async(req, res)=>{
         try {
             let id = req.params.id;
             const schoolId =  req.user.schoolId;
