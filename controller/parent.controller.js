@@ -44,65 +44,7 @@ module.exports = {
     },
 
 
-    // registerParent: async (req, res) => {
-    //     const form = new formidable.IncomingForm();
-    //     const schoolId = req.user.schoolId;
-    //     form.parse(req, (err, fields, files) => {
-    //         Parent.find({ email: fields.email[0] }).then(resp => {
-    //             if (resp.length > 0) {
-    //                 res.status(500).json({ success: false, message: "Email Already Exist!" })
-    //             } else {
-
-    //                 const photo = files.image[0];
-    //                 let oldPath = photo.filepath;
-    //                 let originalFileName = photo.originalFilename.replace(" ", "_")
-
-    //                 let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/parent', '/', originalFileName)
-
-    //                 let photoData = fs.readFileSync(oldPath);
-    //                 fs.writeFile(newPath, photoData, function (err) {
-    //                     if (err) console.log(err);
-
-    //                     var salt = bcrypt.genSaltSync(10);
-    //                     var hashPassword = bcrypt.hashSync(fields.password[0], salt);
-
-    //                     const newParent = new Parent({
-    //                         email: fields.email[0],
-    //                         name: fields.name[0],
-    //                         qualification:fields.qualification[0],
-    //                         age: fields.age[0],
-    //                         gender: fields.gender[0],
-    //                         dOBDate: fields.dOBDate[0],
-    //                         joinDate: fields.joinDate[0],
-    //                         year: fields.year[0],
-
-
-    //                         parent_image: originalFileName,
-    //                         password: hashPassword,
-    //                         school:schoolId
-
-    //                     })
-
-    //                     newParent.save().then(savedData => {
-    //                         console.log("Date saved", savedData);
-    //                         res.status(200).json({ success: true, data: savedData, message:"Parent is Registered Successfully." })
-    //                     }).catch(e => {
-    //                         console.log("ERRORO in Register", e)
-    //                         res.status(500).json({ success: false, message: "Failed Registration." })
-    //                     })
-
-    //                 })
-
-
-    //             }
-    //         })
-
-    //     })
-
-
-
-    // },
-
+    
     registerParent: async (req, res) => {
         const form = new formidable.IncomingForm();
 
@@ -202,58 +144,6 @@ module.exports = {
             res.status(500).json({ success: false, message: "Error in getting  Parent Data" })
         })
     },
-    // updateParentWithId: async (req, res) => {
-    //     const form =new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/parent'), keepExtensions: true });
-
-    //     form.parse(req, async (err, fields, files) => {
-    //       if (err) {
-    //         return res.status(400).json({ message: "Error parsing the form data." });
-    //       }
-    //       try {
-    //         const { id } = req.params;
-    //         const parent = await Parent.findById(id);
-
-    //         if (!parent) {
-    //           return res.status(404).json({ message: "parent not found." });
-    //         }
-
-    //         // Update text fields
-    //         Object.keys(fields).forEach((field) => {
-    //           parent[field] = fields[field][0];
-    //         });
-
-    //         // Handle image file if provided
-    //         if (files.image) {
-    //           // Delete the old image if it exists
-    //           const oldImagePath = path.join(__dirname, '../../frontend/public/images/uploaded/parent',  parent.parent_image);
-
-    //           if (parent.parent_image && fs.existsSync(oldImagePath)) {
-    //             fs.unlink(oldImagePath, (unlinkErr) => {
-    //               if (unlinkErr) console.log("Error deleting old image:", unlinkErr);
-    //             });
-    //           }
-
-    //           // Set the new image filename
-
-    //           let filepath = files.image[0].filepath;
-    //           const originalFileName = path.basename(files.image[0].originalFilename.replace(" ", "_"));
-    //           let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/parent', '/', originalFileName)
-
-    //           let photoData = fs.readFileSync(filepath);
-
-    //          fs.writeFileSync(newPath, photoData);
-    //           parent.parent_image=originalFileName;
-    //         }
-
-    //         // Save the updated parent document
-    //         await parent.save();
-    //         res.status(200).json({ message: "parent updated successfully", data: parent });
-    //       } catch (e) {
-    //         console.log(e);
-    //         res.status(500).json({ message: "Error updating parent details." });
-    //       }
-    //     })
-    // },
     updateParentWithId: async (req, res) => {
         const form = new formidable.IncomingForm();
         form.parse(req, async (err, fields, files) => {

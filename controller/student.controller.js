@@ -50,65 +50,6 @@ module.exports = {
     },
 
 
-    // registerStudent: async (req, res) => {
-    //     const form = new formidable.IncomingForm();
-
-    //     form.parse(req, (err, fields, files) => {
-    //         Student.find({ email: fields.email[0] }).then(resp => {
-    //             if (resp.length > 0) {
-    //                 res.status(500).json({ success: false, message: "Email Already Exist!" })
-    //             } else {
-
-    //                 const photo = files.image[0];
-    //                 let oldPath = photo.filepath;
-    //                 let originalFileName = photo.originalFilename.replace(" ", "_")
-
-    //                 let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/student', '/', originalFileName)
-
-    //                 let photoData = fs.readFileSync(oldPath);
-    //                 fs.writeFile(newPath, photoData, function (err) {
-    //                     if (err) console.log(err);
-
-    //                     var salt = bcrypt.genSaltSync(10);
-    //                     var hashPassword = bcrypt.hashSync(fields.password[0], salt);
-
-    //                     console.log(fields,"Fields")
-    //                     const newStudent = new Student({
-    //                         email: fields.email[0],
-    //                         name: fields.name[0],
-    //                         student_class:fields.student_class[0],
-    //                         guardian:fields.guardian[0],
-    //                         guardian_phone:fields.guardian_phone[0],
-    //                         age: fields.age[0],
-    //                         gender: fields.gender[0],
-    //                         parent:fields.parent[0],
-    //                         section:fields.section[0],
-    //                         student_image: originalFileName,
-    //                         password: hashPassword,
-    //                         school:req.user.id
-
-    //                     })
-
-    //                     newStudent.save().then(savedData => {
-    //                         console.log("Date saved", savedData);
-    //                         res.status(200).json({ success: true, data: savedData, message:"Student is Registered Successfully." })
-    //                     }).catch(e => {
-    //                         console.log("ERRORO in Register", e)
-    //                         res.status(500).json({ success: false, message: "Failed Registration." })
-    //                     })
-
-    //                 })
-
-
-    //             }
-    //         })
-
-    //     })
-
-
-
-    // },
-
     registerStudent: async (req, res) => {
         const form = new formidable.IncomingForm();
 
@@ -225,64 +166,7 @@ module.exports = {
         })
     },
 
-    // updateStudentWithId : async (req, res) => {
-    //     // `${frontendUrl}/images/uploaded/school/${reportHeader.school_image}`
-
-    //     console.log(frontendUrl);
-
-    //     console.log(process.env.VITE_FRONTEND_URL);
-    //     const form =new formidable.IncomingForm({ multiples: false, uploadDir: path.join(__dirname, '../../frontend/public/images/uploaded/student'), keepExtensions: true });
-
-    //     form.parse(req, async (err, fields, files) => {
-    //       if (err) {
-    //         return res.status(400).json({ message: "Error parsing the form data." });
-    //       }
-    //       try {
-    //         const { id } = req.params;
-    //         const student = await Student.findById(id);
-
-    //         if (!student) {
-    //           return res.status(404).json({ message: "Student not found." });
-    //         }
-
-    //         // Update text fields
-    //         Object.keys(fields).forEach((field) => {
-    //           student[field] = fields[field][0];
-    //         });
-
-    //         // Handle image file if provided
-    //         if (files.image) {
-    //           // Delete the old image if it exists
-    //           const oldImagePath = path.join(__dirname, '../../frontend/public/images/uploaded/student',  student.student_image);
-
-    //           if (student.student_image && fs.existsSync(oldImagePath)) {
-    //             fs.unlink(oldImagePath, (unlinkErr) => {
-    //               if (unlinkErr) console.log("Error deleting old image:", unlinkErr);
-    //             });
-    //           }
-
-    //           // Set the new image filename
-
-    //           let filepath = files.image[0].filepath;
-    //           const originalFileName = path.basename(files.image[0].originalFilename.replace(" ", "_"));
-    //           let newPath = path.join(__dirname, '../../frontend/public/images/uploaded/student', '/', originalFileName)
-
-    //           let photoData = fs.readFileSync(filepath);
-
-    //          fs.writeFileSync(newPath, photoData);
-    //           student.student_image=originalFileName;
-    //         }
-
-    //         // Save the updated student document
-    //         await student.save();
-    //         res.status(200).json({ message: "Student updated successfully", data: student });
-    //       } catch (e) {
-    //         console.log(e);
-    //         res.status(500).json({ message: "Error updating student details." });
-    //       }
-    //     });
-    //   },
-
+    
     updateStudentWithId: async (req, res) => {
         const form = new formidable.IncomingForm();
         form.parse(req, async (err, fields, files) => {
