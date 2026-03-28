@@ -3,6 +3,8 @@ const formidable = require("formidable");
 const fs = require("fs");
 const path = require("path");
 const cloudinary = require("../config/cloudinary");
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 module.exports = {
 
@@ -28,18 +30,26 @@ module.exports = {
                     const originalName = file.originalFilename.replace(/\s/g, "_");
 
                     // 👉 Detect file type
+                    
+                    const cleanName = originalName.replace(/\.[^/.]+$/, ""); // remove extension
                     const isPdf = file.mimetype === "application/pdf";
-
                     const result = await cloudinary.uploader.upload(filePath, {
                         folder: "questionpapers",
-                        resource_type: isPdf ? "raw" : "image",  // ⭐ IMPORTANT
-                        public_id: Date.now() + "_" + originalName,
+                        resource_type: "image", // ⭐ FORCE IMAGE
+                        format: isPdf ? "pdf" : undefined, // ⭐ IMPORTANT
+                        public_id: Date.now() + "_" + cleanName,
                     });
+
+                  
+
+                    let fileUrl = result.secure_url;
+
+                    
 
                     fileType = path.extname(originalName); // .pdf / .jpg / .png
 
                     // ✅ Save in DB
-                    fileName = result.secure_url;
+                    fileName = fileUrl;
                     fileType = fileType;
                 }
 
@@ -54,6 +64,7 @@ module.exports = {
                     marksLimit: fields.marksLimit[0],
                     fileName: fileName,
                     fileType: fileType,
+                     public_id: Date.now() + "_" + cleanName,
                     school: req.user.id
                 });
 
@@ -130,51 +141,25 @@ module.exports = {
                         resource_type: "image", // ⭐ FORCE IMAGE
                         format: isPdf ? "pdf" : undefined, // ⭐ IMPORTANT
                         public_id: Date.now() + "_" + cleanName,
+                        access_mode: "public",
                     });
 
-                    // const result = await cloudinary.uploader.upload(filePath, {
-                    //     folder: "questionpapers",
-                    //     resource_type: isPdf ? "auto" : "image", // ✅ CORRECT
-                    //     public_id: Date.now() + "_" + cleanName,
-                    // });
-
-                    // const result = await cloudinary.uploader.upload(filePath, {
-                    //     folder: "questionpapers",
-                    //     resource_type: "auto",
-                    //     public_id: Date.now() + "_" + cleanName,
-                    // });
+                  
 
                     let fileUrl = result.secure_url;
 
                     // ✅ FIX: allow PDF preview
-                    // if (file.mimetype === "application/pdf") {
-                    //     fileUrl = fileUrl.replace("/upload/", "/upload/fl_attachment:false/");
-                    // }
-                    // if (file.mimetype === "application/pdf") {
-                    //     fileUrl = fileUrl.replace("image", "raw");
-                    // }
-
-                    let thumbnail = null;
-
-                    // ✅ Generate thumbnail for PDF
-                    if (isPdf) {
-                        thumbnail = cloudinary.url(result.public_id, {
-                            resource_type: "image",   // ⭐ IMPORTANT
-                            format: "jpg",
-                            page: 1,                  // first page
-                            width: 300,
-                            crop: "scale",
-                        });
+                    if (file.mimetype === "application/pdf") {
+                        // fileUrl = fileUrl.replace("image", "raw");
                     }
 
+                    
+
                     // save in DB
-                    questionpaper.fileName = result.secure_url;
+                    questionpaper.fileName = fileUrl;
                     questionpaper.fileType = path.extname(originalName);
                     questionpaper.public_id = result.public_id; // ⭐ VERY IMPORTANT
-                    questionpaper.thumbnail = thumbnail;
-
-                    // questionpaper.fileName = fileUrl;
-                    // questionpaper.fileType = require("path").extname(originalName);
+                    
                 }
 
                 await questionpaper.save();

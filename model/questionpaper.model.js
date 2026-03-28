@@ -12,6 +12,7 @@ const questionpaperSchema = new mongoose.Schema({
     marksLimit:{type:Number,  default:0},
     fileType:{type:String,  default:''},
     fileName:{type:String,  default:''},
+    public_id:{type:String,  default:''},
     docStatus:{type:String, default:'pending'},
     status:{type:String, default:'active'},
     remarks:{type:String, default:''},
