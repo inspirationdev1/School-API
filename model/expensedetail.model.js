@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const expensedetailSchema = new mongoose.Schema({
     school: { type: mongoose.Schema.ObjectId, ref: 'School' },
+    employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
     expenseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Expense', required: true },
     expensetype: { type: mongoose.Schema.Types.ObjectId, ref: 'Expensetype', required: true },
     expensetype_code: { type: String, default: '' },

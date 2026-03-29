@@ -10,7 +10,7 @@ module.exports = {
 
 
 
-    
+
     newQuestionpaper: async (req, res) => {
         const form = new formidable.IncomingForm();
 
@@ -30,7 +30,7 @@ module.exports = {
                     const originalName = file.originalFilename.replace(/\s/g, "_");
 
                     // 👉 Detect file type
-                    
+
                     const cleanName = originalName.replace(/\.[^/.]+$/, ""); // remove extension
                     const isPdf = file.mimetype === "application/pdf";
                     const result = await cloudinary.uploader.upload(filePath, {
@@ -40,11 +40,11 @@ module.exports = {
                         public_id: Date.now() + "_" + cleanName,
                     });
 
-                  
+
 
                     let fileUrl = result.secure_url;
 
-                    
+
 
                     fileType = path.extname(originalName); // .pdf / .jpg / .png
 
@@ -64,7 +64,7 @@ module.exports = {
                     marksLimit: fields.marksLimit[0],
                     fileName: fileName,
                     fileType: fileType,
-                     public_id: Date.now() + "_" + cleanName,
+                    public_id: Date.now() + "_" + cleanName,
                     school: req.user.id
                 });
 
@@ -130,9 +130,9 @@ module.exports = {
                 // ✅ Handle file upload (image OR pdf)
                 if (files.image && files.image[0]) {
                     // Optional: Delete old image from Cloudinary if needed
-                                        if (questionpaper.student_image && questionpaper.public_id){
-                                            await cloudinary.uploader.destroy(questionpaper.public_id);
-                                        } 
+                    if (questionpaper.student_image && questionpaper.public_id) {
+                        await cloudinary.uploader.destroy(questionpaper.public_id);
+                    }
                     const file = files.image[0];
                     const filePath = file.filepath;
                     const originalName = file.originalFilename.replace(/\s/g, "_");
@@ -147,7 +147,7 @@ module.exports = {
                         access_mode: "public",
                     });
 
-                  
+
 
                     let fileUrl = result.secure_url;
 
@@ -156,13 +156,13 @@ module.exports = {
                         // fileUrl = fileUrl.replace("image", "raw");
                     }
 
-                    
+
 
                     // save in DB
                     questionpaper.fileName = fileUrl;
                     questionpaper.fileType = path.extname(originalName);
                     questionpaper.public_id = result.public_id; // ⭐ VERY IMPORTANT
-                    
+
                 }
 
                 await questionpaper.save();
