@@ -129,7 +129,10 @@ module.exports = {
 
                 // ✅ Handle file upload (image OR pdf)
                 if (files.image && files.image[0]) {
-
+                    // Optional: Delete old image from Cloudinary if needed
+                                        if (questionpaper.student_image && questionpaper.public_id){
+                                            await cloudinary.uploader.destroy(questionpaper.public_id);
+                                        } 
                     const file = files.image[0];
                     const filePath = file.filepath;
                     const originalName = file.originalFilename.replace(/\s/g, "_");

@@ -11,6 +11,7 @@ const parentSchema = new mongoose.Schema({
     year: { type: Number, default: new Date().getFullYear() },
     gender:{type:String, required:true},
     parent_image:{type:String,  required:true},
+    public_id:{type:String,  default:''},
     createdAt:{type:Date, default: new Date()},
 
     password:{type:String, required:true}

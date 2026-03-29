@@ -10,6 +10,7 @@ const schoolSchema = new mongoose.Schema({
     zipcode:{type:String, required:true},
     country:{type:String, required:true},
     school_image:{type:String,  required:true},
+    public_id:{type:String,  default:''},
     createdAt:{type:Date, default: new Date()},
     password:{type:String, required:true}
 

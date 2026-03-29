@@ -185,7 +185,9 @@ module.exports = {
                 // Handle image upload to Cloudinary
                 if (files.image && files.image[0]) {
                     // Optional: Delete old image from Cloudinary if needed
-                    // if (student.student_image) await cloudinary.uploader.destroy(public_id_from_url);
+                    if (student.student_image && student.public_id){
+                        await cloudinary.uploader.destroy(student.public_id);
+                    } 
 
                     const photo = files.image[0];
                     const result = await cloudinary.uploader.upload(photo.filepath, {
@@ -193,6 +195,7 @@ module.exports = {
                         public_id: Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
                     });
                     student.student_image = result.secure_url;
+                    student.public_id = result.public_id;
                 }
 
                 await student.save();

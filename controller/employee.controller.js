@@ -134,7 +134,7 @@ module.exports = {
             res.status(500).json({ success: false, message: "Error in getting  Employee Data" })
         })
     },
-   
+
     updateEmployeeWithId: async (req, res) => {
         const form = new formidable.IncomingForm();
         form.parse(req, async (err, fields, files) => {
@@ -153,7 +153,9 @@ module.exports = {
                 // Handle image upload to Cloudinary
                 if (files.image && files.image[0]) {
                     // Optional: Delete old image from Cloudinary if needed
-                    // if (employee.employee_image) await cloudinary.uploader.destroy(public_id_from_url);
+                    if (employee.employee_image && employee.public_id) {
+                        await cloudinary.uploader.destroy(employee.public_id);
+                    }
 
                     const photo = files.image[0];
                     const result = await cloudinary.uploader.upload(photo.filepath, {
@@ -161,6 +163,7 @@ module.exports = {
                         public_id: Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
                     });
                     employee.employee_image = result.secure_url;
+                    employee.public_id = result.public_id;
                 }
 
                 await employee.save();

@@ -44,7 +44,7 @@ module.exports = {
     },
 
 
-    
+
     registerParent: async (req, res) => {
         const form = new formidable.IncomingForm();
 
@@ -151,7 +151,7 @@ module.exports = {
 
             try {
                 const { id } = req.params;
-               
+
                 const parent = await Parent.findById(id);
                 if (!parent) return res.status(404).json({ success: false, message: "Parent not found." });
 
@@ -163,7 +163,9 @@ module.exports = {
                 // Handle image upload to Cloudinary
                 if (files.image && files.image[0]) {
                     // Optional: Delete old image from Cloudinary if needed
-                    // if (parent.parent_image) await cloudinary.uploader.destroy(public_id_from_url);
+                    if (parent.parent_image && parent.public_id) {
+                        await cloudinary.uploader.destroy(parent.public_id);
+                    }
 
                     const photo = files.image[0];
                     const result = await cloudinary.uploader.upload(photo.filepath, {
@@ -171,6 +173,7 @@ module.exports = {
                         public_id: Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
                     });
                     parent.parent_image = result.secure_url;
+                    parent.public_id = result.public_id;
                 }
 
                 await parent.save();

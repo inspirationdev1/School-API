@@ -13,6 +13,7 @@ const employeeSchema = new mongoose.Schema({
     joinDate: { type: Date, required: true, },
     gender:{type:String, required:true},
     employee_image:{type:String,  required:true},
+    public_id:{type:String,  default:''},
     createdAt:{type:Date, default: new Date()},
 
     password:{type:String, required:true}

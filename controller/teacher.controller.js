@@ -55,7 +55,7 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
-                
+
                 const newTeacher = new Teacher({
                     email: fields.email[0],
                     name: fields.name[0],
@@ -152,7 +152,9 @@ module.exports = {
                 // Handle image upload to Cloudinary
                 if (files.image && files.image[0]) {
                     // Optional: Delete old image from Cloudinary if needed
-                    // if (teacher.teacher_image) await cloudinary.uploader.destroy(public_id_from_url);
+                    if (teacher.teacher_image && teacher.public_id) {
+                        await cloudinary.uploader.destroy(teacher.public_id);
+                    }
 
                     const photo = files.image[0];
                     const result = await cloudinary.uploader.upload(photo.filepath, {
@@ -160,6 +162,7 @@ module.exports = {
                         public_id: Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
                     });
                     teacher.teacher_image = result.secure_url;
+                    teacher.public_id = result.public_id;
                 }
 
                 await teacher.save();

@@ -68,7 +68,7 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
-                
+
                 const newUser = new User({
                     email: fields.email[0],
                     name: fields.name[0],
@@ -166,7 +166,9 @@ module.exports = {
                 // Handle image upload to Cloudinary
                 if (files.image && files.image[0]) {
                     // Optional: Delete old image from Cloudinary if needed
-                    // if (user.user_image) await cloudinary.uploader.destroy(public_id_from_url);
+                    if (user.user_image && user.public_id) {
+                        await cloudinary.uploader.destroy(user.public_id);
+                    }
 
                     const photo = files.image[0];
                     const result = await cloudinary.uploader.upload(photo.filepath, {
@@ -174,6 +176,7 @@ module.exports = {
                         public_id: Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
                     });
                     user.user_image = result.secure_url;
+                    user.public_id = result.public_id;
                 }
 
                 await user.save();
