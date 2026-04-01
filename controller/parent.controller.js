@@ -79,7 +79,7 @@ module.exports = {
                     year: fields.year[0],
                     parent_image: photoUrl,
                     password: hashPassword,
-                    school: schoolId
+                    school: req.user.id
 
                 })
 
@@ -88,7 +88,7 @@ module.exports = {
 
             } catch (e) {
                 console.log("Error in Register:", e);
-                res.status(500).json({ success: false, message: "Failed Registration." });
+                res.status(500).json({ success: false, message: "Failed Registration." + e.message });
             }
         });
     },
