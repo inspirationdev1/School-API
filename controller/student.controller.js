@@ -13,6 +13,7 @@ const Attendance = require('../model/attendance.model');
 const cloudinary = require("../config/cloudinary");
 
 
+const { getNumberseqWithScreenId } = require("../controller/numberseq.controller");
 
 
 module.exports = {
@@ -51,6 +52,8 @@ module.exports = {
 
 
     registerStudent: async (req, res) => {
+
+
         const form = new formidable.IncomingForm();
 
         form.parse(req, async (err, fields, files) => {
@@ -73,6 +76,15 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
+                const numberseqData = await getNumberseqWithScreenId({ screenId: "69a8852f1a7361b6e6686e59", schoolId: req.user.schoolId });
+                console.log("numberseqData.data", numberseqData);
+                let seq = 1;
+                let code = "";
+                if (numberseqData){
+                    seq = numberseqData.seq||1;
+                    code= numberseqData.code||"";
+                }
+                
                 const newStudent = new Student({
                     email: fields.email[0],
                     name: fields.name[0],
@@ -88,6 +100,8 @@ module.exports = {
                     section: fields.section[0],
                     student_image: photoUrl,
                     password: hashPassword,
+                    student_code: code||"",
+                    seq: seq||1,
                     school: req.user.id,
                 });
 
@@ -166,11 +180,12 @@ module.exports = {
         })
     },
 
-    
+
     updateStudentWithId: async (req, res) => {
         const form = new formidable.IncomingForm();
         form.parse(req, async (err, fields, files) => {
             if (err) return res.status(400).json({ success: false, message: "Error parsing form data." });
+
 
             try {
                 const { id } = req.params;
@@ -185,9 +200,9 @@ module.exports = {
                 // Handle image upload to Cloudinary
                 if (files.image && files.image[0]) {
                     // Optional: Delete old image from Cloudinary if needed
-                    if (student.student_image && student.public_id){
+                    if (student.student_image && student.public_id) {
                         await cloudinary.uploader.destroy(student.public_id);
-                    } 
+                    }
 
                     const photo = files.image[0];
                     const result = await cloudinary.uploader.upload(photo.filepath, {

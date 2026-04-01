@@ -17,6 +17,7 @@ const examtypeRouter = require("./router/examtype.router")
 const menuRouter = require("./router/menu.router")
 const roleRouter = require("./router/role.router")
 const screenRouter = require("./router/screen.router")
+const numberseqRouter = require("./router/numberseq.router")
 
 const feestructureRouter = require("./router/feestructure.router")
 const salesinvoiceRouter = require("./router/salesinvoice.router");
@@ -36,6 +37,8 @@ const noticeRoutes = require("./router/notice.router");
 const expensetypeRouter = require("./router/expensetype.router");
 const expenseRouter = require("./router/expense.router");
 const paymentRouter = require("./router/payment.router");
+
+
 
 const schoolreportsRouter = require("./router/schoolreports.router");
 
@@ -83,6 +86,7 @@ app.use("/api/examtype", examtypeRouter)
 app.use("/api/menu", menuRouter)
 app.use("/api/role", roleRouter)
 app.use("/api/screen", screenRouter)
+app.use("/api/numberseq", numberseqRouter);
 
 app.use("/api/feestructure", feestructureRouter)
 app.use("/api/salesinvoice", salesinvoiceRouter)

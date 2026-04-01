@@ -159,7 +159,7 @@ module.exports = {
         try {
             let attendeeClass =await Class.find({attendee:req.user.id});
            attendeeClass = attendeeClass.map(x=>{
-          return {class_num:x.class_num,class_text: x.class_text,classId: x._id}
+          return {class_code:x.class_code,class_name: x.class_name,classId: x._id}
         })
             res.status(200).json(attendeeClass)
             

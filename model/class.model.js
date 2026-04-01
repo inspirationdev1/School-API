@@ -5,8 +5,9 @@ const asignSubTeachSchema =new mongoose.Schema({
 })
 const classSchema = new mongoose.Schema({
     school:{type:mongoose.Schema.ObjectId, ref:'School'},
-    class_text:{type:String, required:true},
-    class_num:{type:Number,required:true},
+    class_name:{type:String, required:true},
+    class_code:{type:String,default:''},
+    seq:{type:Number,default:1},
     asignSubTeach:[asignSubTeachSchema],
     attendee:{type:mongoose.Schema.ObjectId, ref:'Teacher', required:false},
     createdAt:{type:Date, default:new Date()}
