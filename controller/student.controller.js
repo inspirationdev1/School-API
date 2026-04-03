@@ -13,7 +13,7 @@ const Attendance = require('../model/attendance.model');
 const cloudinary = require("../config/cloudinary");
 
 
-const { getNumberseqWithScreenId } = require("../controller/numberseq.controller");
+const { getNumberseqWithScreenId,updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
 
 
 module.exports = {
@@ -76,7 +76,7 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
-                const numberseqData = await getNumberseqWithScreenId({ screenId: "69a8852f1a7361b6e6686e59", schoolId: req.user.schoolId });
+                const numberseqData = await getNumberseqWithScreenId({ screen_name: "Student", schoolId: req.user.schoolId });
                 console.log("numberseqData.data", numberseqData);
                 let seq = 1;
                 let code = "";
@@ -106,6 +106,10 @@ module.exports = {
                 });
 
                 const savedData = await newStudent.save();
+
+                const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_name: "Student", schoolId: req.user.schoolId });
+                console.log("numberseqAfterUpdate",numberseqAfterUpdate);
+                
                 res.status(200).json({ success: true, data: savedData, message: "Student is Registered Successfully." });
 
             } catch (e) {
@@ -214,6 +218,8 @@ module.exports = {
                 }
 
                 await student.save();
+
+                
                 res.status(200).json({ success: true, message: "Student updated successfully", data: student });
             } catch (e) {
                 console.log("Error updating student:", e);

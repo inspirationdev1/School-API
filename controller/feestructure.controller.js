@@ -24,7 +24,7 @@ module.exports = {
                             res.status(200).json({ success: true, data: savedData, message:"Feestructure is Created Successfully." })
                         }).catch(e => {
                             console.log("ERRORO in Register", e)
-                            res.status(500).json({ success: false, message: "Failed Creation of Feestructure." })
+                            res.status(500).json({ success: false, message: e.message })
                         })
 
     },

@@ -2,6 +2,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 
 const Numberseq = require("../model/numberseq.model");
+const Screen = require("../model/screen.model");
 
 module.exports = {
 
@@ -79,10 +80,19 @@ module.exports = {
     },
     getNumberseqWithScreenId: async (req, res) => {
 
-
-        const screenId = req.screenId;
+        const screen_name = req.screen_name;
         const schoolId = req.schoolId;
         try {
+
+            const screenData = await Screen.find({
+                screen_name: screen_name
+            }).lean();
+
+            let screenId = ""
+            if (screenData.length > 0) {
+                screenId = screenData[0]._id;
+            }
+
             const numberseqData = await Numberseq.find({
                 screen: new mongoose.Types.ObjectId(screenId),
                 school: new mongoose.Types.ObjectId(schoolId)
@@ -92,12 +102,11 @@ module.exports = {
             let code = "";
             let prefix = "";
             let suffix = "";
-            if (numberseqData.length>0) {
+            if (numberseqData.length > 0) {
                 seq = numberseqData[0].seq || 0;
-                prefix = numberseqData[0].prefix|| "";
-                suffix = numberseqData[0].suffix|| "";
+                prefix = numberseqData[0].prefix || "";
+                suffix = numberseqData[0].suffix || "";
             }
-            seq += 1;
             code = prefix + seq + suffix;
             const seqData = {
                 seq: seq,
@@ -107,6 +116,53 @@ module.exports = {
         } catch (error) {
             console.log("Error in getNumberseqWithId", error.message)
             return { success: false, message: "Error in getting  Numberseq Data" }
+        }
+
+    },
+    updateNumberseqWithScreenId: async (req, res) => {
+        // Not providing the  schoolId as numberseq Id will be unique.
+        try {
+            // let id = req.params.id;
+            const screen_name = req.screen_name;
+            const schoolId = req.schoolId;
+            const screenData = await Screen.find({
+                screen_name: screen_name,
+                school: new mongoose.Types.ObjectId(schoolId)
+            }).lean();
+
+            let screenId = ""
+            if (screenData.length > 0) {
+                screenId = screenData[0]._id;
+            }
+
+
+
+
+
+
+            const numberSeqData = await Numberseq.find({
+                screen: screenId,
+                school: new mongoose.Types.ObjectId(schoolId)
+            }).lean();
+
+            let id = "";
+            if (numberSeqData.length > 0) {
+                let seq = numberSeqData[0].seq;
+                seq += 1;
+                numberSeqData[0].seq = seq;
+                id = numberSeqData[0]._id || null;
+                await Numberseq.findOneAndUpdate({ _id: id }, { $set: numberSeqData[0] });
+
+            }
+            const numberseqAfterUpdate = await Numberseq.findOne({ _id: id }).lean();
+            console.log("NumberseqAfterUpdate", numberseqAfterUpdate);
+            return numberseqAfterUpdate;
+
+            // res.status(200).json({ success: true, message: "Numberseq Updated", data: NumberseqAfterUpdate })
+        } catch (error) {
+
+            console.log("Error in updateNumberseqWithScreenId", error);
+            return { success: false, message: error.message };
         }
 
     },

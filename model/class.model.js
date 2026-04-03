@@ -5,8 +5,18 @@ const asignSubTeachSchema =new mongoose.Schema({
 })
 const classSchema = new mongoose.Schema({
     school:{type:mongoose.Schema.ObjectId, ref:'School'},
-    class_name:{type:String, required:true},
-    class_code:{type:String,default:''},
+    class_name: {
+        type: String,
+        required: true,
+        unique: true,      // 👈 unique constraint
+        index: true        // 👈 creates index
+    },
+    class_code: {
+        type: String,
+        required: true,
+        unique: true,      // 👈 unique constraint
+        index: true        // 👈 creates index
+    },
     seq:{type:Number,default:1},
     asignSubTeach:[asignSubTeachSchema],
     attendee:{type:mongoose.Schema.ObjectId, ref:'Teacher', required:false},

@@ -9,7 +9,7 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 module.exports = {
 
 
-
+// 69bc6b2b78fc6c31cd299ab3
 
     newQuestionpaper: async (req, res) => {
         const form = new formidable.IncomingForm();
@@ -88,7 +88,8 @@ module.exports = {
     },
     getAllQuestionpapers: async (req, res) => {
         try {
-            const questionpapers = await Questionpaper.find().populate("subject").populate("class").populate("teacher").populate("subject").populate("examination");
+            const questionpapers = await Questionpaper.find().populate("subject")
+            .populate("class").populate("teacher").populate("subject").populate("examination");
             res.status(200).json({ success: true, message: "Success in fetching User Applications.", data: questionpapers })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in fetching user applications, try later." })

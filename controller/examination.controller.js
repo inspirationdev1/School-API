@@ -3,9 +3,9 @@ const Examination = require('../model/examination.model');
 module.exports = {
     newExamination: (req, res)=>{
           const newExamination = new Examination({
-            examCode:req.body.examCode,
+            examination_code:req.body.examination_code,
             examNo:req.body.examNo,
-              name:req.body.name,
+              examination_name:req.body.examination_name,
               marksLimit: req.body.marksLimit,
               school:req.user.id
           })
@@ -13,7 +13,7 @@ module.exports = {
               res.status(200).send({success:true,  message:"Exam assigned Successfully."})
           }).catch(e=>{
              console.log(e)
-             res.status(500).send({success:false, message:"Failure  in exam , try later."})
+             res.status(500).send({success:false, message:e.message})
            })
     
     },
@@ -54,7 +54,7 @@ module.exports = {
         try {
             let id = req.params.id;
             console.log(req.body,id)
-            await Examination.findOneAndUpdate({_id:id},{$set:{name:req.body.name,examCode: req.body.examCode, marksLimit: req.body.marksLimit}});
+            await Examination.findOneAndUpdate({_id:id},{$set:{examination_name:req.body.examination_name,examination_code: req.body.examination_code}});
             res.status(200).json({success:true, message:"Examination Updated."})
         } catch (error) {
             

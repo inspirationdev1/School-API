@@ -24,7 +24,7 @@ module.exports = {
                             res.status(200).json({ success: true, data: savedData, message:"Section is Created Successfully." })
                         }).catch(e => {
                             console.log("ERRORO in Register", e)
-                            res.status(500).json({ success: false, message: "Failed Creation of Section." })
+                            res.status(500).json({ success: false, message: e.message })
                         })
 
     },
