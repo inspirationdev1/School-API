@@ -21,7 +21,7 @@ module.exports = {
 
                 let fileName = null;
                 let fileType = "";
-
+                let  cleanName = "";
                 // ✅ Handle file upload (image OR pdf)
                 if (files.image && files.image[0]) {
 
@@ -31,7 +31,7 @@ module.exports = {
 
                     // 👉 Detect file type
 
-                    const cleanName = originalName.replace(/\.[^/.]+$/, ""); // remove extension
+                     cleanName = originalName.replace(/\.[^/.]+$/, ""); // remove extension
                     const isPdf = file.mimetype === "application/pdf";
                     const result = await cloudinary.uploader.upload(filePath, {
                         folder: "questionpapers",
