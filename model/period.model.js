@@ -6,6 +6,7 @@ const periodSchema = new mongoose.Schema({
   teacher: {   type: mongoose.Schema.Types.ObjectId,  ref: 'Teacher',   required: true, },
   subject: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject',  },
   class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true,},
+  section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', required: true,},
   startTime: { type: Date, required: true,},
   endTime: { type: Date,  required: true,
   },
