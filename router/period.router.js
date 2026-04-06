@@ -8,7 +8,9 @@ router.get('/all',authMiddleware(['SCHOOL','USER']), getPeriods)
 router.get('/teacher/:teacherId',authMiddleware(['SCHOOL','TEACHER','USER']), getTeacherPeriods);
 router.get('/class/:classId',authMiddleware(['SCHOOL','STUDENT','TEACHER','PARENT','USER']), getClassPeriods);
 router.get('/:id',authMiddleware(['SCHOOL','USER']), getPeriodsWithId)
-router.put('/update/:id',authMiddleware(['SCHOOL','USER']),  updatePeriod);
+router.get('/single/:id',authMiddleware(['SCHOOL','USER']), getPeriodsWithId );
+// router.put('/update/:id',authMiddleware(['SCHOOL','USER']),  updatePeriod);
+router.patch('/update/:id',authMiddleware(['SCHOOL','USER']), updatePeriod);
 router.delete('/delete/:id',authMiddleware(['SCHOOL','USER']), deletePeriod);
 
 module.exports = router;

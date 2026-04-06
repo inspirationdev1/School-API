@@ -7,9 +7,11 @@ const periodSchema = new mongoose.Schema({
   subject: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject',  },
   class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true,},
   section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', required: true,},
-  startTime: { type: Date, required: true,},
-  endTime: { type: Date,  required: true,
-  },
+  period_code: { type: String, default:'',},
+  period_name: { type: String, default:'',},
+  starttime: { type: String, required: true,},
+  endtime: { type: String,  required: true,},
+  days:[]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Period', periodSchema);
