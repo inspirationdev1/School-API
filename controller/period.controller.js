@@ -132,37 +132,3 @@ exports.deletePeriod = async (req, res) => {
   }
 };
 
-// exports.getPeriodWithQuery = async (req, res) => {
-
-//   console.log(req.body);
-//   try {
-//     const filterQuery = {};
-//     const schoolId = req.user.schoolId;
-//     filterQuery['school'] = schoolId;
-//     if (req.query.hasOwnProperty('search')) {
-//       filterQuery['name'] = { $regex: req.query.search, $options: 'i' }
-//     }
-
-
-
-//     const filteredPeriods = await Period.find(filterQuery);
-//     res.status(200).json({ success: true, data: filteredPeriods })
-//   } catch (error) {
-//     console.log("Error in fetching Period with query", error);
-//     res.status(500).json({ success: false, message: "Error  in fetching Period  with query." })
-//   }
-
-// };
-
-exports.getPeriodWithQuery = async (req, res) => {
-  console.log(req.body);
-  // try {
-  //   console.log(req.body);
-  //   const schoolId = req.user.schoolId;
-  //   const periods = await Period.find({ school: schoolId }).populate('class').populate('section').populate('subject').populate("teacher").populate("school")
-  //   // res.status(200).json(periods);
-  //   res.status(200).json({ success: true, message: "Success in fetching all  Periods", data: periods })
-  // } catch (error) {
-  //   res.status(500).json({ message: 'Error fetching periods', error });
-  // }
-};

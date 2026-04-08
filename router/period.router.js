@@ -12,13 +12,7 @@ router.get('/single/:id',authMiddleware(['SCHOOL','USER']), getPeriodsWithId );
 // router.put('/update/:id',authMiddleware(['SCHOOL','USER']),  updatePeriod);
 router.patch('/update/:id',authMiddleware(['SCHOOL','USER']), updatePeriod);
 router.delete('/delete/:id',authMiddleware(['SCHOOL','USER']), deletePeriod);
-// router.get('/fetch-with-query', authMiddleware(['SCHOOL','USER']), getPeriodWithQuery);
-router.get("/fetch-with-query",authMiddleware(['SCHOOL','USER']),getPeriodWithQuery);
-// router.get(
-//   '/fetchwithquery',
-//   authMiddleware(['SCHOOL','USER']),
-//   getPeriodWithQuery
-// );
+
 
 
 module.exports = router;
