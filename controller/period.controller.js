@@ -9,6 +9,20 @@ exports.createPeriod = async (req, res) => {
     const newPeriod = new Period({ ...req.body, school: schoolId });
 
     await newPeriod.save();
+
+    const periodSeq = await Period.find(params).sort({ timeseq: 1 }).lean();
+    console.log("periodSeq", periodSeq);
+    let subseq = 0;
+    for (const item of periodSeq) {
+      subseq += 1;
+      const id = item._id;
+      const subjectkey = "subject"+subseq;
+      item.subjectkey = subjectkey;
+      const updatedPeriodSeq = await Period.findOneAndUpdate({ _id: id }, { $set: { ...item } });
+      console.log("updatedPeriodSeq",updatedPeriodSeq);
+      // code
+    }
+    
     res.status(201).json({ message: 'Period assigned successfully', period: newPeriod });
   } catch (error) {
     res.status(500).json({ message: 'Error creating period', error });
@@ -77,9 +91,30 @@ exports.updatePeriod = async (req, res) => {
 
 
     const id = req.params.id;
-    
 
-    updatedPeriod = await Period.findOneAndUpdate({_id:id},{$set:{...req.body}});
+
+    updatedPeriod = await Period.findOneAndUpdate({ _id: id }, { $set: { ...req.body } });
+
+    const classId = req.body.class;
+    const sectionId = req.body.section;
+    let params = {
+      class: classId,
+      section: sectionId
+    }
+
+    const periodSeq = await Period.find(params).sort({ timeseq: 1 }).lean();
+    console.log("periodSeq", periodSeq);
+    let subseq = 0;
+    for (const item of periodSeq) {
+      subseq += 1;
+      const id = item._id;
+      const subjectkey = "subject"+subseq;
+      item.subjectkey = subjectkey;
+      const updatedPeriodSeq = await Period.findOneAndUpdate({ _id: id }, { $set: { ...item } });
+      console.log("updatedPeriodSeq",updatedPeriodSeq);
+      // code
+    }
+
     res.status(200).json({ message: 'Period updated successfully', period: updatedPeriod });
   } catch (error) {
     res.status(500).json({ message: 'Error updating period', error });
@@ -97,22 +132,37 @@ exports.deletePeriod = async (req, res) => {
   }
 };
 
-exports.getPeriodWithQuery= async (req, res) => {
-        try {
-            const filterQuery = {};
-            const schoolId = req.user.schoolId;
-            filterQuery['school'] = schoolId;
-            if (req.query.hasOwnProperty('search')) {
-                filterQuery['name'] = { $regex: req.query.search, $options: 'i' }
-            }
+// exports.getPeriodWithQuery = async (req, res) => {
+
+//   console.log(req.body);
+//   try {
+//     const filterQuery = {};
+//     const schoolId = req.user.schoolId;
+//     filterQuery['school'] = schoolId;
+//     if (req.query.hasOwnProperty('search')) {
+//       filterQuery['name'] = { $regex: req.query.search, $options: 'i' }
+//     }
 
 
 
-            const filteredPeriods = await Period.find(filterQuery);
-            res.status(200).json({ success: true, data: filteredPeriods })
-        } catch (error) {
-            console.log("Error in fetching Period with query", error);
-            res.status(500).json({ success: false, message: "Error  in fetching Period  with query." })
-        }
+//     const filteredPeriods = await Period.find(filterQuery);
+//     res.status(200).json({ success: true, data: filteredPeriods })
+//   } catch (error) {
+//     console.log("Error in fetching Period with query", error);
+//     res.status(500).json({ success: false, message: "Error  in fetching Period  with query." })
+//   }
 
-    };
+// };
+
+exports.getPeriodWithQuery = async (req, res) => {
+  console.log(req.body);
+  // try {
+  //   console.log(req.body);
+  //   const schoolId = req.user.schoolId;
+  //   const periods = await Period.find({ school: schoolId }).populate('class').populate('section').populate('subject').populate("teacher").populate("school")
+  //   // res.status(200).json(periods);
+  //   res.status(200).json({ success: true, message: "Success in fetching all  Periods", data: periods })
+  // } catch (error) {
+  //   res.status(500).json({ message: 'Error fetching periods', error });
+  // }
+};

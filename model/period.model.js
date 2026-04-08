@@ -11,6 +11,8 @@ const periodSchema = new mongoose.Schema({
   period_name: { type: String, default:'',},
   starttime: { type: String, required: true,},
   endtime: { type: String,  required: true,},
+  timeseq: { type: Number,  default: 1,},
+  subjectkey: { type: String,  default: "",},
   days:[]
 }, { timestamps: true });
 

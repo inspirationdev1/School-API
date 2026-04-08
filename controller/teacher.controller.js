@@ -39,6 +39,7 @@ module.exports = {
             if (err) return res.status(400).json({ success: false, message: "Error parsing form data." });
 
             try {
+                const schoolId = req.user.schoolId;
                 const existing = await Teacher.find({ email: fields.email[0] });
                 if (existing.length > 0) return res.status(500).json({ success: false, message: "Email Already Exist!" });
 

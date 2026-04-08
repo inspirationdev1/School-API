@@ -15,6 +15,8 @@ const Paymentdetail = require("../model/paymentdetail.model");
 
 const Attendance = require("../model/attendance.model");
 
+const Period = require("../model/period.model");
+
 
 
 module.exports = {
@@ -1532,5 +1534,58 @@ module.exports = {
             });
         }
     },
+    getSchedulePrint: async (req, res) => {
+        try {
 
+            const schoolId = new mongoose.Types.ObjectId(req.user.schoolId);
+
+
+            const filterQuery = {
+                school: schoolId
+            };
+
+            if (req.query.class) {
+                const classId = new mongoose.Types.ObjectId(req.query.class);
+                filterQuery.class = classId;
+            }
+
+            if (req.query.section) {
+                const sectionId = new mongoose.Types.ObjectId(req.query.section);
+                filterQuery.section = sectionId;
+            }
+
+            if (req.query.teacher) {
+                const teacherId = new mongoose.Types.ObjectId(req.query.teacher);
+                filterQuery.teacher = teacherId;
+            }
+            
+
+            
+            const result = await Period.find(filterQuery).populate('class')
+            .populate('section').populate('subject').populate("teacher").populate("school")
+            .sort({ timeseq: 1 }).lean();
+
+            // console.log("result", result);
+
+
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Payment not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains expense + expenseDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getPaidExpensesPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getPaidExpensesPrint",
+            });
+        }
+    },
 }
