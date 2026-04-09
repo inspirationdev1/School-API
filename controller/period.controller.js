@@ -99,9 +99,9 @@ exports.updatePeriod = async (req, res) => {
 
     updatedPeriod = await Period.findOneAndUpdate({ _id: id }, { $set: { ...req.body } });
 
-  //   const classId = req.body.class;
-  //   const sectionId = req.body.section;
-  //   const subjectId = req.body.subject;
+    const classId = req.body.class;
+    const sectionId = req.body.section;
+    const subjectId = req.body.subject;
     
   //   let paramsDuplicate = {
   //     class: classId,
