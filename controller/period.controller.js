@@ -9,6 +9,10 @@ exports.createPeriod = async (req, res) => {
     const newPeriod = new Period({ ...req.body, school: schoolId });
 
     await newPeriod.save();
+    let params = {
+      class: classId,
+      section: sectionId
+    }
 
     const periodSeq = await Period.find(params).sort({ timeseq: 1 }).lean();
     console.log("periodSeq", periodSeq);
@@ -95,13 +99,26 @@ exports.updatePeriod = async (req, res) => {
 
     updatedPeriod = await Period.findOneAndUpdate({ _id: id }, { $set: { ...req.body } });
 
-    const classId = req.body.class;
-    const sectionId = req.body.section;
-    let params = {
+  //   const classId = req.body.class;
+  //   const sectionId = req.body.section;
+  //   const subjectId = req.body.subject;
+    
+  //   let paramsDuplicate = {
+  //     class: classId,
+  //     section: sectionId,
+  //     subject: subjectId
+  //   }
+  //   const isDuplicate = await checkDuplicate(paramsDuplicate);
+  //  if (isDuplicate) {
+  //   console.log("checkDuplicate",isDuplicate);
+  //   res.status(500).json({ message: 'Error Duplicatiing period' });
+  //   return;
+  //  }
+
+   let params = {
       class: classId,
       section: sectionId
     }
-
     const periodSeq = await Period.find(params).sort({ timeseq: 1 }).lean();
     console.log("periodSeq", periodSeq);
     let subseq = 0;
@@ -131,4 +148,14 @@ exports.deletePeriod = async (req, res) => {
     res.status(500).json({ message: 'Error deleting period', error });
   }
 };
+
+checkDuplicate = async (params) =>{
+  let isDuplicate = false;
+  const periodDuplicate = await Period.find(params).sort({ timeseq: 1 }).lean();
+  console.log("periodDuplicate", periodDuplicate);
+  
+  console.log("Test-1");
+  isDuplicate=true;
+  return isDuplicate;
+}
 
