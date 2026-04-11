@@ -8,6 +8,8 @@ exports.createPeriod = async (req, res) => {
     const sectionId = req.body.section;
     const subjectId = req.body.subject;
     const teacherId = req.body.teacher;
+    const startminutes = toMinutes(req.body.starttime);
+    const endminutes = toMinutes(req.body.endtime);
 
     let paramsDuplicate = {
       school: schoolId,
@@ -15,14 +17,33 @@ exports.createPeriod = async (req, res) => {
       section: sectionId,
       subject: subjectId,
       teacher: teacherId,
-      id: ""
+      id: "",
+      starttime: req.body.starttime || "00:00",
+      endtime: req.body.endtime || "00:00",
+      startminutes: startminutes || 1,
+      endminutes: endminutes || 1,
+      days: req.body.days || [],
     }
-    const isDuplicate = await checkDuplicate(paramsDuplicate);
+
+    let isDuplicate = false;
+    let duplicateMessage = "";
+    const objCheckDuplicate = await checkDuplicate(paramsDuplicate);
+
+    if (objCheckDuplicate) {
+      isDuplicate = objCheckDuplicate?.isDuplicate;
+      duplicateMessage = objCheckDuplicate?.message;
+    }
+
+
     if (isDuplicate) {
       console.log("isDuplicate", isDuplicate);
-      res.status(500).json({ success: false, message: 'Error Duplicatiing period' });
+      res.status(500).json({ success: false, message: duplicateMessage });
       return;
     }
+
+    req.body.startminutes = startminutes || 1;
+    req.body.endminutes = endminutes || 1;
+    req.body.timeseq = startminutes || 1;
 
 
     const newPeriod = new Period({ ...req.body, school: schoolId });
@@ -119,6 +140,8 @@ exports.updatePeriod = async (req, res) => {
     const sectionId = req.body.section;
     const subjectId = req.body.subject;
     const teacherId = req.body.teacher;
+    const startminutes = toMinutes(req.body.starttime);
+    const endminutes = toMinutes(req.body.endtime);
 
     let paramsDuplicate = {
       school: schoolId,
@@ -127,14 +150,32 @@ exports.updatePeriod = async (req, res) => {
       subject: subjectId,
       teacher: teacherId,
       id: id,
-      starttime: req.body.starttime || "00:00"
+      starttime: req.body.starttime || "00:00",
+      endtime: req.body.endtime || "00:00",
+      startminutes: startminutes || 1,
+      endminutes: endminutes || 1,
+      days: req.body.days || [],
     }
-    const isDuplicate = await checkDuplicate(paramsDuplicate);
+
+    let isDuplicate = false;
+    let duplicateMessage = "";
+    const objCheckDuplicate = await checkDuplicate(paramsDuplicate);
+
+    if (objCheckDuplicate) {
+      isDuplicate = objCheckDuplicate?.isDuplicate;
+      duplicateMessage = objCheckDuplicate?.message;
+    }
+
+
     if (isDuplicate) {
       console.log("isDuplicate", isDuplicate);
-      res.status(500).json({ success: false, message: 'Error Duplicatiing period' });
+      res.status(500).json({ success: false, message: duplicateMessage });
       return;
     }
+
+    req.body.startminutes = startminutes || 1;
+    req.body.endminutes = endminutes || 1;
+    req.body.timeseq = startminutes || 1;
 
     updatedPeriod = await Period.findOneAndUpdate({ _id: id }, { $set: { ...req.body } });
     let params = {
@@ -178,11 +219,14 @@ const toMinutes = (time) => {
 
 checkDuplicate = async (paramsDuplicate) => {
 
+  let objCheckDuplicate = { isDuplicate: false, message: "" };
   let isDuplicate = false;
 
-  let existingId = paramsDuplicate.id;
-  let currenttime = paramsDuplicate.starttime;
 
+  let existingId = paramsDuplicate.id;
+  let currentstarttime = paramsDuplicate.starttime;
+  let currentendtime = paramsDuplicate.endtime;
+  let curretdays = paramsDuplicate.days || [];
 
   try {
     let params = {
@@ -197,48 +241,92 @@ checkDuplicate = async (paramsDuplicate) => {
         item => item._id.toString() !== existingId && item.subject.toString() === subjectId.toString()
       );
       if (isDuplicate) {
-        return isDuplicate;
+        objCheckDuplicate = { isDuplicate: isDuplicate, message: "Class , Section & Subject is duplicating" };
+        return objCheckDuplicate;
       }
 
       for (const item of periodDuplicate) {
         const startminutes = toMinutes(item.starttime);
         const endminutes = toMinutes(item.endtime);
-        const currentminutes = toMinutes(currenttime);
+        const currentstartminutes = toMinutes(currentstarttime) + 1;
+        const currentendminutes = toMinutes(currentendtime);
+
         if (item._id.toString() !== existingId) {
-          if (currentminutes >= startminutes && currentminutes <= endminutes) {
+          const days = item.days || [];
+          console.log("days", days);
+          console.log("curretdays", curretdays);
+          const isAnyPresent = curretdays.some(
+            day => days.includes(day)
+          );
+
+          console.log(isAnyPresent);
+
+          if ((currentstartminutes >= startminutes && currentstartminutes <= endminutes) && isAnyPresent) {
             isDuplicate = true;
-            return isDuplicate;
+            objCheckDuplicate = { isDuplicate: isDuplicate, message: "Start time is duplicating/overlaping" };
+            return objCheckDuplicate;
+            // break;
+          }
+          if (item.starttime == "12:00") {
+            console.log("starttime:" + item.starttime);
+          }
+          if ((currentendminutes >= startminutes + 1 && currentendminutes <= endminutes) && isAnyPresent) {
+            isDuplicate = true;
+            objCheckDuplicate = { isDuplicate: isDuplicate, message: "End time is duplicating/overlaping" };
+            return objCheckDuplicate
             // break;
           }
         }
       }
-
-    //   let paramsTeacher = {
-    //   teacher: paramsDuplicate.teacher
-    // }
-    // const periodTeacherData = await Period.find(paramsTeacher).sort({ timeseq: 1 }).lean();
-    // console.log("periodTeacherData", periodTeacherData);
-    // for (const item of periodTeacherData) {
-    //     const startminutes = toMinutes(item.starttime);
-    //     const endminutes = toMinutes(item.endtime);
-    //     const currentminutes = toMinutes(currenttime);
-    //     if (item._id.toString() !== existingId) {
-    //       if (currentminutes >= startminutes && currentminutes <= endminutes) {
-    //         isDuplicate = true;
-    //         return isDuplicate;
-    //         // break;
-    //       }
-    //     }
-    //   }
-
-
-
-
     }
+
+
+    let paramsTeacher = {
+      teacher: paramsDuplicate.teacher
+    }
+    const periodTeacherData = await Period.find(paramsTeacher).sort({ timeseq: 1 }).lean();
+    console.log("periodTeacherData", periodTeacherData);
+    if (periodTeacherData.length > 0) {
+      for (const item of periodTeacherData) {
+        const startminutes = toMinutes(item.starttime);
+        const endminutes = toMinutes(item.endtime);
+        const currentstartminutes = toMinutes(currentstarttime);
+        const currentendminutes = toMinutes(currentendtime);
+        if (item.starttime == "11:00" || item.starttime == "12:00") {
+          console.log("starttime:" + item.starttime);
+        }
+        if (item._id.toString() !== existingId) {
+          const days = item.days || [];
+          console.log("days", days);
+          console.log("curretdays", curretdays);
+          const isAnyPresent = curretdays.some(
+            day => days.includes(day)
+          );
+
+          console.log(isAnyPresent);
+          if ((currentstartminutes + 1 >= startminutes && currentstartminutes + 1 <= endminutes) && isAnyPresent) {
+            isDuplicate = true;
+            objCheckDuplicate = { isDuplicate: isDuplicate, message: "Teacher , Starttime is duplicating/overlaping" };
+            return objCheckDuplicate;
+            // break;
+          }
+
+          if ((currentendminutes >= startminutes + 1 && currentendminutes <= endminutes) && isAnyPresent) {
+            isDuplicate = true;
+            objCheckDuplicate = { isDuplicate: isDuplicate, message: "Teacher , Endtime is duplicating/overlaping" };
+            return objCheckDuplicate;
+            // break;
+          }
+        }
+      }
+    }
+
+
   } catch (error) {
     console.log("Duplicate function", error.message);
   }
-  return isDuplicate;
+  objCheckDuplicate = { isDuplicate: isDuplicate, message: "" };
+  return objCheckDuplicate;
 }
 
 
