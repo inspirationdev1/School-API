@@ -1223,7 +1223,7 @@ module.exports = {
 
 
 
-            
+
             const result = await Receiptdetail.aggregate([
 
                 {
@@ -1389,7 +1389,7 @@ module.exports = {
 
 
 
-            
+
             const result = await Paymentdetail.aggregate([
 
                 {
@@ -1558,12 +1558,12 @@ module.exports = {
                 const teacherId = new mongoose.Types.ObjectId(req.query.teacher);
                 filterQuery.teacher = teacherId;
             }
-            
 
-            
+
+
             const result = await Period.find(filterQuery).populate('class')
-            .populate('section').populate('subject').populate("teacher").populate("school")
-            .sort({ timeseq: 1 }).lean();
+                .populate('section').populate('subject').populate("teacher").populate("school")
+                .sort({ timeseq: 1 }).lean();
 
             // console.log("result", result);
 
@@ -1585,6 +1585,202 @@ module.exports = {
             res.status(500).json({
                 success: false,
                 message: "Error fetching getPaidExpensesPrint",
+            });
+        }
+    },
+    getIncomeExpenseDashboard: async (req, res) => {
+        try {
+            // const id = req.params.id;
+
+
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+            if (req.query.hasOwnProperty('year')) {
+                const year = req.query.year;
+                filterQuery['year'] = year;
+            }
+            filterQuery['status'] = "valid";
+
+            let resultIncome = await Salesinvoicedetail.find(filterQuery)
+                .populate("feestructure")
+                .populate("student")
+                .populate("siId")
+                .populate("school")
+                .lean();
+            console.log(resultIncome);
+
+            const resultExpense = await Expensedetail.find(filterQuery)
+                .populate("employee")
+                .populate("expensetype")
+                .populate("expenseId")
+                .populate("school")
+                .lean();
+            console.log(resultExpense);
+
+
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+            const monthlyData = {};
+
+            // 👉 Process Income
+            resultIncome.forEach((item) => {
+                const date = new Date(item?.siId?.invoiceDate);
+                const monthIndex = date.getMonth();
+                const month = monthNames[monthIndex];
+
+                if (!monthlyData[month]) {
+                    monthlyData[month] = { month, income: 0, expense: 0 };
+                }
+
+                monthlyData[month].income += Number(item.netAmount || 0);
+            });
+
+            // 👉 Process Expense
+            resultExpense.forEach((item) => {
+                const date = new Date(item?.expenseId?.expenseDate);
+                const monthIndex = date.getMonth();
+                const month = monthNames[monthIndex];
+
+                if (!monthlyData[month]) {
+                    monthlyData[month] = { month, income: 0, expense: 0 };
+                }
+
+                monthlyData[month].expense += Number(item.expenseAmount || 0);
+            });
+
+            // 👉 Convert object → array
+            const result = Object.values(monthlyData);
+
+            // 👉 Optional: Sort by month order
+            result.sort((a, b) => {
+                return monthNames.indexOf(a.month) - monthNames.indexOf(b.month);
+            });
+
+            // return res.json(apiData);
+
+
+            // const result = res.json(apiData);
+            // console.log(result);
+
+
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Marksheet not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains marksheet + marksheetDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getIncomeExpenseDashboard", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getIncomeExpenseDashboard",
+            });
+        }
+    },
+    getAttendanceDashboard: async (req, res) => {
+        try {
+            const schoolId = new mongoose.Types.ObjectId(req.user.schoolId);
+
+            const filterQuery = {
+                school: schoolId
+            };
+
+            let dateFilter = {};
+
+            if (req.query.fromDate) {
+                let fromDate = new Date(req.query.fromDate + "T00:00:00.000Z");
+                dateFilter.$gte = fromDate;
+            }
+
+            if (req.query.toDate) {
+                let toDate = new Date(req.query.toDate + "T23:59:59.999Z");
+                dateFilter.$lte = toDate;
+            }
+
+            // ✅ Attach to query
+            if (Object.keys(dateFilter).length > 0) {
+                filterQuery.date = dateFilter;
+            }
+
+            const attendanceData = await Attendance.find(filterQuery)
+                .populate("school")
+                .populate("class")
+                .populate("section")
+                .populate("student")
+                .lean();
+            console.log(attendanceData);
+
+
+            // const totalPresent = attendanceData.filter(
+            //     (item) => item.status === "Present"
+            // ).length;
+
+            // const totalAbsent = attendanceData.filter(
+            //     (item) => item.status === "Absent"
+            // ).length;
+
+            // console.log(totalPresent); // 2
+            // console.log(totalAbsent);  // 1
+
+            const result = attendanceData.reduce(
+                (acc, item) => {
+                    if (item.status === "Present") acc.present++;
+                    else if (item.status === "Absent") acc.absent++;
+                    return acc;
+                },
+                { present: 0, absent: 0 }
+            );
+
+            console.log(result);
+
+            const totalStudents = attendanceData?.length || 0;
+
+
+            const chartData = {
+                labels: ["Total Students", "Present", "Absent"],
+                datasets: [
+                    {
+                        label: "Students",
+                        data: [
+                            totalStudents,
+                            result.present,
+                            result.absent
+                        ],
+                        backgroundColor: ["#1976d2", "#2e7d32", "#d32f2f"],
+                    },
+                ],
+            };
+
+
+
+            if (!chartData) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Data not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: chartData, // contains Data
+            });
+
+        } catch (e) {
+            console.error("Error in getAttendanceDashboard", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getAttendanceDashboard",
             });
         }
     },
