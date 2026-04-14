@@ -13,6 +13,7 @@ const subjectRouter = require("./router/subject.router")
 const sectionRouter = require("./router/section.router")
 const departmentRouter = require("./router/department.router")
 const feestypeRouter = require("./router/feestype.router")
+const appsettingRouter = require("./router/appsetting.router");
 const examtypeRouter = require("./router/examtype.router")
 const menuRouter = require("./router/menu.router")
 const roleRouter = require("./router/role.router")
@@ -81,6 +82,8 @@ app.use("/api/subject", subjectRouter)
 app.use("/api/section", sectionRouter)
 app.use("/api/department", departmentRouter)
 app.use("/api/feestype", feestypeRouter)
+app.use("/api/appsetting", appsettingRouter);
+
 app.use("/api/examtype", examtypeRouter)
 
 app.use("/api/menu", menuRouter)
