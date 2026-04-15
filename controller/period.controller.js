@@ -231,7 +231,8 @@ checkDuplicate = async (paramsDuplicate) => {
   try {
     let params = {
       class: paramsDuplicate.class,
-      section: paramsDuplicate.section
+      section: paramsDuplicate.section,
+      subject: paramsDuplicate.subject
     }
     const periodDuplicate = await Period.find(params).sort({ timeseq: 1 }).lean();
     console.log("periodDuplicate", periodDuplicate);
