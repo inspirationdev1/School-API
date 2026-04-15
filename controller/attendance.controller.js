@@ -5,7 +5,14 @@ module.exports = {
   markAttendance: async (req, res) => {
     const { studentId, date, status, classId } = req.body;
     const schoolId = req.user.schoolId;
-    const selectedDate = moment(date, "YYYY-MM-DD").startOf('day');
+    
+// const [h, m] = time.split(":").map(Number);
+    const [dd, mm,yyyy] = date.split("-").map(Number);
+
+    let  attendance_date= new Date(Date.UTC(yyyy, mm - 1, dd));
+    const selectedDate = moment(attendance_date, "YYYY-MM-DD").startOf('day');
+    
+
     try {
       const updatedAttendance = await Attendance.findOneAndUpdate(
         {
@@ -21,9 +28,10 @@ module.exports = {
       );
       console.log(updatedAttendance);
       if (updatedAttendance) {
+
         res.status(201).json(updatedAttendance);
       } else {
-        const attendance = new Attendance({ student: studentId, date, status, class: classId, school: schoolId });
+        const attendance = new Attendance({ student: studentId, date:attendance_date, status, class: classId, school: schoolId });
         await attendance.save();
         res.status(201).json(attendance);
       }
@@ -51,7 +59,14 @@ module.exports = {
 
 
       const { classId, selectedDate } = req.query;
-      const dateMoment = moment(selectedDate, "YYYY-MM-DD").startOf('day');
+
+      const [dd, mm,yyyy] = selectedDate.split("-").map(Number);
+
+    let  attendance_date= new Date(Date.UTC(yyyy, mm - 1, dd));
+    // selectedDate = moment(attendance_date, "YYYY-MM-DD").startOf('day');
+   
+
+      const dateMoment = moment(attendance_date, "YYYY-MM-DD").startOf('day');
       // Query the database for any attendance record for today
       const attendanceForToday = await Attendance.find({
         class: classId,

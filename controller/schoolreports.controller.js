@@ -16,7 +16,10 @@ const Paymentdetail = require("../model/paymentdetail.model");
 const Attendance = require("../model/attendance.model");
 
 const Period = require("../model/period.model");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
 
+dayjs.extend(utc);
 
 
 module.exports = {
@@ -777,26 +780,36 @@ module.exports = {
 
             if (req.query.student) {
                 const studentId = new mongoose.Types.ObjectId(req.query.student);
-                filterQuery.student = studentId;
+                // filterQuery.student = studentId;
             }
 
+            // let dateFilter = {};
+            // if (req.query.fromDate) {
+            //     let fromDate = new Date(req.query.fromDate + "T00:00:00.000Z");
+            //     const startDate = dayjs(req.query.fromDate).startOf("day").toDate();
+            //     dateFilter.$gte = startDate;
+            // }
+
+            // if (req.query.toDate) {
+            //     let toDate = new Date(req.query.toDate + "T23:59:59.999Z");
+            //     const endDate = dayjs(req.query.toDate).endOf("day").toDate();
+            //     dateFilter.$lte = endDate;
+            // }
             let dateFilter = {};
 
-            if (req.query.fromDate) {
-                let fromDate = new Date(req.query.fromDate + "T00:00:00.000Z");
-                dateFilter.$gte = fromDate;
-            }
+if (req.query.fromDate) {
+  dateFilter.$gte = dayjs.utc(req.query.fromDate).startOf("day").toDate();
+}
 
-            if (req.query.toDate) {
-                let toDate = new Date(req.query.toDate + "T23:59:59.999Z");
-                dateFilter.$lte = toDate;
-            }
+if (req.query.toDate) {
+  dateFilter.$lte = dayjs.utc(req.query.toDate).endOf("day").toDate();
+}
 
-            // ✅ Attach to query
-            if (Object.keys(dateFilter).length > 0) {
-                filterQuery.date = dateFilter;
-            }
-
+if (Object.keys(dateFilter).length > 0) {
+  filterQuery.date = dateFilter;
+}
+console.log("FROM:", dateFilter.$gte.toISOString());
+console.log("TO:", dateFilter.$lte.toISOString());
             const result = await Attendance.find(filterQuery)
                 .populate("school")
                 .populate("class")
