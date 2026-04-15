@@ -3,7 +3,7 @@ const Attendance = require('../model/attendance.model');
 const moment = require('moment')
 module.exports = {
   markAttendance: async (req, res) => {
-    const { studentId, date, status, classId } = req.body;
+    const { studentId, date, status, classId,sectionId } = req.body;
     const schoolId = req.user.schoolId;
     
 // const [h, m] = time.split(":").map(Number);
@@ -18,6 +18,7 @@ module.exports = {
         {
           student: studentId,
           class: classId,
+          section: sectionId,
           date: {
           $gte: selectedDate.toDate(), // Check if attendance date is greater than or equal to today's date
           $lt: moment(selectedDate).endOf('day').toDate(), // Less than the end of today
@@ -31,7 +32,7 @@ module.exports = {
 
         res.status(201).json(updatedAttendance);
       } else {
-        const attendance = new Attendance({ student: studentId, date:attendance_date, status, class: classId, school: schoolId });
+        const attendance = new Attendance({ student: studentId, date:attendance_date, status, class: classId,section: sectionId, school: schoolId });
         await attendance.save();
         res.status(201).json(attendance);
       }
@@ -58,7 +59,7 @@ module.exports = {
       const today = moment().startOf('day'); // Get the start of today (00:00:00)
 
 
-      const { classId, selectedDate } = req.query;
+      const { classId,sectionId, selectedDate } = req.query;
 
       const [dd, mm,yyyy] = selectedDate.split("-").map(Number);
 
@@ -70,6 +71,7 @@ module.exports = {
       // Query the database for any attendance record for today
       const attendanceForToday = await Attendance.find({
         class: classId,
+        section:sectionId,
         date: {
           $gte: dateMoment.toDate(), // Check if attendance date is greater than or equal to today's date
           $lt: moment(dateMoment).endOf('day').toDate(), // Less than the end of today
@@ -94,7 +96,12 @@ module.exports = {
       const today = moment().startOf('day'); // Get the start of today (00:00:00)
 
       const { classId, selectedDate } = req.query;
-      const dateMoment = moment(selectedDate, "YYYY-MM-DD").startOf('day');
+      // const dateMoment = moment(selectedDate, "YYYY-MM-DD").startOf('day');
+
+    const [dd, mm,yyyy] = selectedDate.split("-").map(Number);
+    let  attendance_date= new Date(Date.UTC(yyyy, mm - 1, dd));
+    const dateMoment = moment(attendance_date, "YYYY-MM-DD").startOf('day');
+
 
       // Query the database for any attendance record for today
       const attendanceForToday = await Attendance.find({

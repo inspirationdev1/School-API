@@ -777,11 +777,21 @@ module.exports = {
             const filterQuery = {
                 school: schoolId
             };
-
             if (req.query.student) {
                 const studentId = new mongoose.Types.ObjectId(req.query.student);
-                // filterQuery.student = studentId;
+                filterQuery.student = studentId;
             }
+
+            if (req.query.class) {
+                const classId = new mongoose.Types.ObjectId(req.query.class);
+                filterQuery.class = classId;
+            }
+
+            if (req.query.section) {
+                const sectionId = new mongoose.Types.ObjectId(req.query.section);
+                filterQuery.section = sectionId;
+            }
+
 
             // let dateFilter = {};
             // if (req.query.fromDate) {
