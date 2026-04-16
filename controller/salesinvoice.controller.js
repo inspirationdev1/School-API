@@ -2,8 +2,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Salesinvoice = require("../model/salesinvoice.model");
 const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
-const Exam = require("../model/examination.model");
-const Period = require("../model/period.model");
+
 const ReceiptdetailModel = require("../model/receiptdetail.model");
 module.exports = {
 
@@ -144,25 +143,27 @@ module.exports = {
         try {
             const schoolId = req.user.schoolId;
             let id = req.params.id;
-            const subExamCount = (await Exam.find({ salesinvoice: id, school: schoolId })).length;
-            const subPeriodCount = (await Period.find({ salesinvoice: id, school: schoolId })).length;
-            if ((subExamCount === 0) && (subPeriodCount === 0)) {
-                await Salesinvoice.findOneAndUpdate(
-                    { _id: id },
-                    { $set: { status: "cancel" } },
-                    { new: true } // optional: returns updated document
-                );
-                await Salesinvoicedetail.updateMany(
-                                    { siId: id },
-                                    { $set: { status: "cancel" } },
-                                    { new: true } // optional: returns updated document
-                                );
-                // await Salesinvoice.findOneAndDelete({ _id: id, school: schoolId });
-                const SalesinvoiceAfterDelete = await Salesinvoice.findOne({ _id: id });
-                res.status(200).json({ success: true, message: "Salesinvoice Deleted.", data: SalesinvoiceAfterDelete })
-            } else {
-                res.status(500).json({ success: false, message: "This class is already in use." })
+
+
+            const receiptDetails = await ReceiptdetailModel.find({siId:id,status:"valid"}).lean();
+            if (receiptDetails.length>0){
+                res.status(500).json({ success: false, message: "Cannot Delete Invoice, Receipt is against this invoice" })
+                return;
             }
+
+            await Salesinvoice.findOneAndUpdate(
+                { _id: id },
+                { $set: { status: "cancel" } },
+                { new: true } // optional: returns updated document
+            );
+            await Salesinvoicedetail.updateMany(
+                { siId: id },
+                { $set: { status: "cancel" } },
+                { new: true } // optional: returns updated document
+            );
+            // await Salesinvoice.findOneAndDelete({ _id: id, school: schoolId });
+            const SalesinvoiceAfterDelete = await Salesinvoice.findOne({ _id: id });
+            res.status(200).json({ success: true, message: "Salesinvoice Deleted.", data: SalesinvoiceAfterDelete })
 
 
         } catch (error) {
@@ -410,11 +411,11 @@ module.exports = {
                         } else {
                             item.totalPaidAmount = 0;
                         }
-                        item.balanceAmount = item.totalNetAmount-item.totalPaidAmount;
+                        item.balanceAmount = item.totalNetAmount - item.totalPaidAmount;
                     }
-                 result = result.filter(
-                            row => row.balanceAmount > 0
-                        );
+                    result = result.filter(
+                        row => row.balanceAmount > 0
+                    );
                     console.log("result:", result);
 
                 }

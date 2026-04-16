@@ -45,23 +45,7 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
-                // const newStudent = new Student({
-                //     email: fields.email[0],
-                //     name: fields.name[0],
-                //     student_class: fields.student_class[0],
-                //     guardian: fields.guardian[0],
-                //     guardian_phone: fields.guardian_phone[0],
-                //     age: fields.age[0],
-                //     dOBDate: fields.dOBDate[0],
-                //     joinDate: fields.joinDate[0],
-                //     year: fields.year[0],
-                //     gender: fields.gender[0],
-                //     parent: fields.parent[0],
-                //     section: fields.section[0],
-                //     student_image: photoUrl,
-                //     password: hashPassword,
-                //     school: req.user.id,
-                // });
+                
                 const newSchool = new School({
                     school_name: fields.school_name[0],
                     email: fields.email[0],
@@ -80,7 +64,7 @@ module.exports = {
 
             } catch (e) {
                 console.log("Error in Register:", e);
-                res.status(500).json({ success: false, message: "Failed Registration." });
+                res.status(500).json({ success: false, message: "Failed Registration." + e.message });
             }
         });
     },
@@ -200,7 +184,7 @@ module.exports = {
                 res.status(200).json({ message: "School updated successfully", data: school });
             } catch (e) {
                 console.log(e);
-                res.status(500).json({ message: "Error updating school details." });
+                res.status(500).json({ message: "Error updating school details." + e.message });
             }
         });
     },

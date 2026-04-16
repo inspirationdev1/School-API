@@ -1,8 +1,18 @@
 const mongoose = require("mongoose");
 
 const schoolSchema = new mongoose.Schema({
-    school_name:{type:String, required:true},
-    email:{ type: String,  required:true },
+    school_name: {
+    type: String,
+    required: true,
+    unique: true, // ✅ makes it unique
+    trim: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true, // ✅ makes it unique
+    trim: true
+  },
     owner_name:{type:String, required:true},
     address:{type:String, required:true},
     city:{type:String, required:true},
