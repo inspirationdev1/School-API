@@ -12,7 +12,15 @@ const classRouter = require("./router/class.router")
 const subjectRouter = require("./router/subject.router")
 const sectionRouter = require("./router/section.router")
 const departmentRouter = require("./router/department.router")
-const feestypeRouter = require("./router/feestype.router")
+const feestypeRouter = require("./router/feestype.router");
+const accountlevelRouter = require("./router/accountlevel.router");
+const accountledgerRouter = require("./router/accountledger.router");
+const bonafidecertificateRouter = require("./router/bonafidecertificate.router");
+const transfercertificateRouter = require("./router/transfercertificate.router");
+
+
+
+
 const appsettingRouter = require("./router/appsetting.router");
 const examtypeRouter = require("./router/examtype.router")
 const menuRouter = require("./router/menu.router")
@@ -81,7 +89,12 @@ app.use("/api/class", classRouter)
 app.use("/api/subject", subjectRouter)
 app.use("/api/section", sectionRouter)
 app.use("/api/department", departmentRouter)
-app.use("/api/feestype", feestypeRouter)
+app.use("/api/feestype", feestypeRouter);
+app.use("/api/accountlevel", accountlevelRouter);
+app.use("/api/accountledger", accountledgerRouter);
+app.use("/api/bonafidecertificate", bonafidecertificateRouter);
+app.use("/api/transfercertificate", transfercertificateRouter);
+
 app.use("/api/appsetting", appsettingRouter);
 
 app.use("/api/examtype", examtypeRouter)
