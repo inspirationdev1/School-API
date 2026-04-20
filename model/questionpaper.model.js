@@ -6,6 +6,7 @@ const questionpaperSchema = new mongoose.Schema({
     description:{type:String, default:''},
     date:{type:Date, default: new Date()},
     class:{type:mongoose.Schema.ObjectId, ref:"Class"},
+    section:{type:mongoose.Schema.ObjectId, ref:"Section"},
     teacher:{type:mongoose.Schema.ObjectId, ref:"Teacher"},
     subject:{type:mongoose.Schema.ObjectId, ref:"Subject"},
     examination:{type:mongoose.Schema.ObjectId, ref:"Examination"},

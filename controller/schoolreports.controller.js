@@ -7,6 +7,8 @@ const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
 const Expense = require("../model/expense.model");
 const Expensedetail = require("../model/expensedetail.model");
 
+const Questionpaper = require("../model/questionpaper.model");
+
 const Receipt = require("../model/receipt.model");
 const Receiptdetail = require("../model/receiptdetail.model");
 
@@ -807,19 +809,19 @@ module.exports = {
             // }
             let dateFilter = {};
 
-if (req.query.fromDate) {
-  dateFilter.$gte = dayjs.utc(req.query.fromDate).startOf("day").toDate();
-}
+            if (req.query.fromDate) {
+                dateFilter.$gte = dayjs.utc(req.query.fromDate).startOf("day").toDate();
+            }
 
-if (req.query.toDate) {
-  dateFilter.$lte = dayjs.utc(req.query.toDate).endOf("day").toDate();
-}
+            if (req.query.toDate) {
+                dateFilter.$lte = dayjs.utc(req.query.toDate).endOf("day").toDate();
+            }
 
-if (Object.keys(dateFilter).length > 0) {
-  filterQuery.date = dateFilter;
-}
-console.log("FROM:", dateFilter.$gte.toISOString());
-console.log("TO:", dateFilter.$lte.toISOString());
+            if (Object.keys(dateFilter).length > 0) {
+                filterQuery.date = dateFilter;
+            }
+            console.log("FROM:", dateFilter.$gte.toISOString());
+            console.log("TO:", dateFilter.$lte.toISOString());
             const result = await Attendance.find(filterQuery)
                 .populate("school")
                 .populate("class")
@@ -1804,6 +1806,97 @@ console.log("TO:", dateFilter.$lte.toISOString());
             res.status(500).json({
                 success: false,
                 message: "Error fetching getAttendanceDashboard",
+            });
+        }
+    },
+    getExamQuestionpaperPrint: async (req, res) => {
+        try {
+
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+
+
+
+            if (req.query.class) {
+                const classId = new mongoose.Types.ObjectId(req.query.class);
+                filterQuery.class = classId;
+            }
+
+            if (req.query.section) {
+                const sectionId = new mongoose.Types.ObjectId(req.query.section);
+                filterQuery.section = sectionId;
+            }
+
+            if (req.query.teacher) {
+                const teacherId = new mongoose.Types.ObjectId(req.query.teacher);
+                filterQuery.section = teacherId;
+            }
+
+
+
+            if (req.query.subject) {
+                const subjectId = new mongoose.Types.ObjectId(req.query.subject);
+                filterQuery.subject = subjectId;
+            }
+
+            if (req.query.examination) {
+                const examinationId = new mongoose.Types.ObjectId(req.query.examination);
+                filterQuery.examination = examinationId;
+            }
+
+            let dateFilter = {};
+
+            if (req.query.fromDate) {
+                let fromDate = new Date(req.query.fromDate);
+                fromDate.setHours(0, 0, 0, 0);
+                dateFilter.$gte = fromDate;
+            }
+
+            if (req.query.toDate) {
+                let toDate = new Date(req.query.toDate);
+                toDate.setHours(23, 59, 59, 999);
+                dateFilter.$lte = toDate;
+            }
+
+            if (Object.keys(dateFilter).length > 0) {
+                filterQuery.date = dateFilter;
+            }
+
+            const result = await Questionpaper.find(filterQuery)
+                .populate("school")
+                .populate("class")
+                .populate("section")
+                .populate("teacher")
+                .populate("subject")
+                .populate("examination")
+                .lean();
+            console.log(result);
+
+
+
+
+
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Exam Questionpaper not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains Exam Questionpaper data
+            });
+
+        } catch (e) {
+            console.error("Error in getExamQuestionpaperPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getExamQuestionpaperPrint",
             });
         }
     },

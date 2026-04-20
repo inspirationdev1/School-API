@@ -18,7 +18,7 @@ const accountledgerRouter = require("./router/accountledger.router");
 const bonafidecertificateRouter = require("./router/bonafidecertificate.router");
 const transfercertificateRouter = require("./router/transfercertificate.router");
 
-
+const attendeeRouter = require("./router/attendee.router");
 
 
 const appsettingRouter = require("./router/appsetting.router");
@@ -94,6 +94,8 @@ app.use("/api/accountlevel", accountlevelRouter);
 app.use("/api/accountledger", accountledgerRouter);
 app.use("/api/bonafidecertificate", bonafidecertificateRouter);
 app.use("/api/transfercertificate", transfercertificateRouter);
+app.use("/api/attendee", attendeeRouter);
+
 
 app.use("/api/appsetting", appsettingRouter);
 

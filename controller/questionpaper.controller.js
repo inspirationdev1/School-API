@@ -60,6 +60,7 @@ module.exports = {
                     subject: fields.subject[0],
                     teacher: fields.teacher[0],
                     class: fields.class[0],
+                    section: fields.section[0],
                     examination: fields.examination[0],
                     marksLimit: fields.marksLimit[0],
                     fileName: fileName,
@@ -80,7 +81,8 @@ module.exports = {
     getQuestionpaperByClass: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
-            const questionpaper = await Questionpaper.find({ class: req.params.classId, school: schoolId }).populate("class").populate("subject").populate("teacher").populate("subject").populate("examination");
+            const questionpaper = await Questionpaper.find({ class: req.params.classId, school: schoolId })
+            .populate("class").populate("section").populate("subject").populate("teacher").populate("subject").populate("examination");
             res.status(200).json({ success: true, message: "Success in fetching User Applications.", data: questionpaper })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in fetching user applications, try later." })
@@ -89,7 +91,7 @@ module.exports = {
     getAllQuestionpapers: async (req, res) => {
         try {
             const questionpapers = await Questionpaper.find().populate("subject")
-            .populate("class").populate("teacher").populate("subject").populate("examination");
+            .populate("class").populate("section").populate("teacher").populate("subject").populate("examination");
             res.status(200).json({ success: true, message: "Success in fetching User Applications.", data: questionpapers })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in fetching user applications, try later." })
@@ -98,7 +100,7 @@ module.exports = {
     getQuestionpaperById: async (req, res) => {
         try {
             const questionpaper = await Questionpaper.findOne({ _id: req.params.id })
-                .populate("class").populate("subject").populate("teacher").populate("subject").populate("examination");
+                .populate("class").populate("section").populate("subject").populate("teacher").populate("subject").populate("examination");
             res.status(200).json({ success: true, message: "Success in Fetching Single Questionpaper.", data: questionpaper })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in Fetching Single Questionpaper, try later." })
@@ -181,6 +183,10 @@ module.exports = {
             filterQuery['school'] = schoolId;
             if (req.query.hasOwnProperty('class')) {
                 filterQuery['class'] = req.query.class
+            }
+
+            if (req.query.hasOwnProperty('section')) {
+                filterQuery['section'] = req.query.section
             }
 
             if (req.query.hasOwnProperty('subject')) {
