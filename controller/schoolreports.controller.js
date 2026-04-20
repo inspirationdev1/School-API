@@ -1833,7 +1833,7 @@ module.exports = {
 
             if (req.query.teacher) {
                 const teacherId = new mongoose.Types.ObjectId(req.query.teacher);
-                filterQuery.section = teacherId;
+                filterQuery.teacher = teacherId;
             }
 
 

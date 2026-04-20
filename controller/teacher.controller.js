@@ -20,9 +20,11 @@ module.exports = {
                 filterQuery['name'] = { $regex: req.query.search, $options: 'i' }
             }
 
+            if (req.user?.role==='TEACHER') {
+                filterQuery['_id'] = req.user.id;
+            }
 
-
-            const filteredTeachers = await Teacher.find(filterQuery);
+            const filteredTeachers =   await Teacher.find(filterQuery);
             res.status(200).json({ success: true, data: filteredTeachers })
         } catch (error) {
             console.log("Error in fetching Teacher with query", error);
