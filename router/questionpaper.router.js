@@ -5,8 +5,8 @@ const { newQuestionpaper,  getQuestionpaperByClass, updateQuestionpaperWithId, d
 
 
 router.post("/new", authMiddleware(['SCHOOL','USER']),newQuestionpaper);
-router.get("/all", authMiddleware(['SCHOOL','TEACHER','USER']), getAllQuestionpapers);
-router.get("/fetch-with-query",authMiddleware(['SCHOOL','USER']),getQuestionpaperWithQuery);
+router.get("/all", authMiddleware(['SCHOOL','USER','TEACHER','STUDENT','PARENT']), getAllQuestionpapers);
+router.get("/fetch-with-query",authMiddleware(['SCHOOL','USER','STUDENT','TEACHER','PARENT']),getQuestionpaperWithQuery);
 router.get("/fetch-class/:classId",authMiddleware(['SCHOOL','STUDENT','TEACHER','PARENT','USER']),  getQuestionpaperByClass);
 router.get('/single/:id',authMiddleware(['SCHOOL','USER']), getQuestionpaperById );
 router.patch("/update/:id",authMiddleware(['SCHOOL','USER']), updateQuestionpaperWithId);
