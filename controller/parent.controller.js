@@ -108,7 +108,7 @@ module.exports = {
 
                     res.header("Authorization", token);
                     console.log("Success")
-                    res.status(200).json({ success: true, message: "Success Login", user: { id: resp[0]._id, username: resp[0].username, image_url: resp[0].parent_image, role: 'PARENT' } })
+                    res.status(200).json({ success: true, message: "Success Login", user: { id: resp[0]._id, name: resp[0].name, image_url: resp[0].parent_image, role: 'PARENT' } })
                 } else {
                     res.status(401).json({ success: false, message: "Password doesn't match." })
                 }
