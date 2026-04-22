@@ -41,6 +41,11 @@ module.exports = {
             if (req.query.hasOwnProperty('parent')) {
                 filterQuery['parent'] = req.query.parent
             }
+
+            if (req.user?.role==='STUDENT') {
+                filterQuery['_id'] = req.user.id;
+            }
+
             const filteredStudents = await Student.find(filterQuery).populate("student_class").populate("section").populate("parent");
             res.status(200).json({ success: true, data: filteredStudents })
         } catch (error) {

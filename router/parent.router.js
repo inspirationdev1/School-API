@@ -4,7 +4,7 @@ const router = express.Router();
 const authMiddleware = require("../auth/auth");
 
 router.post('/register', authMiddleware(['SCHOOL','USER']), registerParent);
-router.get("/fetch-with-query", authMiddleware(['SCHOOL','USER']), getParentWithQuery);
+router.get("/fetch-with-query", authMiddleware(['SCHOOL','USER','PARENT']), getParentWithQuery);
 router.post("/login", loginParent);
 router.patch("/update/:id", authMiddleware(['SCHOOL','USER']), updateParentWithId);
 router.get("/fetch-own", authMiddleware(['PARENT']), getParentOwnDetails);
