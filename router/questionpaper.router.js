@@ -8,8 +8,8 @@ router.post("/new", authMiddleware(['SCHOOL','USER']),newQuestionpaper);
 router.get("/all", authMiddleware(['SCHOOL','USER','TEACHER','STUDENT','PARENT']), getAllQuestionpapers);
 router.get("/fetch-with-query",authMiddleware(['SCHOOL','USER','STUDENT','TEACHER','PARENT']),getQuestionpaperWithQuery);
 router.get("/fetch-class/:classId",authMiddleware(['SCHOOL','STUDENT','TEACHER','PARENT','USER']),  getQuestionpaperByClass);
-router.get('/single/:id',authMiddleware(['SCHOOL','USER']), getQuestionpaperById );
-router.patch("/update/:id",authMiddleware(['SCHOOL','USER']), updateQuestionpaperWithId);
+router.get('/single/:id',authMiddleware(['SCHOOL','USER','TEACHER']), getQuestionpaperById );
+router.patch("/update/:id",authMiddleware(['SCHOOL','USER','TEACHER']), updateQuestionpaperWithId);
 router.delete("/delete/:id",authMiddleware(['SCHOOL','USER']),  deleteQuestionpaperById);
 
 module.exports = router;
