@@ -17,12 +17,16 @@ const accountlevelRouter = require("./router/accountlevel.router");
 const accountledgerRouter = require("./router/accountledger.router");
 const bonafidecertificateRouter = require("./router/bonafidecertificate.router");
 const transfercertificateRouter = require("./router/transfercertificate.router");
+const castecertificateRouter = require("./router/castecertificate.router");
 
 const attendeeRouter = require("./router/attendee.router");
 
+const uploadRouter = require("./router/upload.router");
+
 
 const appsettingRouter = require("./router/appsetting.router");
-const examtypeRouter = require("./router/examtype.router")
+const examtypeRouter = require("./router/examtype.router");
+const generalmasterRouter = require("./router/generalmaster.router")
 const menuRouter = require("./router/menu.router")
 const roleRouter = require("./router/role.router")
 const screenRouter = require("./router/screen.router")
@@ -94,12 +98,17 @@ app.use("/api/accountlevel", accountlevelRouter);
 app.use("/api/accountledger", accountledgerRouter);
 app.use("/api/bonafidecertificate", bonafidecertificateRouter);
 app.use("/api/transfercertificate", transfercertificateRouter);
+app.use("/api/castecertificate", castecertificateRouter);
 app.use("/api/attendee", attendeeRouter);
 
 
 app.use("/api/appsetting", appsettingRouter);
+app.use("/api/upload", uploadRouter);
 
-app.use("/api/examtype", examtypeRouter)
+
+app.use("/api/examtype", examtypeRouter);
+app.use("/api/generalmaster", generalmasterRouter);
+
 
 app.use("/api/menu", menuRouter)
 app.use("/api/role", roleRouter)

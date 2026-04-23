@@ -15,6 +15,7 @@ const accountlevelSchema = new mongoose.Schema({
         index: true        // 👈 creates index
     },
     levelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Accountlevel', default: null },
+    level: { type: Number, default: 0 },
     status: { type: String, default: 'valid' },
     createdAt: { type: Date, default: new Date() }
 
