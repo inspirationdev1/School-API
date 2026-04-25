@@ -9,14 +9,10 @@ const sectionSchema = new mongoose.Schema({
     section_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     section_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     asignSubTeach:[asignSubTeachSchema],
     attendee:{type:mongoose.Schema.ObjectId, ref:'Teacher', required:false},
@@ -24,4 +20,7 @@ const sectionSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+sectionSchema.index({ school: 1, section_code: 1 }, { unique: true });
+sectionSchema.index({ school: 1, section_name: 1 }, { unique: true });
 module.exports = mongoose.model("Section", sectionSchema)

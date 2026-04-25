@@ -5,19 +5,18 @@ const accountledgerSchema = new mongoose.Schema({
     accountledger_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     accountledger_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
-     levelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Accountlevel', required: true },
+     groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Accountlevel', required: true },
     status: { type: String, default: 'valid' },
     createdAt: { type: Date, default: new Date() }
 
 })
 
+// ✅ Compound unique index
+accountledgerSchema.index({ school: 1, accountledger_code: 1 }, { unique: true });
+accountledgerSchema.index({ school: 1, accountledger_name: 1 }, { unique: true });
 module.exports = mongoose.model("Accountledger", accountledgerSchema)

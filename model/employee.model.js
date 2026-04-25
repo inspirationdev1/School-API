@@ -8,7 +8,7 @@ const employeeSchema = new mongoose.Schema({
     employee_no:{type:Number, default:0},
     qualification:{type:String, required:true},
     dOBDate: { type: Date, required: true, },
-    age:{type:String, required:true},
+    age:{type:String, default:null},
     year: { type: Number, default: new Date().getFullYear() },
     joinDate: { type: Date, required: true, },
     gender:{type:String, required:true},
@@ -20,4 +20,7 @@ const employeeSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+employeeSchema.index({ school: 1, employee_code: 1 }, { unique: true });
+employeeSchema.index({ school: 1, employee_name: 1 }, { unique: true });
 module.exports = mongoose.model("Employee", employeeSchema)

@@ -5,14 +5,10 @@ const bonafidecertificateSchema = new mongoose.Schema({
     bonafidecertificate_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     bonafidecertificate_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     docDate: { type: Date, required: true, },
     docTime: { type: Date, required: true, },
@@ -27,4 +23,6 @@ const bonafidecertificateSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+bonafidecertificateSchema.index({ school: 1, bonafidecertificate_code: 1 }, { unique: true });
 module.exports = mongoose.model("Bonafidecertificate", bonafidecertificateSchema)

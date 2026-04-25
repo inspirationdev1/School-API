@@ -4,9 +4,7 @@ const receiptSchema = new mongoose.Schema({
     school: { type: mongoose.Schema.ObjectId, ref: 'School' },
     receiptCode: {
         type: String,
-        required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
+        required: true
     },
     receiptNumber: { type: Number, default: 0 },
     receiptDate: { type: Date, required: true, },
@@ -19,4 +17,6 @@ const receiptSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+receiptSchema.index({ school: 1, receiptCode: 1 }, { unique: true });
 module.exports = mongoose.model("Receipt", receiptSchema)

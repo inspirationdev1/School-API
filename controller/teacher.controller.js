@@ -62,6 +62,8 @@ module.exports = {
                 const newTeacher = new Teacher({
                     email: fields.email[0],
                     name: fields.name[0],
+                    teacher_code: fields.teacher_code[0],
+                    seq:fields?.seq[0]||0,
                     qualification: fields.qualification[0],
                     age: fields.age[0],
                     gender: fields.gender[0],

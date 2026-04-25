@@ -5,17 +5,16 @@ const examtypeSchema = new mongoose.Schema({
     examtype_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     examtype_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     createdAt:{type:Date, default:new Date()}
 
 })
 
+// ✅ Compound unique index
+examtypeSchema.index({ school: 1, examtype_code: 1 }, { unique: true });
+examtypeSchema.index({ school: 1, examtype_name: 1 }, { unique: true });
 module.exports = mongoose.model("Examtype", examtypeSchema)

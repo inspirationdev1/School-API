@@ -4,9 +4,7 @@ const marksheetSchema = new mongoose.Schema({
     school: { type: mongoose.Schema.ObjectId, ref: 'School' },
     msCode: {
         type: String,
-        required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
+        required: true
     },
      name: { type: String, default: '' },
     msNumber: { type: Number, default: 0 },
@@ -26,4 +24,6 @@ const marksheetSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+marksheetSchema.index({ school: 1, msCode: 1 }, { unique: true });
 module.exports = mongoose.model("Marksheet", marksheetSchema)

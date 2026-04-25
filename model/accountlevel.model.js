@@ -5,20 +5,20 @@ const accountlevelSchema = new mongoose.Schema({
     accountlevel_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     accountlevel_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
-    levelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Accountlevel', default: null },
+    seq: { type: Number, default: 0 },
+    groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Accountlevel', default: null },
     level: { type: Number, default: 0 },
     status: { type: String, default: 'valid' },
     createdAt: { type: Date, default: new Date() }
 
 })
 
+// ✅ Compound unique index
+accountlevelSchema.index({ school: 1, accountlevel_code: 1 }, { unique: true });
+accountlevelSchema.index({ school: 1, accountlevel_code: 1 }, { unique: true });
 module.exports = mongoose.model("Accountlevel", accountlevelSchema)

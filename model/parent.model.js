@@ -4,9 +4,11 @@ const parentSchema = new mongoose.Schema({
     school:{type:mongoose.Schema.ObjectId, ref:'School'},
     email:{ type: String,  required:true },
     name:{type:String, required:true},
+    parent_code:{type:String, required:true},
+    seq: { type: Number, default: 0 },
     qualification:{type:String, required:true},
     dOBDate: { type: Date, required: true, },
-    age:{type:String, required:true},
+    age:{type:String, default:0},
     joinDate: { type: Date, required: true, },
     year: { type: Number, default: new Date().getFullYear() },
     gender:{type:String, required:true},
@@ -18,4 +20,6 @@ const parentSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+parentSchema.index({ school: 1, parent_code: 1 }, { unique: true });
 module.exports = mongoose.model("Parent", parentSchema)

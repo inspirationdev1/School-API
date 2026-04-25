@@ -8,4 +8,7 @@ const screenSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+screenSchema.index({ school: 1, screen_code: 1 }, { unique: true });
+screenSchema.index({ school: 1, screen_name: 1 }, { unique: true });
 module.exports = mongoose.model("Screen", screenSchema)

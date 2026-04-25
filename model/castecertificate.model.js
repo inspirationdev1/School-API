@@ -5,14 +5,10 @@ const castecertificateSchema = new mongoose.Schema({
     castecertificate_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     castecertificate_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     docDate: { type: Date, required: true, },
     docTime: { type: Date, required: true, },
@@ -28,4 +24,6 @@ const castecertificateSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+castecertificateSchema.index({ school: 1, castecertificate_code: 1 }, { unique: true });
 module.exports = mongoose.model("Castecertificate", castecertificateSchema)

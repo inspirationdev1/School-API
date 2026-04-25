@@ -4,9 +4,7 @@ const expenseSchema = new mongoose.Schema({
     school: { type: mongoose.Schema.ObjectId, ref: 'School' },
     expenseCode: {
         type: String,
-        required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
+        required: true
     },
     expenseNumber: { type: Number, default: 0 },
     expenseDate: { type: Date, required: true, },
@@ -19,4 +17,6 @@ const expenseSchema = new mongoose.Schema({
     createdAt: { type: Date, default: new Date() }
 })
 
+// ✅ Compound unique index
+expenseSchema.index({ school: 1, expenseCode: 1 }, { unique: true });
 module.exports = mongoose.model("Expense", expenseSchema)

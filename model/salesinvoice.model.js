@@ -5,8 +5,6 @@ const salesinvoiceSchema = new mongoose.Schema({
     siCode: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
 
     siNumber: { type: Number, default: 0 },
@@ -23,4 +21,6 @@ const salesinvoiceSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+salesinvoiceSchema.index({ school: 1, siCode: 1 }, { unique: true });
 module.exports = mongoose.model("Salesinvoice", salesinvoiceSchema)

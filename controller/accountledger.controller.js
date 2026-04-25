@@ -7,7 +7,7 @@ module.exports = {
     getAllAccountledgers: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
-            const allAccountledger = await Accountledger.find({ school: schoolId }).populate("levelId");
+            const allAccountledger = await Accountledger.find({ school: schoolId }).populate("groupId");
             res.status(200).json({ success: true, message: "Success in fetching all  Accountledger", data: allAccountledger })
         } catch (error) {
             console.log("Error in getAllAccountledger", error);
@@ -30,7 +30,7 @@ module.exports = {
     getAccountledgerWithId: async (req, res) => {
         const id = req.params.id;
         const schoolId = req.user.schoolId;
-        Accountledger.findOne({ _id: id, school: schoolId }).populate("levelId").then(resp => {
+        Accountledger.findOne({ _id: id, school: schoolId }).populate("groupId").then(resp => {
             if (resp) {
                 res.status(200).json({ success: true, data: resp })
             } else {
@@ -48,7 +48,7 @@ module.exports = {
             let id = req.params.id;
             console.log(req.body)
             await Accountledger.findOneAndUpdate({ _id: id }, { $set: { ...req.body } });
-            const AccountledgerAfterUpdate = await Accountledger.findOne({ _id: id }).populate("levelId");
+            const AccountledgerAfterUpdate = await Accountledger.findOne({ _id: id }).populate("groupId");
             res.status(200).json({ success: true, message: "Accountledger Updated", data: AccountledgerAfterUpdate })
         } catch (error) {
 
@@ -64,7 +64,7 @@ module.exports = {
             let id = req.params.id;
 
             await Accountledger.findOneAndDelete({ _id: id, school: schoolId });
-            const AccountledgerAfterDelete = await Accountledger.findOne({ _id: id }).populate("levelId");
+            const AccountledgerAfterDelete = await Accountledger.findOne({ _id: id }).populate("groupId");
             res.status(200).json({ success: true, message: "Accountledger Deleted.", data: AccountledgerAfterDelete })
 
 

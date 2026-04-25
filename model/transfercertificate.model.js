@@ -4,15 +4,11 @@ const transfercertificateSchema = new mongoose.Schema({
     school: { type: mongoose.Schema.ObjectId, ref: 'School' },
     transfercertificate_name: {
         type: String,
-        required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
+        required: true
     },
     transfercertificate_code: {
         type: String,
-        required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
+        required: true
     },
     docDate: { type: Date, required: true, },
         docTime: { type: Date, required: true, },
@@ -28,5 +24,8 @@ const transfercertificateSchema = new mongoose.Schema({
         createdAt: { type: Date, default: new Date() }
 
 })
+
+// ✅ Compound unique index
+transfercertificateSchema.index({ school: 1, transfercertificate_code: 1 }, { unique: true });
 
 module.exports = mongoose.model("Transfercertificate", transfercertificateSchema)

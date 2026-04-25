@@ -5,15 +5,11 @@ const examinationSchema = new mongoose.Schema({
     examNo:{type:Number,  default:0},
     examination_name: {
         type: String,
-        required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
+        required: true
     },
     examination_code: {
         type: String,
-        required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
+        required: true
     },
     status:{type:String, default:'active'},   
     remarks:{type:String,  default:''},
@@ -21,4 +17,7 @@ const examinationSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+examinationSchema.index({ school: 1, examination_code: 1 }, { unique: true });
+examinationSchema.index({ school: 1, examination_name: 1 }, { unique: true });
 module.exports = mongoose.model("Examination", examinationSchema)

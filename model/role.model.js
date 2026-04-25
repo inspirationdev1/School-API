@@ -9,4 +9,7 @@ const roleSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+roleSchema.index({ school: 1, role_code: 1 }, { unique: true });
+roleSchema.index({ school: 1, role_name: 1 }, { unique: true });
 module.exports = mongoose.model("Role", roleSchema)

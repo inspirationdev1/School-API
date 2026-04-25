@@ -6,8 +6,6 @@ const feestructureSchema = new mongoose.Schema({
     code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     class: { type: mongoose.Schema.ObjectId, ref: "Class", required: true },
     feestype: { type: mongoose.Schema.ObjectId, ref: "Feestype", required: true },
@@ -15,4 +13,7 @@ const feestructureSchema = new mongoose.Schema({
     createdAt:{type:Date, default:new Date()}
 })
 
+// ✅ Compound unique index
+feestructureSchema.index({ school: 1, code: 1 }, { unique: true });
+feestructureSchema.index({ school: 1, name: 1 }, { unique: true });
 module.exports = mongoose.model("Feestructure", feestructureSchema)

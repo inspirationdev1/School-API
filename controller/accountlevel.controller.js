@@ -7,7 +7,7 @@ module.exports = {
     getAllAccountlevels: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
-            const allAccountlevel = await Accountlevel.find({ school: schoolId }).populate("levelId");
+            const allAccountlevel = await Accountlevel.find({ school: schoolId }).populate("groupId");
             res.status(200).json({ success: true, message: "Success in fetching all  Accountlevel", data: allAccountlevel })
         } catch (error) {
             console.log("Error in getAllAccountlevel", error);
@@ -30,7 +30,7 @@ module.exports = {
     getAccountlevelWithId: async (req, res) => {
         const id = req.params.id;
         const schoolId = req.user.schoolId;
-        Accountlevel.findOne({ _id: id, school: schoolId }).populate("levelId").then(resp => {
+        Accountlevel.findOne({ _id: id, school: schoolId }).populate("groupId").then(resp => {
             if (resp) {
                 res.status(200).json({ success: true, data: resp })
             } else {
@@ -48,7 +48,7 @@ module.exports = {
             let id = req.params.id;
             console.log(req.body)
             await Accountlevel.findOneAndUpdate({ _id: id }, { $set: { ...req.body } });
-            const AccountlevelAfterUpdate = await Accountlevel.findOne({ _id: id }).populate("levelId");
+            const AccountlevelAfterUpdate = await Accountlevel.findOne({ _id: id }).populate("groupId");
             res.status(200).json({ success: true, message: "Accountlevel Updated", data: AccountlevelAfterUpdate })
         } catch (error) {
 
@@ -64,7 +64,7 @@ module.exports = {
             let id = req.params.id;
 
             await Accountlevel.findOneAndDelete({ _id: id, school: schoolId });
-            const AccountlevelAfterDelete = await Accountlevel.findOne({ _id: id }).populate("levelId");
+            const AccountlevelAfterDelete = await Accountlevel.findOne({ _id: id }).populate("groupId");
             res.status(200).json({ success: true, message: "Accountlevel Deleted.", data: AccountlevelAfterDelete })
 
 

@@ -5,16 +5,15 @@ const expensetypeSchema = new mongoose.Schema({
     expensetype_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     expensetype_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     createdAt:{type:Date, default:new Date()}
 })
 
+// ✅ Compound unique index
+expensetypeSchema.index({ school: 1, expensetype_code: 1 }, { unique: true });
+expensetypeSchema.index({ school: 1, expensetype_name: 1 }, { unique: true });
 module.exports = mongoose.model("Expensetype", expensetypeSchema)

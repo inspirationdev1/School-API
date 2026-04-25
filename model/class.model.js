@@ -8,14 +8,10 @@ const classSchema = new mongoose.Schema({
     class_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     class_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     seq:{type:Number,default:1},
     asignSubTeach:[asignSubTeachSchema],
@@ -24,4 +20,7 @@ const classSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+classSchema.index({ school: 1, class_code: 1 }, { unique: true });
+classSchema.index({ school: 1, class_name: 1 }, { unique: true });
 module.exports = mongoose.model("Class", classSchema)

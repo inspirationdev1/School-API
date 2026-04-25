@@ -5,14 +5,10 @@ const generalmasterSchema = new mongoose.Schema({
     generalmaster_name: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     generalmaster_code: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
      generalmaster_type: {
         type: String,
@@ -23,4 +19,7 @@ const generalmasterSchema = new mongoose.Schema({
 
 })
 
+// ✅ Compound unique index
+generalmasterSchema.index({ school: 1, generalmaster_code: 1 }, { unique: true });
+generalmasterSchema.index({ school: 1, generalmaster_name: 1 }, { unique: true });
 module.exports = mongoose.model("Generalmaster", generalmasterSchema)

@@ -5,8 +5,6 @@ const paymentSchema = new mongoose.Schema({
     paymentCode: {
         type: String,
         required: true,
-        unique: true,      // 👈 unique constraint
-        index: true        // 👈 creates index
     },
     paymentNumber: { type: Number, default: 0 },
     paymentDate: { type: Date, required: true, },
@@ -18,5 +16,8 @@ const paymentSchema = new mongoose.Schema({
     createdAt: { type: Date, default: new Date() }
 
 })
+
+// ✅ Compound unique index
+paymentSchema.index({ school: 1, paymentCode: 1 }, { unique: true });
 
 module.exports = mongoose.model("Payment", paymentSchema)

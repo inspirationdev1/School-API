@@ -73,6 +73,7 @@ module.exports = {
                 const newUser = new User({
                     email: fields.email[0],
                     name: fields.name[0],
+                    user_code: fields.user_code[0],
                     qualification: fields.qualification[0],
                     age: fields.age[0],
                     gender: fields.gender[0],
