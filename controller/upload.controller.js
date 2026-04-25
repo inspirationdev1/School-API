@@ -37,11 +37,24 @@ module.exports = {
 
 
             for (const item of sheetData) {
-                const acclevelData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.link_code });
-                console.log("acclevelData", acclevelData);
                 item.school = schoolId;
+
+                const checkData = await Accountlevel.find({ school: schoolId, student_code: item?.student_code });
+                console.log("checkData", checkData);
+                if (checkData.length > 0) {
+                    return res.status(500).json({ success: false, message: "Already exist Student Code :" + item?.student_code });
+                    // break;
+                }
+
+
+
+                const acclevelData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.group_code });
+                console.log("acclevelData", acclevelData);
+                
                 if (acclevelData.length > 0) {
                     item.groupId = acclevelData[0]?._id || null;
+                } else {
+                    item.groupId = null;
                 }
             }
 
@@ -132,7 +145,7 @@ module.exports = {
                 jsDate = excelDateToJSDate(excelValue);
                 console.log(jsDate);
                 let joinDate = jsDate;
-                item.joinDate = joinDate;                
+                item.joinDate = joinDate;
             }
 
             // 👉 save to  here
@@ -187,7 +200,7 @@ module.exports = {
                 jsDate = excelDateToJSDate(excelValue);
                 console.log(jsDate);
                 let joinDate = jsDate;
-                item.joinDate = joinDate;                
+                item.joinDate = joinDate;
             }
 
             // 👉 save to  here
@@ -229,7 +242,7 @@ module.exports = {
                     // break;
                 }
                 item.parent = parentData[0]?._id;
-                
+
 
                 const classData = await Class.find({ school: schoolId, class_code: item?.class_code });
                 console.log("classData", classData);
@@ -267,7 +280,7 @@ module.exports = {
                 jsDate = excelDateToJSDate(excelValue);
                 console.log(jsDate);
                 let joinDate = jsDate;
-                item.joinDate = joinDate;                
+                item.joinDate = joinDate;
             }
 
             // 👉 save to  here
@@ -280,7 +293,7 @@ module.exports = {
             res.status(500).json({ success: false, message: error.message })
         }
     },
-     upload_class: async (req, res) => {
+    upload_class: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
             const filePath = req.file.path;
@@ -302,11 +315,11 @@ module.exports = {
                     return res.status(500).json({ success: false, message: "Already exist Class Code :" + item?.class_code });
                     // break;
                 }
-                
-                
+
+
 
                 item.school = schoolId;
-                               
+
             }
 
             // 👉 save to  here
@@ -341,11 +354,11 @@ module.exports = {
                     return res.status(500).json({ success: false, message: "Already exist Section Code :" + item?.section_code });
                     // break;
                 }
-                
-                
+
+
 
                 item.school = schoolId;
-                               
+
             }
 
             // 👉 save to  here
