@@ -10,6 +10,7 @@ const appsettingSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    udise_no: { type: String, default: null },
     discPerAllowed: { type: Number, default: 0 },
     createdAt:{type:Date, default:new Date()}
 

@@ -8,6 +8,8 @@ const Expense = require("../model/expense.model");
 const Expensedetail = require("../model/expensedetail.model");
 
 const Questionpaper = require("../model/questionpaper.model");
+const Accountlevel = require("../model/accountlevel.model");
+const Accountledger = require("../model/accountledger.model");
 
 const Receipt = require("../model/receipt.model");
 const Receiptdetail = require("../model/receiptdetail.model");
@@ -1884,6 +1886,131 @@ module.exports = {
                 return res.status(404).json({
                     success: false,
                     message: "Exam Questionpaper not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains Exam Questionpaper data
+            });
+
+        } catch (e) {
+            console.error("Error in getExamQuestionpaperPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getExamQuestionpaperPrint",
+            });
+        }
+    },
+    getChartOfAccountPrint: async (req, res) => {
+        try {
+
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+            if (req.query.accountlevel) {
+                const accountlevelId = new mongoose.Types.ObjectId(req.query.accountlevel);
+                filterQuery.groupId = accountlevelId;
+            }
+
+            if (req.query.accountledger) {
+                const accountledgerId = new mongoose.Types.ObjectId(req.query.accountledger);
+                filterQuery._id = accountledgerId;
+            }
+
+
+            const accountlevelData = await Accountlevel.find()
+                .populate("groupId")
+                .populate("school")
+                .lean();
+            console.log(accountlevelData);
+
+            const accountledgerData = await Accountledger.find()
+                .populate("groupId")
+                .populate("school")
+                .lean();
+            console.log(accountledgerData);
+
+            let levels = 5;
+            let filterLevel_1 =[];
+            if (!req.query.accountlevel) {
+                filterLevel_1 = accountlevelData.filter(item => item.groupId === null);
+            }else{
+                filterLevel_1 = accountlevelData.filter(item => item?._id.toString() === req.query.accountlevel);
+            }
+            
+            console.log(filterLevel_1);
+            
+            let result = [];            
+            for (const item1 of filterLevel_1) {
+                const school = {
+                    school_name: item1?.school?.school_name
+                    , address: item1?.school?.address, city: item1?.school?.city, country: item1?.school?.country,
+                    school_image: item1?.school?.school_image,
+                };
+                result.push(
+                    {
+                        account_code: item1?.accountlevel_code,
+                        account_name: item1?.accountlevel_name,
+                        group_name: item1?.groupId?.accountlevel_name,
+                        school: school
+                    }
+                );
+
+
+                console.log("groupId:", item1?._id);
+                const groupId = item1?._id;
+                
+
+                const filterLevel_2 = accountlevelData.filter(item2 => (item2?.groupId?._id?.toString() === groupId?.toString()));
+                console.log("filterLevel_2", filterLevel_2);
+                for (const item2 of filterLevel_2) {
+                    console.log("groupId:", item2?._id);
+                    const groupId = item2?._id;
+
+                    result.push(
+                        {
+                            account_code: item2?.accountlevel_code,
+                            account_name: item2?.accountlevel_name,
+                            group_name: item2?.groupId?.accountlevel_name,
+                            school: school
+                        }
+                    );
+                    const filterLevel_3 = accountledgerData.filter(item3 => (item3?.groupId?._id?.toString() === groupId?.toString()));
+                    console.log("filterLevel_3", filterLevel_3);
+                    for (const item3 of filterLevel_3) {
+                        console.log("groupId:", item3?.groupId);
+                        const groupId = item3?.groupId;
+
+                        result.push(
+                            {
+                                account_code: item3?.accountledger_code,
+                                account_name: item3?.accountledger_name,
+                                group_name: item3?.groupId?.accountlevel_name,
+                                school: school
+                            }
+                        );
+                    }
+
+
+
+                    
+
+                }
+
+                item1.account_code = item1?.accountlevel_code;
+                item1.account_name = item1?.accountlevel_name;
+                item1.group_name = item1?.groupId?.accountlevel_name;
+                
+            }
+
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Chart not found",
                 });
             }
 

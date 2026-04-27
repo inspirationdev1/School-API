@@ -75,5 +75,28 @@ module.exports = {
             res.status(500).json({ success: false, message: "Server Error in Deleting Accountledger. Try later" })
         }
 
-    }
+    },
+    getAccountledgerWithQuery: async (req, res) => {
+    
+            try {
+                const filterQuery = {};
+                const schoolId = req.user.schoolId;
+                console.log(schoolId, "schoolId")
+                filterQuery['school'] = schoolId;
+                if (req.query.hasOwnProperty('search')) {
+                    filterQuery['accountledger_name'] = { $regex: req.query.search, $options: 'i' }
+                }
+    
+                if (req.query.hasOwnProperty('groupId')) {
+                    filterQuery['groupId'] = req.query.groupId
+                }
+    
+                const filteredAccountledgers = await Accountledger.find(filterQuery).populate("groupId");
+                res.status(200).json({ success: true, data: filteredAccountledgers })
+            } catch (error) {
+                console.log("Error in fetching Accountledger with query", error);
+                res.status(500).json({ success: false, message: "Error  in fetching Accountledger  with query." })
+            }
+    
+        },
 }

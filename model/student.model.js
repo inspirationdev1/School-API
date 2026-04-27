@@ -16,6 +16,8 @@ const studentSchema = new mongoose.Schema({
     gender: { type: String, required: true },
     guardian: { type: String, default: null },
     guardian_phone: { type: String, required: true },
+    pen_no: { type: String, default: null },
+    adhar_no: { type: String, default: null },
     student_image: { type: String, required: true },
     public_id: { type: String,default: ''},
     image: {

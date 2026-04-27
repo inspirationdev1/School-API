@@ -39,20 +39,20 @@ module.exports = {
             for (const item of sheetData) {
                 item.school = schoolId;
 
-                const checkData = await Accountlevel.find({ school: schoolId, student_code: item?.student_code });
+                const checkData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.accountlevel_code });
                 console.log("checkData", checkData);
                 if (checkData.length > 0) {
-                    return res.status(500).json({ success: false, message: "Already exist Student Code :" + item?.student_code });
+                    return res.status(500).json({ success: false, message: "Already exist accountlevel code :" + item?.accountlevel_code });
                     // break;
                 }
 
 
 
-                const acclevelData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.group_code });
-                console.log("acclevelData", acclevelData);
+                const groupData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.group_code });
+                console.log("groupData", groupData);
                 
-                if (acclevelData.length > 0) {
-                    item.groupId = acclevelData[0]?._id || null;
+                if (groupData.length > 0) {
+                    item.groupId = groupData[0]?._id || null;
                 } else {
                     item.groupId = null;
                 }
@@ -85,19 +85,32 @@ module.exports = {
 
 
             for (const item of sheetData) {
-                const acclevelData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.link_code });
-                console.log("acclevelData", acclevelData);
                 item.school = schoolId;
-                if (acclevelData.length > 0) {
-                    item.groupId = acclevelData[0]?._id || null;
+
+                const checkData = await Accountledger.find({ school: schoolId, accountledger_code: item?.accountledger_code });
+                console.log("checkData", checkData);
+                if (checkData.length > 0) {
+                    return res.status(500).json({ success: false, message: "Already exist accountledger code :" + item?.accountledger_code });
+                    // break;
+                }
+
+
+
+                const groupData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.group_code });
+                console.log("groupData", groupData);
+                
+                if (groupData.length == 0) {
+                    return res.status(500).json({ success: false, message: "Group code does not exist :" + item?.group_code });
+                } else {
+                   item.groupId = groupData[0]?._id ;
                 }
             }
 
             // 👉 save to  here
-            await Accountlevel.insertMany(sheetData);
+            await Accountledger.insertMany(sheetData);
             console.log("Date saved", sheetData);
             fs.unlinkSync(filePath);
-            res.status(200).json({ success: true, data: sheetData, message: "Accountlevel is Uploaded Successfully." })
+            res.status(200).json({ success: true, data: sheetData, message: "Accountledger is Uploaded Successfully." })
         } catch (error) {
             res.status(500).json({ success: false, message: error.message })
         }

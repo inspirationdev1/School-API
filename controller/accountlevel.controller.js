@@ -41,7 +41,6 @@ module.exports = {
             res.status(500).json({ success: false, message: "Error in getting  Accountlevel Data" })
         })
     },
-
     updateAccountlevelWithId: async (req, res) => {
         // Not providing the  schoolId as accountlevel Id will be unique.
         try {
@@ -75,5 +74,30 @@ module.exports = {
             res.status(500).json({ success: false, message: "Server Error in Deleting Accountlevel. Try later" })
         }
 
-    }
+    },
+    getAccountlevelWithQuery: async (req, res) => {
+
+        try {
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = schoolId;
+            if (req.query.hasOwnProperty('search')) {
+                filterQuery['accountlevel_name'] = { $regex: req.query.search, $options: 'i' }
+            }
+
+            if (req.query.hasOwnProperty('groupId')) {
+                filterQuery['groupId'] = req.query.groupId
+            }
+
+
+
+            const filteredAccountlevels = await Accountlevel.find(filterQuery).populate("groupId");
+            res.status(200).json({ success: true, data: filteredAccountlevels })
+        } catch (error) {
+            console.log("Error in fetching Accountlevel with query", error);
+            res.status(500).json({ success: false, message: "Error  in fetching Accountlevel  with query." })
+        }
+
+    },
 }
