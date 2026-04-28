@@ -5,7 +5,7 @@ const asignSubTeachSchema =new mongoose.Schema({
 })
 
 const sectionSchema = new mongoose.Schema({
-    school:{type:mongoose.Schema.ObjectId, ref:'School'},
+    school:{type:mongoose.Schema.ObjectId, ref:'School',require:true},
     section_name: {
         type: String,
         required: true,

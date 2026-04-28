@@ -50,7 +50,7 @@ module.exports = {
 
                 const groupData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.group_code });
                 console.log("groupData", groupData);
-                
+
                 if (groupData.length > 0) {
                     item.groupId = groupData[0]?._id || null;
                 } else {
@@ -98,11 +98,11 @@ module.exports = {
 
                 const groupData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.group_code });
                 console.log("groupData", groupData);
-                
+
                 if (groupData.length == 0) {
                     return res.status(500).json({ success: false, message: "Group code does not exist :" + item?.group_code });
                 } else {
-                   item.groupId = groupData[0]?._id ;
+                    item.groupId = groupData[0]?._id;
                 }
             }
 
@@ -199,7 +199,7 @@ module.exports = {
                 const hashPassword = bcrypt.hashSync(password, salt);
                 item.password = hashPassword;
                 if (item.gender === 'male') {
-                    item.parent_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg"
+                    item.parent_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
                 } else {
                     item.parent_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
                 }
@@ -242,43 +242,63 @@ module.exports = {
 
 
             for (const item of sheetData) {
+                item.school = schoolId;
                 const checkData = await Student.find({ school: schoolId, student_code: item?.student_code });
                 console.log("checkData", checkData);
                 if (checkData.length > 0) {
                     return res.status(500).json({ success: false, message: "Already exist Student Code :" + item?.student_code });
                     // break;
                 }
-                const parentData = await Parent.find({ school: schoolId, parent_code: item?.parent_code });
-                console.log("parentData", parentData);
-                if (parentData.length == 0) {
-                    return res.status(500).json({ success: false, message: "Parent Code does not exist :" + item?.parent_code });
-                    // break;
-                }
-                item.parent = parentData[0]?._id;
 
 
-                const classData = await Class.find({ school: schoolId, class_code: item?.class_code });
-                console.log("classData", classData);
-                if (classData.length == 0) {
-                    return res.status(500).json({ success: false, message: "Class Code does not exist :" + item?.class_code });
-                    // break;
-                }
-                item.student_class = classData[0]?._id;
+                const student_name = item?.name;
+                const str = student_name;
+                const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+                console.log(cleaned);
+                const email = cleaned + "@mms.com";
+                item.email = email;
+                // const classData = await Class.find({ school: schoolId, class_code: item?.class_code });
+                // console.log("classData", classData);
+                // if (classData.length == 0) {
+                //     return res.status(500).json({ success: false, message: "Class Code does not exist :" + item?.class_code });
+                // }
+                const classId = await CreateClass(item);
+                item.student_class = classId;
 
-                const sectionData = await Section.find({ school: schoolId, section_code: item?.section_code });
-                console.log("sectionData", sectionData);
-                if (sectionData.length == 0) {
-                    return res.status(500).json({ success: false, message: "Section Code does not exist :" + item?.section_code });
-                    // break;
-                }
-                item.section = sectionData[0]?._id;
 
-                item.school = schoolId;
+                // const sectionData = await Section.find({ school: schoolId, section_code: item?.section_code });
+                // console.log("sectionData", sectionData);
+                // if (sectionData.length == 0) {
+                //     return res.status(500).json({ success: false, message: "Section Code does not exist :" + item?.section_code });
+
+                // }
+                // item.section = sectionData[0]?._id;
+                const sectionId = await CreateSection(item);
+                item.section = sectionId;
+
+                // const parentData = await Parent.find({ school: schoolId, parent_code: item?.parent_code });
+                // console.log("parentData", parentData);
+                // if (parentData.length == 0) {
+                //     return res.status(500).json({ success: false, message: "Parent Code does not exist :" + item?.parent_code });
+                // }
+
+
+                const parentId = await CreateParent(item);
+                item.parent = parentId;
+
+
+
                 const password = "12345678";
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(password, salt);
                 item.password = hashPassword;
-                if (item.gender === 'male') {
+
+                let gender = "male";
+
+                if (item?.gender === "B") {
+                    gender = "male";
+                }
+                if (gender === 'female') {
                     item.student_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg"
                 } else {
                     item.student_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
@@ -294,6 +314,8 @@ module.exports = {
                 console.log(jsDate);
                 let joinDate = jsDate;
                 item.joinDate = joinDate;
+                const phoneno = item?.guardian_phone||"1234567890";
+                item.guardian_phone=phoneno
             }
 
             // 👉 save to  here
@@ -392,4 +414,114 @@ function excelDateToJSDate(serial) {
 
     const result = new Date(excelEpoch.getTime() + days * 86400000);
     return result;
+}
+
+async function CreateParent(studentData) {
+    let parentId = "";
+    try {
+
+        const parent_name = studentData?.parent_name||studentData?.name;
+
+        const existing = await Parent.find({ name: parent_name, school: studentData.school }).lean();
+        if (existing.length > 0) {
+            parentId = existing[0]?._id;
+            return parentId;
+        }
+
+
+        const salt = bcrypt.genSaltSync(10);
+        const hashPassword = bcrypt.hashSync("12345678", salt);
+        const str = parent_name;
+        const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+        console.log(cleaned);
+        const email = cleaned + "@mms.com";
+        const gender = "male";
+        const dOBDate = new Date("01/01/1990");
+        const joinDate = new Date("01/01/2000");
+        const year = joinDate.getFullYear();
+        const photoUrl = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
+        const phoneno = studentData?.guardian_phone || "1234567890";
+        const newParent = new Parent({
+            email: email,
+            name: parent_name,
+            parent_code: parent_name,
+            qualification: "",
+            age: "",
+            gender: gender,
+            dOBDate: dOBDate,
+            joinDate: joinDate,
+            year: year,
+            parent_image: photoUrl,
+            password: hashPassword,
+            school: studentData.school,
+            phoneno: phoneno
+        })
+
+        const savedData = await newParent.save();
+        parentId = savedData?._id;
+        console.log("parentId", parentId);
+        return parentId;
+
+    } catch (e) {
+        console.log("Error in Parent Register:", e);
+        return parentId;
+    }
+}
+
+async function CreateSection(studentData) {
+    let sectionId = "";
+    try {
+
+        const section_name = studentData.section_name
+        const existing = await Section.find({ section_name: section_name, school: studentData.school }).lean();
+        if (existing.length > 0) {
+            sectionId = existing[0]?._id;
+            return sectionId;
+        }
+
+
+
+        const newSection = new Section({
+            section_code: section_name,
+            section_name: section_name,
+            school: studentData.school,
+        })
+
+        const savedData = await newSection.save();
+        sectionId = savedData?._id;
+        console.log("sectionId", sectionId);
+        return sectionId;
+
+    } catch (e) {
+        console.log("Error in Section Register:", e);
+        return sectionId;
+    }
+}
+
+async function CreateClass(studentData) {
+    let classId = "";
+    try {
+
+        const class_name = studentData.class_name
+        const existing = await Class.find({ class_name: class_name, school: studentData.school }).lean();
+        if (existing.length > 0) {
+            classId = existing[0]?._id;
+            return classId;
+        }
+
+        const newClass = new Class({
+            class_code: class_name,
+            class_name: class_name,
+            school: studentData.school,
+        })
+
+        const savedData = await newClass.save();
+        classId = savedData?._id;
+        console.log("classId", classId);
+        return classId;
+
+    } catch (e) {
+        console.log("Error in Class Register:", e);
+        return classId;
+    }
 }

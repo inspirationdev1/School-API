@@ -4,7 +4,7 @@ const asignSubTeachSchema =new mongoose.Schema({
     teacher:{type:mongoose.Schema.ObjectId, ref:"Teacher"}
 })
 const classSchema = new mongoose.Schema({
-    school:{type:mongoose.Schema.ObjectId, ref:'School'},
+    school:{type:mongoose.Schema.ObjectId, ref:'School',required:true},
     class_name: {
         type: String,
         required: true,

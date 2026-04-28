@@ -20,5 +20,5 @@ const accountlevelSchema = new mongoose.Schema({
 
 // ✅ Compound unique index
 accountlevelSchema.index({ school: 1, accountlevel_code: 1 }, { unique: true });
-accountlevelSchema.index({ school: 1, accountlevel_code: 1 }, { unique: true });
+accountlevelSchema.index({ school: 1, accountlevel_name: 1 }, { unique: true });
 module.exports = mongoose.model("Accountlevel", accountlevelSchema)

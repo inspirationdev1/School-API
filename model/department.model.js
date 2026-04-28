@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const departmentSchema = new mongoose.Schema({
-    school:{type:mongoose.Schema.ObjectId, ref:'School'},
+    school:{type:mongoose.Schema.ObjectId, ref:'School',required:true},
     department_name: {
         type: String,
         required: true

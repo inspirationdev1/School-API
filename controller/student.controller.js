@@ -96,6 +96,8 @@ module.exports = {
                     student_class: fields.student_class[0],
                     guardian: fields.guardian[0],
                     guardian_phone: fields.guardian_phone[0],
+                    pen_no: fields.pen_no[0],
+                    aadhar_no: fields.aadhar_no[0],
                     age: fields.age[0],
                     dOBDate: fields.dOBDate[0],
                     joinDate: fields.joinDate[0],
