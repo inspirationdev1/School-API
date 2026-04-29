@@ -4,7 +4,7 @@ const authMiddleware = require('../auth/auth');
 const { getMarksheetPrint, getProgressCardPrint, getIncomeExpensePrint, getExpensePrint, getIncomePrint, getAttendancePrint, getPendingFeesPrint
     , getPaidFeesPrint, getPendingExpensesPrint, getPaidExpensesPrint, getSchedulePrint
     , getIncomeExpenseDashboard, getAttendanceDashboard, getExamQuestionpaperPrint
-    , getChartOfAccountPrint } = require("../controller/schoolreports.controller");
+    , getChartOfAccountPrint,getStudentListPrint,getParentListPrint } = require("../controller/schoolreports.controller");
 
 
 router.get("/fetch-print/:id", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getMarksheetPrint);
@@ -26,6 +26,9 @@ router.get("/attendance-dashboard", authMiddleware(['SCHOOL', 'USER']), getAtten
 router.get("/questionpaper-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getExamQuestionpaperPrint);
 
 router.get("/char-of-account-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getChartOfAccountPrint);
+
+router.get("/student-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudentListPrint);
+router.get("/parent-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getParentListPrint);
 
 
 module.exports = router;

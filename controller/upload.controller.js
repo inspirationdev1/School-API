@@ -251,7 +251,7 @@ module.exports = {
                 }
 
 
-                const student_name = item?.name;
+                const student_name = item?.name.trim();
                 const str = student_name;
                 const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
                 console.log(cleaned);
@@ -293,16 +293,18 @@ module.exports = {
                 const hashPassword = bcrypt.hashSync(password, salt);
                 item.password = hashPassword;
 
-                let gender = "male";
+                let gender = item?.gender.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();;
 
-                if (item?.gender === "B") {
+                if (gender === "b") {
                     gender = "male";
-                }
-                if (gender === 'female') {
-                    item.student_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg"
-                } else {
+                    item.gender = gender;
+                    item.student_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
+                }else{
+                    gender="female";
+                    item.gender = gender;
                     item.student_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
                 }
+                
                 let excelValue = item?.dOBDate;
                 let jsDate = excelDateToJSDate(excelValue);
                 console.log(jsDate);

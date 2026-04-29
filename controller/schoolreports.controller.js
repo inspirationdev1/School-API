@@ -19,6 +19,9 @@ const Paymentdetail = require("../model/paymentdetail.model");
 
 const Attendance = require("../model/attendance.model");
 
+const Student = require("../model/student.model");
+const Parent = require("../model/parent.model");
+
 const Period = require("../model/period.model");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
@@ -2017,6 +2020,105 @@ module.exports = {
             res.status(200).json({
                 success: true,
                 data: result, // contains Exam Questionpaper data
+            });
+
+        } catch (e) {
+            console.error("Error in getExamQuestionpaperPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getExamQuestionpaperPrint",
+            });
+        }
+    },
+    getStudentListPrint: async (req, res) => {
+        try {
+
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+            if (req.query.class) {
+                const classId = new mongoose.Types.ObjectId(req.query.class);
+                filterQuery.student_class = classId;
+            }
+
+            if (req.query.section) {
+                const sectionId = new mongoose.Types.ObjectId(req.query.section);
+                filterQuery.section = sectionId;
+            }
+
+
+            const result = await Student.find(filterQuery)
+                .populate("student_class")
+                .populate("section")
+                .populate("parent")
+                .populate("school")
+                .lean();
+            // console.log(result);
+
+            
+
+            
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Data not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains Student data
+            });
+
+        } catch (e) {
+            console.error("Error in getExamQuestionpaperPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getExamQuestionpaperPrint",
+            });
+        }
+    },
+    getParentListPrint: async (req, res) => {
+        try {
+
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+            // if (req.query.accountlevel) {
+            //     const accountlevelId = new mongoose.Types.ObjectId(req.query.accountlevel);
+            //     filterQuery.groupId = accountlevelId;
+            // }
+
+            // if (req.query.accountledger) {
+            //     const accountledgerId = new mongoose.Types.ObjectId(req.query.accountledger);
+            //     filterQuery._id = accountledgerId;
+            // }
+
+
+            const result = await Parent.find()
+                .populate("school")
+                .lean();
+            console.log(result);
+
+            
+
+            
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Data not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains Student data
             });
 
         } catch (e) {

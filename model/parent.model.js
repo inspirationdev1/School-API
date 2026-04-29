@@ -15,6 +15,7 @@ const parentSchema = new mongoose.Schema({
     parent_image:{type:String,  required:true},
     public_id:{type:String,  default:''},
     phoneno:{type:String, default:null},
+    aadhar_no: { type: String, default: null },
     createdAt:{type:Date, default: new Date()},
 
     password:{type:String, required:true}

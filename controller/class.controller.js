@@ -4,6 +4,8 @@ const Class = require("../model/class.model");
 const Student = require("../model/student.model");
 const Exam = require("../model/examination.model");
 const Period = require("../model/period.model");
+const Attendee = require("../model/attendee.model");
+
 module.exports = {
 
     getAllClass: async(req,res)=>{
@@ -158,9 +160,14 @@ module.exports = {
     },
     getAttendeeTeacher: async(req, res)=>{
         try {
-            let attendeeClass =await Class.find({attendee:req.user.id});
+        //     let attendeeClass =await Class.find({attendee:req.user.id});
+        //    attendeeClass = attendeeClass.map(x=>{
+        //   return {class_code:x.class_code,class_name: x.class_name,classId: x._id}
+        // })
+        let attendeeClass =await Attendee.find({teacher:req.user.id}).populate("class");
+            
            attendeeClass = attendeeClass.map(x=>{
-          return {class_code:x.class_code,class_name: x.class_name,classId: x._id}
+          return {class_code:x?.class?.class_code,class_name: x?.class?.class_name,classId: x?.class?._id}
         })
             res.status(200).json(attendeeClass)
             
