@@ -27,8 +27,8 @@ router.get("/questionpaper-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 
 
 router.get("/char-of-account-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getChartOfAccountPrint);
 
-router.get("/student-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudentListPrint);
-router.get("/parent-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getParentListPrint);
+router.post("/student-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudentListPrint);
+router.post("/parent-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getParentListPrint);
 
 
 module.exports = router;
