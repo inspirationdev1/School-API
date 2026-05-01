@@ -79,6 +79,7 @@ module.exports = {
                     joinDate: fields.joinDate[0],
                     year: fields.year[0],
                     parent_image: photoUrl,
+                    phoneno: fields.phoneno[0],
                     password: hashPassword,
                     school: req.user.id
 

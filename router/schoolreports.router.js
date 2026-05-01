@@ -4,7 +4,9 @@ const authMiddleware = require('../auth/auth');
 const { getMarksheetPrint, getProgressCardPrint, getIncomeExpensePrint, getExpensePrint, getIncomePrint, getAttendancePrint, getPendingFeesPrint
     , getPaidFeesPrint, getPendingExpensesPrint, getPaidExpensesPrint, getSchedulePrint
     , getIncomeExpenseDashboard, getAttendanceDashboard, getExamQuestionpaperPrint
-    , getChartOfAccountPrint,getStudentListPrint,getParentListPrint } = require("../controller/schoolreports.controller");
+    , getChartOfAccountPrint,getStudentListPrint,getParentListPrint
+    ,getTeacherListPrint,getEmployeeListPrint
+ } = require("../controller/schoolreports.controller");
 
 
 router.get("/fetch-print/:id", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getMarksheetPrint);
@@ -25,10 +27,13 @@ router.get("/attendance-dashboard", authMiddleware(['SCHOOL', 'USER']), getAtten
 
 router.get("/questionpaper-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getExamQuestionpaperPrint);
 
-router.get("/char-of-account-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getChartOfAccountPrint);
+router.get("/chart-of-account-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getChartOfAccountPrint);
 
 router.post("/student-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudentListPrint);
 router.post("/parent-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getParentListPrint);
+
+router.post("/teacher-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getTeacherListPrint);
+router.post("/employee-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getEmployeeListPrint);
 
 
 module.exports = router;

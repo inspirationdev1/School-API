@@ -14,6 +14,7 @@ const employeeSchema = new mongoose.Schema({
     gender:{type:String, required:true},
     employee_image:{type:String,  required:true},
     public_id:{type:String,  default:''},
+    phoneno:{type:String, default:null},
     createdAt:{type:Date, default: new Date()},
 
     password:{type:String, required:true}
