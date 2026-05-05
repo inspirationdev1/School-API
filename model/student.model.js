@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
 
 const studentSchema = new mongoose.Schema({
-    school: { type: mongoose.Schema.ObjectId, ref: 'School',required:true },
+    school: { type: mongoose.Schema.ObjectId, ref: 'School', required: true },
     email: { type: String, required: true },
     name: { type: String, required: true },
-    student_code: { type: String, required:true },
+    student_code: { type: String, required: true },
     seq: { type: Number, default: 0 },
     student_class: { type: mongoose.Schema.ObjectId, ref: "Class" },
     section: { type: mongoose.Schema.ObjectId, ref: "Section", required: true },
@@ -20,11 +20,88 @@ const studentSchema = new mongoose.Schema({
     aadhar_no: { type: String, default: null },
     admission_no: { type: String, default: null },
     student_image: { type: String, required: true },
-    public_id: { type: String,default: ''},
+    public_id: { type: String, default: '' },
     image: {
         url: String,
         public_id: String,
     },
+    bloodgroup: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Generalmaster",
+        required: false,
+        default: null,
+    },
+    vaccinated: { type: String, default: null },
+    nationality: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Generalmaster",
+        required: false,
+        default: null,
+    },
+    religion: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Generalmaster",
+        required: false,
+        default: null,
+    },
+    mothertongue: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Generalmaster",
+        required: false,
+        default: null,
+    },
+    identificationmark1: { type: String, default: null },
+    identificationmark2: { type: String, default: null },
+    permanentaddress: { type: String, default: null },
+    permanentpincode: { type: String, default: null },
+    presentaddress: { type: String, default: null },
+    presentpincode: { type: String, default: null },
+    modeoftransport: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Generalmaster",
+        required: false,
+        default: null,
+    },
+    nameofpreviousschool: { type: String, default: null },
+    classpassed: { type: String, default: null },
+    yearofpassing: { type: String, default: null },
+    reasonforleaving: { type: String, default: null },
+    studentexpelledleaving: { type: String, default: null },
+    mediumofinstructions: { type: String, default: null },
+    firstlanguage: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Generalmaster",
+        required: false,
+        default: null,
+    },
+
+    siblingstudingname: { type: String, default: null },
+    siblingapplyingname: { type: String, default: null },
+    siblingstudingclass: { type: String, default: null },
+    siblingapplyingclass: { type: String, default: null },
+    previouslyapplied: { type: String, default: "no" },
+
+    admissionintoclass: { type: String, default: null },
+    dateofaddmission: { type: Date, default: new Date() },
+
+    admissionattachment: [
+  {
+    attachmenttype: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Generalmaster",
+      default: null,
+    },
+    attachmenttypename: {
+      type: String,
+      default: null,
+    },
+    attachmentstatus: {
+      type: String,
+      default: null,
+    },
+  },
+],
+
     createdAt: { type: Date, default: new Date() },
     password: { type: String, required: true }
 

@@ -21,5 +21,5 @@ const generalmasterSchema = new mongoose.Schema({
 
 // ✅ Compound unique index
 generalmasterSchema.index({ school: 1, generalmaster_code: 1 }, { unique: true });
-generalmasterSchema.index({ school: 1, generalmaster_name: 1 }, { unique: true });
+generalmasterSchema.index({ school: 1, generalmaster_name: 1,generalmaster_type:1 }, { unique: true });
 module.exports = mongoose.model("Generalmaster", generalmasterSchema)

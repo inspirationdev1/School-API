@@ -15,6 +15,28 @@ module.exports = {
         }
 
     },
+    getGeneralmasterWithQuery: async (req, res) => {
+            try {
+                const filterQuery = {};
+                const schoolId = req.user.schoolId;
+                filterQuery['school'] = schoolId;
+                if (req.query.hasOwnProperty('search')) {
+                    filterQuery['name'] = { $regex: req.query.search, $options: 'i' }
+                }
+    
+                if (req.query.hasOwnProperty('generalmaster_type')) {
+                    filterQuery['generalmaster_type'] = req.query.generalmaster_type
+                }
+    
+    
+                const filteredGeneralmasters = await Generalmaster.find(filterQuery);
+                res.status(200).json({ success: true, data: filteredGeneralmasters })
+            } catch (error) {
+                console.log("Error in fetching Parent with query", error);
+                res.status(500).json({ success: false, message: "Error  in fetching Bloodgroup  with query." })
+            }
+    
+        },
     createGeneralmaster: (req, res) => {
                         const schoolId = req.user.schoolId;
                         const newGeneralmaster = new Generalmaster({...req.body, school:schoolId});

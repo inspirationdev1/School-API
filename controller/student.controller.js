@@ -13,7 +13,7 @@ const Attendance = require('../model/attendance.model');
 const cloudinary = require("../config/cloudinary");
 
 
-const { getNumberseqWithScreenId,updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
 
 
 module.exports = {
@@ -42,11 +42,13 @@ module.exports = {
                 filterQuery['parent'] = req.query.parent
             }
 
-            if (req.user?.role==='STUDENT') {
+            if (req.user?.role === 'STUDENT') {
                 filterQuery['_id'] = req.user.id;
             }
 
-            const filteredStudents = await Student.find(filterQuery).populate("student_class").populate("section").populate("parent");
+            const filteredStudents = await Student.find(filterQuery).populate("student_class").populate("section").populate("parent")
+                .populate("bloodgroup").populate("nationality")
+                .populate("religion").populate("mothertongue").populate("modeoftransport").populate("firstlanguage");
             res.status(200).json({ success: true, data: filteredStudents })
         } catch (error) {
             console.log("Error in fetching Student with query", error);
@@ -85,11 +87,11 @@ module.exports = {
                 console.log("numberseqData.data", numberseqData);
                 let seq = 1;
                 let code = "";
-                if (numberseqData){
-                    seq = numberseqData.seq||1;
-                    code= numberseqData.code||"";
+                if (numberseqData) {
+                    seq = numberseqData.seq || 1;
+                    code = numberseqData.code || "";
                 }
-                
+
                 const newStudent = new Student({
                     email: fields.email[0],
                     name: fields.name[0],
@@ -103,21 +105,52 @@ module.exports = {
                     dOBDate: fields.dOBDate[0],
                     joinDate: fields.joinDate[0],
                     year: fields.year[0],
+                    vaccinated: fields.vaccinated[0],
                     gender: fields.gender[0],
                     parent: fields.parent[0],
                     section: fields.section[0],
+                    bloodgroup: fields.bloodgroup[0],
+                    nationality: fields.nationality[0],
+
+                    religion: fields.religion[0],
+                    mothertongue: fields.mothertongue[0],
+                    modeoftransport: fields.modeoftransport[0],
+                    firstlanguage: fields.firstlanguage[0],
+                    identificationmark1: fields.identificationmark1[0],
+                    identificationmark2: fields.identificationmark2[0],
+                    permanentaddress: fields.permanentaddress[0],
+                    permanentpincode: fields.permanentpincode[0],
+                    presentaddress: fields.presentaddress[0],
+                    presentpincode: fields.presentpincode[0],
+                    nameofpreviousschool: fields.nameofpreviousschool[0],
+                    classpassed: fields.classpassed[0],
+                    yearofpassing: fields.yearofpassing[0],
+                    reasonforleaving: fields.reasonforleaving[0],
+                    studentexpelledleaving: fields.studentexpelledleaving[0],
+                    mediumofinstructions: fields.mediumofinstructions[0],
+
+                    siblingstudingname: fields.siblingstudingname[0],
+                    siblingapplyingname: fields.siblingapplyingname[0],
+                    siblingstudingclass: fields.siblingstudingclass[0],
+                    siblingapplyingclass: fields.siblingapplyingclass[0],
+                    previouslyapplied: fields.previouslyapplied[0],
+                    admissionintoclass: fields.admissionintoclass[0],
+                    dateofaddmission: fields.dateofaddmission[0],
+
+
+
                     student_image: photoUrl,
                     password: hashPassword,
-                    student_code: code||"",
-                    seq: seq||1,
+                    student_code: code || "",
+                    seq: seq || 1,
                     school: req.user.id,
                 });
 
                 const savedData = await newStudent.save();
 
                 const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_name: "Student", schoolId: req.user.schoolId });
-                console.log("numberseqAfterUpdate",numberseqAfterUpdate);
-                
+                console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+
                 res.status(200).json({ success: true, data: savedData, message: "Student is Registered Successfully." });
 
             } catch (e) {
@@ -164,32 +197,38 @@ module.exports = {
     getStudentWithId: async (req, res) => {
         const id = req.params.id;
         const schoolId = req.user.schoolId;
-        Student.findOne({ _id: id, school: schoolId }).populate("student_class").populate("section").populate("parent").then(resp => {
-            if (resp) {
-                console.log("data", resp)
-                res.status(200).json({ success: true, data: resp })
-            } else {
-                res.status(500).json({ success: false, message: "Student data not Available" })
-            }
-        }).catch(e => {
-            console.log("Error in getStudentWithId", e)
-            res.status(500).json({ success: false, message: "Error in getting  Student Data" })
-        })
+        Student.findOne({ _id: id, school: schoolId }).populate("student_class").populate("section").populate("parent")
+            .populate("bloodgroup").populate("nationality")
+            .populate("religion").populate("mothertongue").populate("modeoftransport").populate("firstlanguage")
+            .then(resp => {
+                if (resp) {
+                    console.log("data", resp)
+                    res.status(200).json({ success: true, data: resp })
+                } else {
+                    res.status(500).json({ success: false, message: "Student data not Available" })
+                }
+            }).catch(e => {
+                console.log("Error in getStudentWithId", e)
+                res.status(500).json({ success: false, message: "Error in getting  Student Data" })
+            })
     },
     getOwnDetails: async (req, res) => {
         const id = req.user.id;
         const schoolId = req.user.schoolId;
-        Student.findOne({ _id: id, school: schoolId }).populate("student_class").populate("section").populate("parent").then(resp => {
-            if (resp) {
-                console.log("data", resp)
-                res.status(200).json({ success: true, data: resp })
-            } else {
-                res.status(500).json({ success: false, message: "Student data not Available" })
-            }
-        }).catch(e => {
-            console.log("Error in getStudentWithId", e)
-            res.status(500).json({ success: false, message: "Error in getting  Student Data" })
-        })
+        Student.findOne({ _id: id, school: schoolId }).populate("student_class").populate("section").populate("parent")
+            .populate("bloodgroup").populate("nationality")
+            .populate("religion").populate("mothertongue").populate("modeoftransport").populate("firstlanguage")
+            .then(resp => {
+                if (resp) {
+                    console.log("data", resp)
+                    res.status(200).json({ success: true, data: resp })
+                } else {
+                    res.status(500).json({ success: false, message: "Student data not Available" })
+                }
+            }).catch(e => {
+                console.log("Error in getStudentWithId", e)
+                res.status(500).json({ success: false, message: "Error in getting  Student Data" })
+            })
     },
 
 
@@ -227,7 +266,7 @@ module.exports = {
 
                 await student.save();
 
-                
+
                 res.status(200).json({ success: true, message: "Student updated successfully", data: student });
             } catch (e) {
                 console.log("Error updating student:", e);
