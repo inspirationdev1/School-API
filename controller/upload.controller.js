@@ -227,6 +227,7 @@ module.exports = {
         }
     },
     upload_student: async (req, res) => {
+        let student_code = "";
         try {
             const schoolId = req.user.schoolId;
             const filePath = req.file.path;
@@ -234,100 +235,123 @@ module.exports = {
             // read excel file
             const workbook = XLSX.readFile(filePath);
             const sheetName = workbook.SheetNames[0];
-            const sheetData = XLSX.utils.sheet_to_json(
-                workbook.Sheets[sheetName]
-            );
+            const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
             console.log(sheetData); // array of objects
 
-
             for (const item of sheetData) {
                 item.school = schoolId;
-                const checkData = await Student.find({ school: schoolId, student_code: item?.student_code });
+                const checkData = await Student.find({
+                    school: schoolId,
+                    student_code: item?.student_code,
+                });
                 console.log("checkData", checkData);
                 if (checkData.length > 0) {
-                    return res.status(500).json({ success: false, message: "Already exist Student Code :" + item?.student_code });
+                    return res.status(500).json({
+                        success: false,
+                        message: "Already exist Student Code :" + item?.student_code,
+                    });
                     // break;
                 }
-
-
+                student_code = item?.student_code;
                 const student_name = item?.name.trim();
                 const str = student_name;
                 const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
                 console.log(cleaned);
                 const email = cleaned + "@mms.com";
                 item.email = email;
-                // const classData = await Class.find({ school: schoolId, class_code: item?.class_code });
-                // console.log("classData", classData);
-                // if (classData.length == 0) {
-                //     return res.status(500).json({ success: false, message: "Class Code does not exist :" + item?.class_code });
-                // }
+
                 const classId = await CreateClass(item);
                 item.student_class = classId;
 
-
-                // const sectionData = await Section.find({ school: schoolId, section_code: item?.section_code });
-                // console.log("sectionData", sectionData);
-                // if (sectionData.length == 0) {
-                //     return res.status(500).json({ success: false, message: "Section Code does not exist :" + item?.section_code });
-
-                // }
-                // item.section = sectionData[0]?._id;
                 const sectionId = await CreateSection(item);
                 item.section = sectionId;
 
-                // const parentData = await Parent.find({ school: schoolId, parent_code: item?.parent_code });
-                // console.log("parentData", parentData);
-                // if (parentData.length == 0) {
-                //     return res.status(500).json({ success: false, message: "Parent Code does not exist :" + item?.parent_code });
-                // }
-
-
                 const parentId = await CreateParent(item);
                 item.parent = parentId;
-
-
 
                 const password = "12345678";
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(password, salt);
                 item.password = hashPassword;
 
-                let gender = item?.gender.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();;
+                let gender = item?.gender.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 
                 if (gender === "b") {
                     gender = "male";
                     item.gender = gender;
-                    item.student_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
-                }else{
-                    gender="female";
+                    item.student_image =
+                        "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
+                } else {
+                    gender = "female";
                     item.gender = gender;
-                    item.student_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
+                    item.student_image =
+                        "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
                 }
-                
+
                 let excelValue = item?.dOBDate;
                 let jsDate = excelDateToJSDate(excelValue);
                 console.log(jsDate);
-                let dOBDate = jsDate;
-                item.dOBDate = dOBDate;
 
+                let dOBDate = new Date();
+                if (item?.dOBDate) {
+                    if (jsDate == "Invalid Date") {
+                        const [dd, mm, yyyy] = item?.dOBDate.split("/").map(Number);
+                        dOBDate = new Date(Date.UTC(yyyy, mm - 1, dd));
+                    } else {
+                        dOBDate = jsDate;
+                    }
+                }
+
+                item.dOBDate = dOBDate;
+                if (item.dOBDate === "Invalid Date") {
+                    console.log("student_code", student_code);
+                }
+
+                // item.dOBDate = new Date();
                 excelValue = item?.joinDate;
                 jsDate = excelDateToJSDate(excelValue);
                 console.log(jsDate);
-                let joinDate = jsDate;
+
+                let joinDate = new Date();
+                if (item?.joinDate) {
+                    if (jsDate == "Invalid Date") {
+                        const [dd, mm, yyyy] = item?.joinDate.split("/").map(Number);
+                        joinDate = new Date(Date.UTC(yyyy, mm - 1, dd));
+                    } else {
+                        joinDate = jsDate;
+                    }
+                }
+
                 item.joinDate = joinDate;
-                const phoneno = item?.guardian_phone||"1234567890";
-                item.guardian_phone=phoneno
+                const phoneno = item?.guardian_phone || "1234567890";
+                item.guardian_phone = phoneno;
             }
 
+            for (const item of sheetData) {
+                try {
+                    const newStudent = new Student(item);
+                    const savedData = await newStudent.save();
+                } catch (error) {
+                    console.log(item.student_code + + error);
+                }
+            }
             // 👉 save to  here
-            await Student.insertMany(sheetData);
+            //   await Student.insertMany(sheetData);
+
             console.log("Date saved", sheetData);
 
             fs.unlinkSync(filePath);
-            res.status(200).json({ success: true, data: sheetData, message: "Student is Uploaded Successfully." })
+            res.status(200).json({
+                success: true,
+                data: sheetData,
+                message: "Student is Uploaded Successfully.",
+            });
         } catch (error) {
-            res.status(500).json({ success: false, message: error.message })
+            res.status(500).json({
+                success: false,
+                message: "student_code:" + student_code + "-" + error.message,
+            });
         }
     },
     upload_class: async (req, res) => {
@@ -422,7 +446,7 @@ async function CreateParent(studentData) {
     let parentId = "";
     try {
 
-        const parent_name = studentData?.parent_name||studentData?.name;
+        const parent_name = studentData?.parent_name || studentData?.name;
 
         const existing = await Parent.find({ name: parent_name, school: studentData.school }).lean();
         if (existing.length > 0) {
