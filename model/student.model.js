@@ -74,34 +74,13 @@ const studentSchema = new mongoose.Schema({
         required: false,
         default: null,
     },
-
     siblingstudingname: { type: String, default: null },
     siblingapplyingname: { type: String, default: null },
     siblingstudingclass: { type: String, default: null },
     siblingapplyingclass: { type: String, default: null },
     previouslyapplied: { type: String, default: "no" },
-
     admissionintoclass: { type: String, default: null },
     dateofaddmission: { type: Date, default: new Date() },
-
-    admissionattachment: [
-  {
-    attachmenttype: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Generalmaster",
-      default: null,
-    },
-    attachmenttypename: {
-      type: String,
-      default: null,
-    },
-    attachmentstatus: {
-      type: String,
-      default: null,
-    },
-  },
-],
-
     createdAt: { type: Date, default: new Date() },
     password: { type: String, required: true }
 

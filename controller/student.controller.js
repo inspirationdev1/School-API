@@ -10,6 +10,8 @@ const jwtSecret = process.env.JWTSECRET;
 const Student = require("../model/student.model");
 const Attendance = require('../model/attendance.model');
 
+const Admissionattachment = require("../model/admissionattachment.model");
+
 const cloudinary = require("../config/cloudinary");
 
 
@@ -197,20 +199,54 @@ module.exports = {
     getStudentWithId: async (req, res) => {
         const id = req.params.id;
         const schoolId = req.user.schoolId;
-        Student.findOne({ _id: id, school: schoolId }).populate("student_class").populate("section").populate("parent")
-            .populate("bloodgroup").populate("nationality")
-            .populate("religion").populate("mothertongue").populate("modeoftransport").populate("firstlanguage")
-            .then(resp => {
-                if (resp) {
-                    console.log("data", resp)
-                    res.status(200).json({ success: true, data: resp })
-                } else {
-                    res.status(500).json({ success: false, message: "Student data not Available" })
-                }
-            }).catch(e => {
-                console.log("Error in getStudentWithId", e)
-                res.status(500).json({ success: false, message: "Error in getting  Student Data" })
+        try {
+            const resp = await Student.findOne({
+                _id: id,
+                school: schoolId
             })
+                .populate("student_class")
+                .populate("section")
+                .populate("parent")
+                .populate("bloodgroup")
+                .populate("nationality")
+                .populate("religion")
+                .populate("mothertongue")
+                .populate("modeoftransport")
+                .populate("firstlanguage");
+
+            if (resp) {
+
+                const admissionAttachments = await Admissionattachment.find({
+                    student_id: id, // ✅ probably should be student instead of _id
+                    school: schoolId
+                })
+                    .populate("attachmenttype")
+                    .populate("attachmentstatus")
+                    .lean();
+
+                res.status(200).json({
+                    success: true,
+                    data: resp,
+                    admissionAttachments: admissionAttachments
+                });
+
+            } else {
+                res.status(500).json({
+                    success: false,
+                    message: "Student data not Available"
+                });
+            }
+
+        } catch (e) {
+            console.log("Error in getStudentWithId", e);
+
+            res.status(500).json({
+                success: false,
+                message: "Error in getting Student Data"
+            });
+        }
+
+        
     },
     getOwnDetails: async (req, res) => {
         const id = req.user.id;
@@ -265,6 +301,25 @@ module.exports = {
                 }
 
                 await student.save();
+
+                // 2️⃣ Map admissionAttachments
+                const attDetail = JSON.parse(fields["admissionAttachments"][0]) || [];
+                const student_id = id || null;
+                const admissionAttachments = attDetail.map((item) => ({
+                    ...item,
+                    school: req.user.id,
+                    student_id: student_id,
+                }));
+                // 3️⃣ Delete admissionAttachments
+                await Admissionattachment.deleteMany({
+                        student_id: student_id,
+                        school: req.user.id
+                    });
+                
+                if (admissionAttachments.length > 0) {
+                    // 3️⃣ Save admissionAttachments
+                    await Admissionattachment.insertMany(admissionAttachments);
+                }
 
 
                 res.status(200).json({ success: true, message: "Student updated successfully", data: student });
