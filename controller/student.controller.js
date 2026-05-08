@@ -305,6 +305,21 @@ module.exports = {
             }
         });
     },
+    
+    deleteStudentWithId: async (req, res) => {
+        try {
+            let id = req.params.id;
+            const schoolId = req.user.schoolId;
+            await Attendance.deleteMany({ school: schoolId, student: id });
+            await Student.findOneAndDelete({ _id: id, school: schoolId, });
+            const studentAfterDelete = await Student.findOne({ _id: id });
+            res.status(200).json({ success: true, message: "Student  deleted", data: studentAfterDelete })
+        } catch (error) {
+            console.log("Error in updateStudentWithId", error);
+            res.status(500).json({ success: false, message: "Server Error in deleted Student. Try later" })
+        }
+
+    },
     admissionAttachmentWithId: async (req, res) => {
         const form = new formidable.IncomingForm();
         form.parse(req, async (err, fields, files) => {
@@ -393,17 +408,16 @@ module.exports = {
             }
         });
     },
-    deleteStudentWithId: async (req, res) => {
+    deleteAdmissionAttachmentWithId: async (req, res) => {
         try {
             let id = req.params.id;
             const schoolId = req.user.schoolId;
-            await Attendance.deleteMany({ school: schoolId, student: id });
-            await Student.findOneAndDelete({ _id: id, school: schoolId, });
-            const studentAfterDelete = await Student.findOne({ _id: id });
-            res.status(200).json({ success: true, message: "Student  deleted", data: studentAfterDelete })
+            await Admissionattachment.findOneAndDelete({ _id: id, school: schoolId, });
+            const admissionAttachmentAfterDelete = await Admissionattachment.findOne({ _id: id });
+            res.status(200).json({ success: true, message: "Admission attachment  deleted", data: admissionAttachmentAfterDelete })
         } catch (error) {
-            console.log("Error in updateStudentWithId", error);
-            res.status(500).json({ success: false, message: "Server Error in deleted Student. Try later" })
+            console.log("Error in deleteAdmissionAttachmentWithId", error);
+            res.status(500).json({ success: false, message: "Server Error in deleted Admission Attachment. Try later" })
         }
 
     },

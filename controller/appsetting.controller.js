@@ -7,7 +7,7 @@ module.exports = {
     getAllAppsettings: async(req,res)=>{
          try {
             const schoolId = req.user.schoolId;
-            const allAppsetting= await Appsetting.find({school:schoolId});
+            const allAppsetting= await Appsetting.find({school:schoolId}).populate("school");
             res.status(200).json({success:true, message:"Success in fetching all  Appsetting", data:allAppsetting})
          } catch (error) {
             console.log("Error in getAllAppsetting", error);
