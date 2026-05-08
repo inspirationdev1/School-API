@@ -14,7 +14,7 @@ const admissionattachmentSchema = new mongoose.Schema({
         default: null,
     },
     attachment_image: { type: String, required: false,default:'' },
-
+    public_id: { type: String, required: false,default:'' },
     year: { type: Number, default: new Date().getFullYear() },
     createdAt: { type: Date, default: new Date() }
 

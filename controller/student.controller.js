@@ -246,7 +246,7 @@ module.exports = {
             });
         }
 
-        
+
     },
     getOwnDetails: async (req, res) => {
         const id = req.user.id;
@@ -266,8 +266,6 @@ module.exports = {
                 res.status(500).json({ success: false, message: "Error in getting  Student Data" })
             })
     },
-
-
     updateStudentWithId: async (req, res) => {
         const form = new formidable.IncomingForm();
         form.parse(req, async (err, fields, files) => {
@@ -299,29 +297,7 @@ module.exports = {
                     student.student_image = result.secure_url;
                     student.public_id = result.public_id;
                 }
-
                 await student.save();
-
-                // 2️⃣ Map admissionAttachments
-                const attDetail = JSON.parse(fields["admissionAttachments"][0]) || [];
-                const student_id = id || null;
-                const admissionAttachments = attDetail.map((item) => ({
-                    ...item,
-                    school: req.user.id,
-                    student_id: student_id,
-                }));
-                // 3️⃣ Delete admissionAttachments
-                await Admissionattachment.deleteMany({
-                        student_id: student_id,
-                        school: req.user.id
-                    });
-                
-                if (admissionAttachments.length > 0) {
-                    // 3️⃣ Save admissionAttachments
-                    await Admissionattachment.insertMany(admissionAttachments);
-                }
-
-
                 res.status(200).json({ success: true, message: "Student updated successfully", data: student });
             } catch (e) {
                 console.log("Error updating student:", e);
@@ -329,11 +305,99 @@ module.exports = {
             }
         });
     },
+    admissionAttachmentWithId: async (req, res) => {
+        const form = new formidable.IncomingForm();
+        form.parse(req, async (err, fields, files) => {
+            if (err) return res.status(400).json({ success: false, message: "Error parsing form data." });
+
+
+            try {
+                const { id } = req.params;
+                const  schoolId  = req.user.id;
+                
+                // Create payload object
+                const mapRecord = {
+                    student_id: id,
+                    attachmenttype: fields?.attachmenttype?.[0] || "",
+                    attachmentstatus: fields?.attachmentstatus?.[0] || "",
+                    attachment_image: "",
+                    public_id: "",
+                    year: fields?.year?.[0] || 0,
+                    school: schoolId,
+                };
+
+
+                // Handle image upload to Cloudinary
+                // Upload image if exists
+                if (files?.image?.[0]) {
+
+                    const photo = files.image[0];
+
+                    const result = await cloudinary.uploader.upload(photo.filepath, {
+                        folder: "students",
+                        public_id:
+                            Date.now() +
+                            "_" +
+                            photo.originalFilename.replace(/\s+/g, "_"),
+                    });
+
+                    // ✅ Correct assignment
+                    mapRecord.attachment_image = result.secure_url;
+                    mapRecord.public_id = result.public_id;
+                }
+
+
+
+
+                // If updating existing attachment
+                if (fields?._id?.[0]) {
+
+                    const existingAttachment = await Admissionattachment.findOne({
+                        _id: fields._id[0],
+                        school: schoolId,
+                    });
+
+                    if (existingAttachment) {
+
+                        // Delete old cloudinary image if new image uploaded
+                        if (
+                            files?.image?.[0] &&
+                            existingAttachment.public_id
+                        ) {
+                            await cloudinary.uploader.destroy(
+                                existingAttachment.public_id
+                            );
+                        }
+
+                        // Update existing document
+                        await Admissionattachment.findByIdAndUpdate(
+                            existingAttachment._id,
+                            mapRecord,
+                            { new: true }
+                        );
+
+                    }
+
+                } else {
+
+                    // Create new document
+                    const newAdmissionAttachment =
+                        await Admissionattachment.create(mapRecord);
+
+                }
+
+                res.status(200).json({ success: true, message: "Student Admission Attachment successfully", data: mapRecord });
+            } catch (e) {
+                console.log("Error Admission Attachment:", e);
+                res.status(500).json({ success: false, message: "Error Admission Attachment student details." });
+            }
+        });
+    },
     deleteStudentWithId: async (req, res) => {
         try {
             let id = req.params.id;
             const schoolId = req.user.schoolId;
-            await Attendance.deleteMany({ school: schoolId, student: id })
+            await Attendance.deleteMany({ school: schoolId, student: id });
             await Student.findOneAndDelete({ _id: id, school: schoolId, });
             const studentAfterDelete = await Student.findOne({ _id: id });
             res.status(200).json({ success: true, message: "Student  deleted", data: studentAfterDelete })
