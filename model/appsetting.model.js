@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const appsettingSchema = new mongoose.Schema({
-    school:{type:mongoose.Schema.ObjectId, ref:'School'},
+    school: { type: mongoose.Schema.ObjectId, ref: 'School' },
     appsetting_name: {
         type: String,
         required: true,
@@ -12,7 +12,23 @@ const appsettingSchema = new mongoose.Schema({
     },
     udise_no: { type: String, default: null },
     discPerAllowed: { type: Number, default: 0 },
-    createdAt:{type:Date, default:new Date()}
+    report_image: {
+        type: String,
+        required: false,
+        default: null,
+    },
+    toolbar_image: {
+        type: String,
+        required: false,
+        default: null,
+    },
+    toolbar_public_id: {
+        type: String,
+        required: false,
+        default: null,
+    },
+    
+    createdAt: { type: Date, default: new Date() }
 
 })
 
