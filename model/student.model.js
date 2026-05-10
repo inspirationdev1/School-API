@@ -14,6 +14,11 @@ const studentSchema = new mongoose.Schema({
     joinDate: { type: Date, required: true, },
     year: { type: Number, default: new Date().getFullYear() },
     gender: { type: String, required: true },
+    status: {
+        type: String,
+        required: false,
+        default: 'active',
+    },
     guardian: { type: String, default: null },
     guardian_phone: { type: String, required: true },
     pen_no: { type: String, default: null },

@@ -7,7 +7,7 @@ const salesinvoiceSchema = new mongoose.Schema({
         required: true,
     },
 
-    siNumber: { type: Number, default: 0 },
+    seq: { type: Number, default: 0 },
     invoiceDate: { type: Date, required: true, },
     invoiceTime: { type: Date, required: true, },
     class: { type: mongoose.Schema.ObjectId, ref: "Class", required: true },
@@ -15,7 +15,9 @@ const salesinvoiceSchema = new mongoose.Schema({
     student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
     paymentStatus: { type: String, default: 'pending' },
     status: { type: String, default: 'valid' },
+    student_name: { type: String, default: '' },
     remarks: { type: String, default: '' },
+    month: { type: Number, default: new Date().getMonth() + 1 },
     year: { type: Number, default: new Date().getFullYear() },
     createdAt: { type: Date, default: new Date() }
 

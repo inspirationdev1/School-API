@@ -80,21 +80,14 @@ module.exports = {
     },
     getNumberseqWithScreenId: async (req, res) => {
 
-        const screen_name = req.screen_name;
+        const screen_id = req?.screen_id;
         const schoolId = req.schoolId;
         try {
 
-            const screenData = await Screen.find({
-                screen_name: screen_name
-            }).lean();
-
-            let screenId = ""
-            if (screenData.length > 0) {
-                screenId = screenData[0]._id;
-            }
+            
 
             const numberseqData = await Numberseq.find({
-                screen: new mongoose.Types.ObjectId(screenId),
+                screen: screen_id,
                 school: new mongoose.Types.ObjectId(schoolId)
             }).populate("screen").lean();
 
@@ -123,25 +116,11 @@ module.exports = {
         // Not providing the  schoolId as numberseq Id will be unique.
         try {
             // let id = req.params.id;
-            const screen_name = req.screen_name;
-            const schoolId = req.schoolId;
-            const screenData = await Screen.find({
-                screen_name: screen_name,
-                school: new mongoose.Types.ObjectId(schoolId)
-            }).lean();
-
-            let screenId = ""
-            if (screenData.length > 0) {
-                screenId = screenData[0]._id;
-            }
-
-
-
-
-
+            const screen_id = req?.screen_id;
+            const schoolId = req?.schoolId;
 
             const numberSeqData = await Numberseq.find({
-                screen: screenId,
+                screen: screen_id,
                 school: new mongoose.Types.ObjectId(schoolId)
             }).lean();
 

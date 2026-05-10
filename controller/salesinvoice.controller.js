@@ -1,15 +1,21 @@
 require("dotenv").config();
+const dayjs = require("dayjs");
 const mongoose = require("mongoose");
+
 const Salesinvoice = require("../model/salesinvoice.model");
 const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
+const Student = require("../model/student.model");
 
 const ReceiptdetailModel = require("../model/receiptdetail.model");
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
+
 module.exports = {
 
     getAllSalesinvoices: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
-            const allSalesinvoice = await Salesinvoice.find({ school: schoolId });
+            const allSalesinvoice = await Salesinvoice.find({ school: schoolId }).populate("student")
+                .populate("class").populate("section").populate("school");
             res.status(200).json({ success: true, message: "Success in fetching all  Salesinvoice", data: allSalesinvoice })
         } catch (error) {
             console.log("Error in getAllSalesinvoice", error);
@@ -21,9 +27,23 @@ module.exports = {
         try {
             const schoolId = req.user.schoolId;
 
+            const numberseqData = await getNumberseqWithScreenId({ screen_id: "salesinvoice", schoolId: req.user.schoolId });
+            console.log("numberseqData.data", numberseqData);
+            let seq = 1;
+            let code = "";
+            if (numberseqData) {
+                seq = numberseqData.seq || 1;
+                code = numberseqData.code || "";
+            }
+
             // 1️⃣ Save sales invoice
+            const formattedinvoiceDate = dayjs(req?.body?.invoiceDate).format("YYYY-MM-DD");
+            const [dd, mm, yyyy] = formattedinvoiceDate.split("-").map(Number);
             const newSalesinvoice = new Salesinvoice({
                 ...req.body,
+                month: mm,
+                siCode: code,
+                seq: seq,
                 school: schoolId,
             });
 
@@ -43,6 +63,11 @@ module.exports = {
                 await Salesinvoicedetail.insertMany(salesInvoiceDetails);
             }
 
+            // ****Update Number Seq****
+            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "salesinvoice", schoolId: req.user.schoolId });
+            console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+            // *********************
+
             // 4️⃣ Response
             res.status(200).json({
                 success: true,
@@ -54,7 +79,7 @@ module.exports = {
             console.error("Error creating sales invoice:", e);
             res.status(500).json({
                 success: false,
-                message: "Failed Creation of Salesinvoice.",
+                message: "Failed Creation of Salesinvoice." + e.message,
             });
         }
     },
@@ -145,8 +170,8 @@ module.exports = {
             let id = req.params.id;
 
 
-            const receiptDetails = await ReceiptdetailModel.find({siId:id,status:"valid"}).lean();
-            if (receiptDetails.length>0){
+            const receiptDetails = await ReceiptdetailModel.find({ siId: id, status: "valid" }).lean();
+            if (receiptDetails.length > 0) {
                 res.status(500).json({ success: false, message: "Cannot Delete Invoice, Receipt is against this invoice" })
                 return;
             }
@@ -437,4 +462,182 @@ module.exports = {
         }
     }
     ,
+    createMonthlyInvoice: async (req, res) => {
+
+        try {
+            const schoolId = req.user.schoolId;
+
+            console.log(req.body);
+
+            const classId = req.body?.class;
+            const sectionId = req.body?.section;
+            const feestructure = req.body?.feestructure;
+            const feeFrequency = req.body?.feeFrequency;
+            const feeAmount = req.body?.feeAmount;
+
+
+            const year = req.body?.year;
+            const invoiceDate = req.body?.invoiceDate;
+            const remarks = req.body?.remarks;
+
+            const invoiceTime = dayjs().format("YYYY-MM-DD HH:mm:ss");
+            const formattedinvoiceDate = dayjs(invoiceDate).format("YYYY-MM-DD");
+            const [dd, mm, yyyy] = formattedinvoiceDate.split("-").map(Number);
+
+            const invoiceExistData = await Salesinvoice.find({
+                school: schoolId,
+                status: "valid",
+                month: mm
+                , year: year,
+                class: classId,
+                section: sectionId
+            }).lean();
+            console.log(invoiceExistData);
+            if (invoiceExistData.length > 0) {
+                const monthName = new Date(year, mm - 1).toLocaleString("default", {
+                    month: "long",
+                });
+                res.status(500).json({
+                    success: false,
+                    message: "Failed Creation of Salesinvoice. Invoices already created for the month = " + monthName,
+                });
+                return;
+            }
+
+            let filterQuery = { school: schoolId, status: "active" }
+            if (classId) {
+                filterQuery.student_class = classId
+            }
+            if (sectionId) {
+                filterQuery.section = sectionId
+            }
+            filterQuery.status = "active";
+            const studentsData = await Student.find(filterQuery).lean();
+            console.log(studentsData);
+
+
+
+            let invoiceCount = 0;
+            for (const item of studentsData) {
+                try {
+                    const student_class = item?.student_class;
+                    const section = item?.section;
+                    const studentId = item?._id;
+                    const student_name = item?.name;
+
+                    const numberseqData = await getNumberseqWithScreenId({ screen_id: "salesinvoice", schoolId: req.user.schoolId });
+                    console.log("numberseqData.data", numberseqData);
+                    let seq = 1;
+                    let code = "";
+                    if (numberseqData) {
+                        seq = numberseqData.seq || 1;
+                        code = numberseqData.code || "";
+                    }
+
+                    const newSalesinvoice = new Salesinvoice({
+                        student: studentId,
+                        student_name: student_name,
+                        class: student_class,
+                        section: section,
+                        month: mm,
+                        year: year,
+                        invoiceDate: formattedinvoiceDate,
+                        invoiceTime: invoiceTime,
+                        school: schoolId,
+                        siCode: code,
+                        seq: seq,
+                        remarks: remarks
+                    });
+                    const savedData = await newSalesinvoice.save();
+
+                    const siId = savedData._id || null;
+
+                    const newSalesinvoicedetail = new Salesinvoicedetail({
+                        siId: siId,
+                        student: studentId,
+                        feestructure: feestructure,
+                        feeFrequency: feeFrequency,
+                        itemId: feestructure,
+                        feeAmount: feeAmount,
+                        Quantity: 1,
+                        salesPrice: feeAmount,
+                        grossAmount: feeAmount,
+                        netAmount: feeAmount,
+                        year: year,
+                        school: schoolId,
+                        remarks: remarks,
+                    });
+                    const saveddetailData = await newSalesinvoicedetail.save();
+                    const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "salesinvoice", schoolId: req.user.schoolId });
+                    console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+                    invoiceCount++;
+                } catch (error) {
+                    console.log(error.message);
+
+                }
+
+
+            }
+
+            // // 1️⃣ Save sales invoice
+            // const newSalesinvoice = new Salesinvoice({
+            //     ...req.body,
+            //     school: schoolId,
+            // });
+
+            // const savedData = await newSalesinvoice.save();
+
+            // // 2️⃣ Map invoice details
+            // const siDetail = req.body.invoiceDetails || [];
+            // const siId = savedData._id || null;
+            // const salesInvoiceDetails = siDetail.map((item) => ({
+            //     ...item,
+            //     school: schoolId,
+            //     siId: siId,
+            // }));
+
+            // // 3️⃣ Save invoice details
+            // if (salesInvoiceDetails.length > 0) {
+            //     await Salesinvoicedetail.insertMany(salesInvoiceDetails);
+            // }
+
+            // 4️⃣ Response
+            const savedData = { invoiceCount: invoiceCount };
+            res.status(200).json({
+                success: true,
+                data: savedData,
+                message: invoiceCount + " Salesinvoices are Created Successfully.",
+            });
+
+        } catch (e) {
+            console.error("Error creating sales invoice:", e);
+            res.status(500).json({
+                success: false,
+                message: "Failed Creation of Salesinvoice.",
+            });
+        }
+    },
+    getSalesinvoiceWithQuery: async (req, res) => {
+
+        try {
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+
+            filterQuery['school'] = schoolId;
+            if (req.query.search) {
+                filterQuery.$or = [
+                    { siCode: { $regex: req.query.search, $options: 'i' } },
+                    { student_name: { $regex: req.query.search, $options: 'i' } }
+                ];
+            }
+
+            const filteredSalesinvoices = await Salesinvoice.find(filterQuery).populate("student")
+                .populate("class").populate("section").populate("school");
+            res.status(200).json({ success: true, data: filteredSalesinvoices })
+        } catch (error) {
+            console.log("Error in fetching Student with query", error);
+            res.status(500).json({ success: false, message: "Error  in fetching Salesinvoice  with query." })
+        }
+
+    },
 }
