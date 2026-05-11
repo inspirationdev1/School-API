@@ -2,8 +2,8 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Receipt = require("../model/receipt.model");
 const Receiptdetail = require("../model/receiptdetail.model");
-const Exam = require("../model/examination.model");
-const Period = require("../model/period.model");
+
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
 module.exports = {
 
     getAllReceipts: async (req, res) => {
@@ -21,9 +21,23 @@ module.exports = {
         try {
             const schoolId = req.user.schoolId;
 
+
+            //***Number seq */
+            const numberseqData = await getNumberseqWithScreenId({ screen_id: "receipt", schoolId: req.user.schoolId });
+            console.log("numberseqData.data", numberseqData);
+            let seq = 1;
+            let code = "";
+            if (numberseqData) {
+                seq = numberseqData.seq || 1;
+                code = numberseqData.code || "";
+            }
+            //****** */
+
             // 1️⃣ Save receipt
             const newReceipt = new Receipt({
                 ...req.body,
+                receiptCode: code,
+                seq: seq,
                 school: schoolId,
             });
 
@@ -79,7 +93,7 @@ module.exports = {
                         as: "receiptDetails",
                     },
                 },
-                
+
                 {
                     $lookup: {
                         from: "salesinvoices",
@@ -232,25 +246,20 @@ module.exports = {
         try {
             const schoolId = req.user.schoolId;
             let id = req.params.id;
-            const subExamCount = (await Exam.find({ receipt: id, school: schoolId })).length;
-            const subPeriodCount = (await Period.find({ receipt: id, school: schoolId })).length;
-            if ((subExamCount === 0) && (subPeriodCount === 0)) {
-                await Receipt.findOneAndUpdate(
-                    { _id: id },
-                    { $set: { status: "cancel" } },
-                    { new: true } // optional: returns updated document
-                );
-                await Receiptdetail.updateMany(
-                    { receiptId: id },
-                    { $set: { status: "cancel" } },
-                    { new: true } // optional: returns updated document
-                );
-                // await Receipt.findOneAndDelete({ _id: id, school: schoolId });
-                const ReceiptAfterDelete = await Receipt.findOne({ _id: id });
-                res.status(200).json({ success: true, message: "Receipt Deleted.", data: ReceiptAfterDelete })
-            } else {
-                res.status(500).json({ success: false, message: "This class is already in use." })
-            }
+
+            await Receipt.findOneAndUpdate(
+                { _id: id },
+                { $set: { status: "cancel" } },
+                { new: true } // optional: returns updated document
+            );
+            await Receiptdetail.updateMany(
+                { receiptId: id },
+                { $set: { status: "cancel" } },
+                { new: true } // optional: returns updated document
+            );
+            // await Receipt.findOneAndDelete({ _id: id, school: schoolId });
+            const ReceiptAfterDelete = await Receipt.findOne({ _id: id });
+            res.status(200).json({ success: true, message: "Receipt Deleted.", data: ReceiptAfterDelete })
 
 
         } catch (error) {
@@ -286,7 +295,7 @@ module.exports = {
                 },
 
 
-                
+
                 {
                     $lookup: {
                         from: "receiptdetails", // 👈 collection name (IMPORTANT)
@@ -427,6 +436,51 @@ module.exports = {
                 {
                     $project: {
                         sectionData: 0, // cleanup
+                    },
+                },
+                // 🔹 Populate Sales Invoicedetail
+                {
+                    $lookup: {
+                        from: "salesinvoicedetails", // collection name
+                        localField: "receiptDetails.siId",
+                        foreignField: "siId",
+                        as: "salesInvoiceData",
+                    },
+                },
+                {
+                    $addFields: {
+                        receiptDetails: {
+                            $map: {
+                                input: "$receiptDetails",
+                                as: "detail",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$detail",
+                                        {
+                                            siId: {
+                                                $arrayElemAt: [
+                                                    {
+                                                        $filter: {
+                                                            input: "$salesInvoiceData",
+                                                            as: "fs",
+                                                            cond: {
+                                                                $eq: ["$$fs.siId", "$$detail.siId"],
+                                                            },
+                                                        },
+                                                    },
+                                                    0,
+                                                ],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    $project: {
+                        salesInvoiceData: 0, // cleanup
                     },
                 },
                 // 🔹 SUM grossAmount

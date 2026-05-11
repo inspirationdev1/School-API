@@ -64,7 +64,7 @@ module.exports = {
             }
 
             // ****Update Number Seq****
-            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "salesinvoice", schoolId: req.user.schoolId });
+            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "receipt", schoolId: req.user.schoolId });
             console.log("numberseqAfterUpdate", numberseqAfterUpdate);
             // *********************
 
@@ -472,6 +472,7 @@ module.exports = {
             const classId = req.body?.class;
             const sectionId = req.body?.section;
             const feestructure = req.body?.feestructure;
+            const feestructure_name = req.body?.feestructure_name;
             const feeFrequency = req.body?.feeFrequency;
             const feeAmount = req.body?.feeAmount;
 
@@ -558,6 +559,7 @@ module.exports = {
                         feestructure: feestructure,
                         feeFrequency: feeFrequency,
                         itemId: feestructure,
+                        itemName: feestructure_name,
                         feeAmount: feeAmount,
                         Quantity: 1,
                         salesPrice: feeAmount,

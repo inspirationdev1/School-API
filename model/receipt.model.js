@@ -7,6 +7,7 @@ const receiptSchema = new mongoose.Schema({
         required: true
     },
     receiptNumber: { type: Number, default: 0 },
+    seq: { type: Number, default: 0 },
     receiptDate: { type: Date, required: true, },
     receiptTime: { type: Date, required: true, },
     paymentMethod: { type: String, default: 'cash', required: true },
