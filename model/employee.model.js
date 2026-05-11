@@ -5,7 +5,7 @@ const employeeSchema = new mongoose.Schema({
     email:{ type: String,  required:true },
     employee_name:{type:String, required:true},
     employee_code:{type:String, required:true},
-    employee_no:{type:Number, default:0},
+    seq:{type:Number, default:0},
     qualification:{type:String, required:true},
     dOBDate: { type: Date, required: true, },
     age:{type:String, default:null},
@@ -15,6 +15,22 @@ const employeeSchema = new mongoose.Schema({
     employee_image:{type:String,  required:true},
     public_id:{type:String,  default:''},
     phoneno:{type:String, default:null},
+    status: {
+        type: String,
+        required: false,
+        default: 'active',
+    },
+    employeetype: {
+        type: String,
+        required: false,
+        default: 'teaching',
+    },
+    designation: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Generalmaster",
+            required: false,
+            default: null,
+        },
     createdAt:{type:Date, default: new Date()},
 
     password:{type:String, required:true}

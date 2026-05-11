@@ -15,6 +15,8 @@ const Student = require("../model/student.model");
 
 const Class = require("../model/class.model");
 const Section = require("../model/section.model");
+const Generalmaster = require("../model/generalmaster.model");
+const Employee = require("../model/employee.model");
 
 module.exports = {
 
@@ -137,6 +139,8 @@ module.exports = {
                     return res.status(500).json({ success: false, message: "Already exist Teacher Code :" + item?.teacher_code });
                     // break;
                 }
+
+                
                 item.school = schoolId;
                 const password = "12345678";
                 const salt = bcrypt.genSaltSync(10);
@@ -159,11 +163,26 @@ module.exports = {
                 console.log(jsDate);
                 let joinDate = jsDate;
                 item.joinDate = joinDate;
+
+                item.generalmaster_type = "designation";
+                item.generalmaster_name = item.designation;
+                const designationId = await CreateGeneralMaster(item);
+                item.designation = designationId||null;
+
+                const employee_id = await CreateEmployee(item);
+                item.employee_id = employee_id||null;
+
+                const teacher_name = item?.name.trim();
+                const str = teacher_name;
+                const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+                console.log(cleaned);
+                const email = cleaned + "@mms.com";
+                item.email = email;
             }
 
             // 👉 save to  here
             await Teacher.insertMany(sheetData);
-            console.log("Date saved", sheetData);
+            // console.log("Date saved", sheetData);
 
             fs.unlinkSync(filePath);
             res.status(200).json({ success: true, data: sheetData, message: "Teacher is Uploaded Successfully." })
@@ -238,7 +257,7 @@ module.exports = {
             const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
             console.log(sheetData); // array of objects
-
+            //Mapping Data and Checking Data
             for (const item of sheetData) {
                 item.school = schoolId;
                 const checkData = await Student.find({
@@ -328,6 +347,7 @@ module.exports = {
                 item.guardian_phone = phoneno;
             }
 
+            //Saving Data
             for (const item of sheetData) {
                 try {
                     const newStudent = new Student(item);
@@ -549,5 +569,93 @@ async function CreateClass(studentData) {
     } catch (e) {
         console.log("Error in Class Register:", e);
         return classId;
+    }
+}
+
+async function CreateGeneralMaster(gmData) {
+    let generalmaster_id = "";
+    try {
+
+        const generalmaster_name = gmData?.generalmaster_name;
+        const existing = await Generalmaster.find({ generalmaster_name: generalmaster_name, school: gmData.school }).lean();
+        if (existing.length > 0) {
+            generalmaster_id = existing[0]?._id;
+            return generalmaster_id;
+        }
+
+        const newGeneralmaster = new Generalmaster({
+            generalmaster_code: generalmaster_name,
+            generalmaster_name: generalmaster_name,
+            generalmaster_type: gmData.generalmaster_type,
+            school: gmData.school,
+        })
+
+        const savedData = await newGeneralmaster.save();
+        generalmaster_id = savedData?._id;
+        console.log("generalmaster_id", generalmaster_id);
+        return generalmaster_id;
+
+    } catch (e) {
+        console.log("Error in Generalmaster Register:", e);
+        return generalmaster_id;
+    }
+}
+
+async function CreateEmployee(employeeData) {
+    let employee_id = "";
+    try {
+
+        const employee_name = employeeData?.name;
+
+        const existing = await Employee.find({ employee_name: employee_name, school: employeeData.school }).lean();
+        if (existing.length > 0) {
+            employee_id = existing[0]?._id;
+            return employee_id;
+        }
+
+
+        const salt = bcrypt.genSaltSync(10);
+        const hashPassword = bcrypt.hashSync("12345678", salt);
+        const str = employee_name;
+        const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+        console.log(cleaned);
+        const email = cleaned + "@mms.com";
+        const gender = employeeData?.gender||"male";
+        const dOBDate = new Date("01/01/1990");
+        const joinDate = new Date("01/01/2000");
+        const year = joinDate.getFullYear();
+        if (employeeData.gender === 'male') {
+                    employeeData.employee_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg"
+                } else {
+                    employeeData.employee_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
+
+                }
+        const phoneno = employeeData?.guardian_phone || "1234567890";
+        const newEmployee = new Employee({
+            email: email,
+            employee_name: employee_name,
+            employee_code: employee_name,
+            qualification: "",
+            age: "",
+            gender: gender,
+            dOBDate: dOBDate,
+            joinDate: joinDate,
+            year: year,
+            employee_image: employeeData.employee_image,
+            password: hashPassword,
+            school: employeeData.school,
+            phoneno: phoneno,
+            employeetype: employeeData?.employeetype,
+            qualification: employeeData?.qualification
+        })
+
+        const savedData = await newEmployee.save();
+        employee_id = savedData?._id;
+        console.log("employee_id", employee_id);
+        return employee_id;
+
+    } catch (e) {
+        console.log("Error in Employee Register:", e);
+        return employee_id;
     }
 }

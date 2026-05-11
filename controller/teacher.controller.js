@@ -69,6 +69,7 @@ module.exports = {
                     dOBDate: fields.dOBDate[0],
                     joinDate: fields.joinDate[0],
                     year: fields.year[0],
+                    status: fields.status[0],
                     phoneno: fields.phoneno[0],
                     teacher_image: photoUrl,
                     password: hashPassword,
