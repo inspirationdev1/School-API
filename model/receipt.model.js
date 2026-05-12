@@ -14,6 +14,7 @@ const receiptSchema = new mongoose.Schema({
     status: { type: String, default: 'valid' },
     remarks: { type: String, default: '' },
     year: { type: Number, default: new Date().getFullYear() },
+    academicyear: { type: String, default: '' },
     createdAt: { type: Date, default: new Date() }
 
 })

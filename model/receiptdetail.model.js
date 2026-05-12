@@ -6,6 +6,7 @@ const receiptdetailSchema = new mongoose.Schema({
     class: { type: mongoose.Schema.ObjectId, ref: "Class", required: true },
     section: { type: mongoose.Schema.ObjectId, ref: "Section", required: true },
     student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
+    parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Parent', required: false,default:null },
     siId: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesinvoice', required: true },
     siCode: { type: String, default: '' },
     invAmount: { type: Number, default: 0 },

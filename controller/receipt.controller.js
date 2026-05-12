@@ -293,9 +293,6 @@ module.exports = {
                 {
                     $unwind: "$school",        // convert array → object
                 },
-
-
-
                 {
                     $lookup: {
                         from: "receiptdetails", // 👈 collection name (IMPORTANT)
@@ -304,6 +301,7 @@ module.exports = {
                         as: "receiptDetails",
                     },
                 },
+                // 🔹 Populate Student
                 {
                     $lookup: {
                         from: "students",
@@ -346,6 +344,51 @@ module.exports = {
                 {
                     $project: {
                         studentData: 0, // cleanup
+                    },
+                },
+                 // 🔹 Populate Parent
+                {
+                    $lookup: {
+                        from: "parents",
+                        localField: "receiptDetails.parent",
+                        foreignField: "_id",
+                        as: "parentData",
+                    },
+                },
+                {
+                    $addFields: {
+                        receiptDetails: {
+                            $map: {
+                                input: "$receiptDetails",
+                                as: "detail",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$detail",
+                                        {
+                                            parent: {
+                                                $arrayElemAt: [
+                                                    {
+                                                        $filter: {
+                                                            input: "$parentData",
+                                                            as: "fs",
+                                                            cond: {
+                                                                $eq: ["$$fs._id", "$$detail.parent"],
+                                                            },
+                                                        },
+                                                    },
+                                                    0,
+                                                ],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    $project: {
+                        parentData: 0, // cleanup
                     },
                 },
                 // 🔹 Populate Class

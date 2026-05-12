@@ -2086,7 +2086,7 @@ module.exports = {
 
                 doc.pipe(res);
 
-                
+
 
                 const schoolInfo = data[0]?.school || {};
                 // Logo (IMPORTANT)
@@ -2359,7 +2359,7 @@ module.exports = {
             console.log(schoolId, "schoolId")
             filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
 
-            
+
             let requesttype = "";
             if (req.query.requesttype) {
                 requesttype = req.query?.requesttype;
@@ -2392,7 +2392,7 @@ module.exports = {
 
                 doc.pipe(res);
 
-                
+
 
                 const schoolInfo = data[0]?.school || {};
                 // Logo (IMPORTANT)
@@ -2575,7 +2575,7 @@ module.exports = {
                             case "joinDate":
                                 value = row?.joinDate ? dayjs(row.joinDate).format("DD-MM-YYYY") : "-";
                                 break;
-                            
+
                             case "phoneno":
                                 value = row?.phoneno;
                                 break;
@@ -2654,7 +2654,7 @@ module.exports = {
             console.log(schoolId, "schoolId")
             filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
 
-            
+
             let requesttype = "";
             if (req.query.requesttype) {
                 requesttype = req.query?.requesttype;
@@ -2687,7 +2687,7 @@ module.exports = {
 
                 doc.pipe(res);
 
-                
+
 
                 const schoolInfo = data[0]?.school || {};
                 // Logo (IMPORTANT)
@@ -2870,7 +2870,7 @@ module.exports = {
                             case "joinDate":
                                 value = row?.joinDate ? dayjs(row.joinDate).format("DD-MM-YYYY") : "-";
                                 break;
-                            
+
                             case "phoneno":
                                 value = row?.phoneno;
                                 break;
@@ -2949,7 +2949,7 @@ module.exports = {
             console.log(schoolId, "schoolId")
             filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
 
-            
+
             let requesttype = "";
             if (req.query.requesttype) {
                 requesttype = req.query?.requesttype;
@@ -2977,12 +2977,12 @@ module.exports = {
                 // ✅ SET HEADERS BEFORE PIPE
                 res.writeHead(200, {
                     "Content-Type": "application/pdf",
-                    "Content-Disposition": "attachment; filename=teacherlist.pdf"
+                    "Content-Disposition": "attachment; filename=employeelist.pdf"
                 });
 
                 doc.pipe(res);
 
-                
+
 
                 const schoolInfo = data[0]?.school || {};
                 // Logo (IMPORTANT)
@@ -3077,7 +3077,7 @@ module.exports = {
                 doc
                     .font("Helvetica-Bold")
                     .fontSize(14)
-                    .text("Teacher List Report", 0, titleY, {
+                    .text("Employee List Report", 0, titleY, {
                         align: "center"
                     });
 
@@ -3165,7 +3165,7 @@ module.exports = {
                             case "joinDate":
                                 value = row?.joinDate ? dayjs(row.joinDate).format("DD-MM-YYYY") : "-";
                                 break;
-                            
+
                             case "phoneno":
                                 value = row?.phoneno;
                                 break;
@@ -3228,10 +3228,983 @@ module.exports = {
         } catch (err) {
             console.error(err);
             // res.status(500).send("Error generating PDF");
-            console.error("Error generating Teacherlist", err.message);
+            console.error("Error generating Employeelist", err.message);
             res.status(500).json({
                 success: false,
-                message: "Error generating Teacherlist",
+                message: "Error generating Employeelist",
+            });
+        }
+    },
+    getStudentList_Marks_Subjectwise_Print: async (req, res) => {
+
+
+        try {
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+
+
+
+
+            if (req.query?.class) {
+                filterQuery.class = req.query?.class;
+            }
+
+            if (req.query?.section) {
+                filterQuery.section = req.query?.section;
+            }
+
+            if (req.query?.examination) {
+                filterQuery.examination = req.query?.examination;
+            }
+
+            let requesttype = "";
+            if (req.query?.requesttype) {
+                requesttype = req.query?.requesttype;
+            }
+
+
+            const data = await await Marksheetdetail.find(filterQuery)
+                .populate("school").populate("class").populate("section").populate("examination")
+                .populate("subject").populate("student")
+                .lean();
+            console.log(data);
+
+
+
+
+
+            if (requesttype === "PDF") {
+                // ============================================
+                // PDF DOCUMENT
+                // ============================================
+                const doc = new PDFDocument({
+                    size: "A4",
+                    layout: "landscape",
+                    margin: 30
+                });
+
+                // ============================================
+                // RESPONSE HEADERS
+                // ============================================
+                res.writeHead(200, {
+                    "Content-Type": "application/pdf",
+                    "Content-Disposition":
+                        "attachment; filename=Student-Subjectwise-Report.pdf"
+                });
+
+                doc.pipe(res);
+
+                // ============================================
+                // NO DATA
+                // ============================================
+                if (!data.length) {
+
+                    doc
+                        .font("Helvetica-Bold")
+                        .fontSize(18)
+                        .text("No Data Found", 0, 300, {
+                            align: "center"
+                        });
+
+                    doc.end();
+                    return;
+                }
+
+                // ============================================
+                // SCHOOL INFO
+                // ============================================
+                const schoolInfo = data[0]?.school || {};
+
+                // ============================================
+                // GROUP STUDENTS
+                // ============================================
+                const studentMap = {};
+                const subjectSet = new Set();
+
+                data.forEach(item => {
+
+                    const studentId = item.student?._id?.toString();
+                    const subjectName = item.subject?.subject_name || "-";
+
+                    subjectSet.add(subjectName);
+
+                    if (!studentMap[studentId]) {
+
+                        studentMap[studentId] = {
+                            studentName: item.student?.name || "-",
+                            studentCode: item.student?.student_code || "-",
+                            marks: {}
+                        };
+                    }
+
+                    studentMap[studentId].marks[subjectName] =
+                        item.marks || 0;
+                });
+
+                const students = Object.values(studentMap);
+                const subjects = Array.from(subjectSet);
+
+                // ============================================
+                // PAGE WIDTH
+                // ============================================
+                const pageWidth = doc.page.width;
+
+                // ============================================
+                // HEADER
+                // ============================================
+                const logoX = 40;
+                const logoY = 25;
+
+                // ============================================
+                // SCHOOL LOGO
+                // ============================================
+                if (schoolInfo?.school_image) {
+
+                    try {
+
+                        const img = await axios.get(
+                            schoolInfo.school_image,
+                            {
+                                responseType: "arraybuffer"
+                            }
+                        );
+
+                        doc.image(img.data, logoX, logoY, {
+                            width: 55,
+                            height: 55
+                        });
+
+                    } catch (err) {
+
+                        console.log("Logo load failed");
+                    }
+                }
+
+                // ============================================
+                // SCHOOL NAME
+                // ============================================
+                doc
+                    .font("Helvetica-Bold")
+                    .fontSize(20)
+                    .text(
+                        schoolInfo.school_name || "School Name",
+                        110,
+                        30
+                    );
+
+                // ============================================
+                // ADDRESS
+                // ============================================
+                doc
+                    .font("Helvetica")
+                    .fontSize(10)
+                    .text(
+                        `${schoolInfo.address || ""}, ${schoolInfo.city || ""}, ${schoolInfo.state || ""}`,
+                        110,
+                        55
+                    );
+
+                // ============================================
+                // REPORT TITLE
+                // ============================================
+                doc
+                    .font("Helvetica-Bold")
+                    .fontSize(15)
+                    .text(
+                        "STUDENT-LIST SUBJECT-WISE MARKSHEET REPORT",
+                        0,
+                        100,
+                        {
+                            align: "center"
+                        }
+                    );
+
+                // ============================================
+                // DIVIDER
+                // ============================================
+                doc
+                    .moveTo(40, 125)
+                    .lineTo(pageWidth - 40, 125)
+                    .stroke();
+
+                // ============================================
+                // TABLE START
+                // ============================================
+                let y = 150;
+                const startX = 40;
+
+                // ============================================
+                // COLUMN WIDTHS
+                // ============================================
+                const snoWidth = 50;
+                const studentWidth = 220;
+                const subjectWidth = 90;
+                const totalWidth = 90;
+
+                // ============================================
+                // DRAW CELL FUNCTION
+                // ============================================
+                const drawCell = (
+                    text,
+                    x,
+                    y,
+                    width,
+                    height,
+                    bgColor = null,
+                    bold = false,
+                    align = "center"
+                ) => {
+
+                    // Background
+                    if (bgColor) {
+
+                        doc
+                            .rect(x, y, width, height)
+                            .fill(bgColor);
+                    }
+
+                    // Border
+                    doc
+                        .rect(x, y, width, height)
+                        .stroke();
+
+                    // Text
+                    doc
+                        .fillColor("black")
+                        .font(
+                            bold
+                                ? "Helvetica-Bold"
+                                : "Helvetica"
+                        )
+                        .fontSize(9)
+                        .text(
+                            String(text || "-"),
+                            x + 3,
+                            y + 8,
+                            {
+                                width: width - 6,
+                                align
+                            }
+                        );
+                };
+
+                // ============================================
+                // DRAW TABLE HEADER
+                // ============================================
+                let x = startX;
+
+                const headerHeight = 30;
+
+                // S.No
+                drawCell(
+                    "S.No",
+                    x,
+                    y,
+                    snoWidth,
+                    headerHeight,
+                    "#d9e8ff",
+                    true
+                );
+
+                x += snoWidth;
+
+                // Student Name
+                drawCell(
+                    "Student Name",
+                    x,
+                    y,
+                    studentWidth,
+                    headerHeight,
+                    "#d9e8ff",
+                    true
+                );
+
+                x += studentWidth;
+
+                // Dynamic Subjects
+                subjects.forEach(subject => {
+
+                    drawCell(
+                        subject,
+                        x,
+                        y,
+                        subjectWidth,
+                        headerHeight,
+                        "#d9e8ff",
+                        true
+                    );
+
+                    x += subjectWidth;
+                });
+
+                // Total
+                drawCell(
+                    "Total",
+                    x,
+                    y,
+                    totalWidth,
+                    headerHeight,
+                    "#d9e8ff",
+                    true
+                );
+
+                y += headerHeight;
+
+                // ============================================
+                // DRAW STUDENT ROWS
+                // ============================================
+                students.forEach((student, index) => {
+
+                    // ========================================
+                    // PAGE BREAK
+                    // ========================================
+                    if (y > doc.page.height - 50) {
+
+                        doc.addPage();
+
+                        y = 50;
+
+                        x = startX;
+
+                        drawCell(
+                            "S.No",
+                            x,
+                            y,
+                            snoWidth,
+                            headerHeight,
+                            "#d9e8ff",
+                            true
+                        );
+
+                        x += snoWidth;
+
+                        drawCell(
+                            "Student Name",
+                            x,
+                            y,
+                            studentWidth,
+                            headerHeight,
+                            "#d9e8ff",
+                            true
+                        );
+
+                        x += studentWidth;
+
+                        subjects.forEach(subject => {
+
+                            drawCell(
+                                subject,
+                                x,
+                                y,
+                                subjectWidth,
+                                headerHeight,
+                                "#d9e8ff",
+                                true
+                            );
+
+                            x += subjectWidth;
+                        });
+
+                        drawCell(
+                            "Total",
+                            x,
+                            y,
+                            totalWidth,
+                            headerHeight,
+                            "#d9e8ff",
+                            true
+                        );
+
+                        y += headerHeight;
+                    }
+
+                    let total = 0;
+
+                    x = startX;
+
+                    const rowColor =
+                        index % 2 === 0
+                            ? "#f7f7f7"
+                            : null;
+
+                    // ========================================
+                    // SERIAL NUMBER
+                    // ========================================
+                    drawCell(
+                        index + 1,
+                        x,
+                        y,
+                        snoWidth,
+                        28,
+                        rowColor
+                    );
+
+                    x += snoWidth;
+
+                    // ========================================
+                    // STUDENT NAME
+                    // ========================================
+                    drawCell(
+                        student.studentName,
+                        x,
+                        y,
+                        studentWidth,
+                        28,
+                        rowColor,
+                        false,
+                        "left"
+                    );
+
+                    x += studentWidth;
+
+                    // ========================================
+                    // SUBJECT MARKS
+                    // ========================================
+                    subjects.forEach(subject => {
+
+                        const marks =
+                            student.marks[subject] || 0;
+
+                        total += marks;
+
+                        drawCell(
+                            marks,
+                            x,
+                            y,
+                            subjectWidth,
+                            28,
+                            rowColor
+                        );
+
+                        x += subjectWidth;
+                    });
+
+                    // ========================================
+                    // TOTAL
+                    // ========================================
+                    drawCell(
+                        total,
+                        x,
+                        y,
+                        totalWidth,
+                        28,
+                        rowColor,
+                        true
+                    );
+
+                    y += 28;
+                });
+
+                // ============================================
+                // END PDF
+                // ============================================
+                doc.end();
+            } else {
+                res.status(200).json({
+                    success: true,
+                    data: data, // contains data
+                });
+            }
+
+        } catch (err) {
+            console.error(err);
+            console.error("Error generating Student_Marks_Subjectwise", err.message);
+            res.status(500).json({
+                success: false,
+                message: "Error generating Student_Marks_Subjectwise",
+            });
+        }
+    },
+    getStudent_Marks_Subjectwise_Print: async (req, res) => {
+
+
+        try {
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+
+
+
+
+            if (req.query?.class) {
+                filterQuery.class = req.query?.class;
+            }
+
+            if (req.query?.section) {
+                filterQuery.section = req.query?.section;
+            }
+
+            if (req.query?.examination) {
+                filterQuery.examination = req.query?.examination;
+            }
+
+            let requesttype = "";
+            if (req.query?.requesttype) {
+                requesttype = req.query?.requesttype;
+            }
+
+
+            const data = await await Marksheetdetail.find(filterQuery)
+                .populate("school").populate("class").populate("section").populate("examination")
+                .populate("subject").populate("student")
+                .lean();
+            console.log(data);
+
+
+            if (requesttype === "PDF") {
+
+
+                // ==========================================
+                // CREATE PDF
+                // ==========================================
+                const doc = new PDFDocument({
+                    size: "A4",
+                    layout: "landscape",
+                    margin: 30
+                });
+
+                // ==========================================
+                // RESPONSE HEADERS
+                // ==========================================
+                res.writeHead(200, {
+                    "Content-Type": "application/pdf",
+                    "Content-Disposition": "attachment; filename=Student-Subjectwise-Marksheet.pdf"
+                });
+
+                doc.pipe(res);
+
+                // ==========================================
+                // NO DATA
+                // ==========================================
+                if (!data || data.length === 0) {
+                    doc
+                        .font("Helvetica-Bold")
+                        .fontSize(18)
+                        .text("No Data Found", 0, 300, {
+                            align: "center"
+                        });
+
+                    doc.end();
+                    return;
+                }
+
+                // ==========================================
+                // SCHOOL INFO
+                // ==========================================
+                const schoolInfo = data[0]?.school || {};
+
+                // ==========================================
+                // GROUP DATA BY STUDENT
+                // ==========================================
+                const groupedStudents = {};
+
+                data.forEach(item => {
+
+                    const studentId = item?.student?._id?.toString();
+
+                    if (!groupedStudents[studentId]) {
+                        groupedStudents[studentId] = {
+                            student: item.student,
+                            class: item.class,
+                            section: item.section,
+                            examination: item.examination,
+                            subjects: []
+                        };
+                    }
+
+                    groupedStudents[studentId].subjects.push({
+                        subject: item.subject?.subject_name || "-",
+                        marks: item.marks || 0,
+                        marksLimit: item.marksLimit || 0,
+                        remarks: item.remarks || "-"
+                    });
+                });
+
+                const students = Object.values(groupedStudents);
+
+                // ==========================================
+                // COMMON POSITIONS
+                // ==========================================
+                const pageWidth = doc.page.width;
+                const pageHeight = doc.page.height;
+
+                // ==========================================
+                // HEADER FUNCTION
+                // ==========================================
+                const drawSchoolHeader = async () => {
+
+                    const logoX = 40;
+                    const logoY = 25;
+                    const logoWidth = 55;
+
+                    const textX = 110;
+
+                    // =============================
+                    // SCHOOL LOGO
+                    // =============================
+                    if (schoolInfo?.school_image) {
+                        try {
+
+                            const img = await axios.get(schoolInfo.school_image, {
+                                responseType: "arraybuffer"
+                            });
+
+                            doc.image(img.data, logoX, logoY, {
+                                width: logoWidth,
+                                height: 55
+                            });
+
+                        } catch (err) {
+                            console.log("School logo load failed");
+                        }
+                    }
+
+                    // =============================
+                    // SCHOOL NAME
+                    // =============================
+                    doc
+                        .font("Helvetica-Bold")
+                        .fontSize(20)
+                        .fillColor("#003366")
+                        .text(
+                            schoolInfo.school_name || "School Name",
+                            textX,
+                            28,
+                            {
+                                width: 500,
+                                align: "left"
+                            }
+                        );
+
+                    // =============================
+                    // ADDRESS
+                    // =============================
+                    doc
+                        .font("Helvetica")
+                        .fontSize(10)
+                        .fillColor("black")
+                        .text(
+                            `${schoolInfo.address || ""}, ${schoolInfo.city || ""}, ${schoolInfo.state || ""}`,
+                            textX,
+                            55,
+                            {
+                                width: 500,
+                                align: "left"
+                            }
+                        );
+
+                    // =============================
+                    // TITLE
+                    // =============================
+                    doc
+                        .font("Helvetica-Bold")
+                        .fontSize(16)
+                        .fillColor("black")
+                        .text(
+                            "STUDENT SUBJECT-WISE MARKSHEET REPORT",
+                            0,
+                            95,
+                            {
+                                align: "center"
+                            }
+                        );
+
+                    // =============================
+                    // DIVIDER
+                    // =============================
+                    doc
+                        .moveTo(40, 125)
+                        .lineTo(pageWidth - 40, 125)
+                        .stroke();
+                };
+
+                // ==========================================
+                // DRAW EACH STUDENT
+                // ==========================================
+                for (let i = 0; i < students.length; i++) {
+
+                    const item = students[i];
+
+                    // =====================================
+                    // NEW PAGE
+                    // =====================================
+                    if (i !== 0) {
+                        doc.addPage();
+                    }
+
+                    // =====================================
+                    // SCHOOL HEADER
+                    // =====================================
+                    await drawSchoolHeader();
+
+                    // =====================================
+                    // STUDENT INFORMATION
+                    // =====================================
+                    let y = 145;
+
+                    const student = item.student || {};
+                    const examination = item.examination || {};
+                    const classInfo = item.class || {};
+                    const sectionInfo = item.section || {};
+
+                    // Left Side
+                    doc.font("Helvetica-Bold").fontSize(11);
+
+                    doc.text("Student Name", 40, y);
+                    doc.text(":", 145, y);
+                    doc.font("Helvetica").text(student.name || "-", 155, y);
+
+                    y += 22;
+
+                    doc.font("Helvetica-Bold");
+                    doc.text("Student Code", 40, y);
+                    doc.text(":", 145, y);
+                    doc.font("Helvetica").text(student.student_code || "-", 155, y);
+
+                    y += 22;
+
+                    doc.font("Helvetica-Bold");
+                    doc.text("Class", 40, y);
+                    doc.text(":", 145, y);
+                    doc.font("Helvetica").text(classInfo.class_name || "-", 155, y);
+
+                    y += 22;
+
+                    doc.font("Helvetica-Bold");
+                    doc.text("Section", 40, y);
+                    doc.text(":", 145, y);
+                    doc.font("Helvetica").text(sectionInfo.section_name || "-", 155, y);
+
+                    // Right Side
+                    let rightY = 145;
+
+                    doc.font("Helvetica-Bold");
+                    doc.text("Exam", 500, rightY);
+                    doc.text(":", 610, rightY);
+                    doc.font("Helvetica").text(examination.examination_name || "-", 620, rightY);
+
+                    rightY += 22;
+
+                    doc.font("Helvetica-Bold");
+                    doc.text("Date", 500, rightY);
+                    doc.text(":", 610, rightY);
+                    doc.font("Helvetica").text(
+                        dayjs(data[0]?.msDate).format("DD-MM-YYYY"),
+                        620,
+                        rightY
+                    );
+
+                    rightY += 22;
+
+                    doc.font("Helvetica-Bold");
+                    doc.text("Gender", 500, rightY);
+                    doc.text(":", 610, rightY);
+                    doc.font("Helvetica").text(student.gender || "-", 620, rightY);
+
+                    // =====================================
+                    // TABLE START
+                    // =====================================
+                    y = 260;
+
+                    const tableX = 40;
+                    const tableWidth = pageWidth - 80;
+
+                    const columns = [
+                        {
+                            label: "S.No",
+                            width: tableWidth * 0.10
+                        },
+                        {
+                            label: "Subject",
+                            width: tableWidth * 0.35
+                        },
+                        {
+                            label: "Max Marks",
+                            width: tableWidth * 0.18
+                        },
+                        {
+                            label: "Obtained Marks",
+                            width: tableWidth * 0.18
+                        },
+                        {
+                            label: "Result",
+                            width: tableWidth * 0.19
+                        }
+                    ];
+
+                    // =====================================
+                    // TABLE HEADER
+                    // =====================================
+                    let x = tableX;
+
+                    columns.forEach(col => {
+
+                        doc
+                            .rect(x, y, col.width, 30)
+                            .fill("#d9e8ff");
+
+                        doc
+                            .rect(x, y, col.width, 30)
+                            .stroke();
+
+                        doc
+                            .fillColor("black")
+                            .font("Helvetica-Bold")
+                            .fontSize(10)
+                            .text(
+                                col.label,
+                                x,
+                                y + 9,
+                                {
+                                    width: col.width,
+                                    align: "center"
+                                }
+                            );
+
+                        x += col.width;
+                    });
+
+                    y += 30;
+
+                    // =====================================
+                    // TABLE ROWS
+                    // =====================================
+                    let totalMarks = 0;
+                    let totalLimit = 0;
+
+                    item.subjects.forEach((sub, index) => {
+
+                        const result = sub.marks >= 35 ? "PASS" : "FAIL";
+
+                        totalMarks += sub.marks;
+                        totalLimit += sub.marksLimit;
+
+                        const rowHeight = 28;
+
+                        let rowX = tableX;
+
+                        const rowData = [
+                            index + 1,
+                            sub.subject,
+                            sub.marksLimit,
+                            sub.marks,
+                            result
+                        ];
+
+                        rowData.forEach((value, i) => {
+
+                            const col = columns[i];
+
+                            // Zebra Background
+                            if (index % 2 === 0) {
+                                doc
+                                    .rect(rowX, y, col.width, rowHeight)
+                                    .fill("#f7f7f7");
+                            }
+
+                            // Border
+                            doc
+                                .rect(rowX, y, col.width, rowHeight)
+                                .stroke();
+
+                            // Text
+                            doc
+                                .fillColor("black")
+                                .font("Helvetica")
+                                .fontSize(10)
+                                .text(
+                                    String(value),
+                                    rowX,
+                                    y + 8,
+                                    {
+                                        width: col.width,
+                                        align: "center"
+                                    }
+                                );
+
+                            rowX += col.width;
+                        });
+
+                        y += rowHeight;
+                    });
+
+                    // =====================================
+                    // TOTAL ROW
+                    // =====================================
+                    const percentage = ((totalMarks / totalLimit) * 100).toFixed(2);
+
+                    doc
+                        .rect(tableX, y, tableWidth, 35)
+                        .fill("#e8e8e8");
+
+                    doc
+                        .rect(tableX, y, tableWidth, 35)
+                        .stroke();
+
+                    doc
+                        .fillColor("black")
+                        .font("Helvetica-Bold")
+                        .fontSize(11)
+                        .text(
+                            `TOTAL MARKS : ${totalMarks} / ${totalLimit}`,
+                            50,
+                            y + 10
+                        );
+
+                    doc
+                        .text(
+                            `PERCENTAGE : ${percentage}%`,
+                            500,
+                            y + 10
+                        );
+
+                    y += 80;
+
+                    // =====================================
+                    // SIGNATURES
+                    // =====================================
+                    doc
+                        .font("Helvetica")
+                        .fontSize(10)
+                        .text("Class Teacher Signature", 60, y);
+
+                    doc
+                        .text("Principal Signature", 620, y);
+
+                    // Signature Lines
+                    doc
+                        .moveTo(50, y - 10)
+                        .lineTo(220, y - 10)
+                        .stroke();
+
+                    doc
+                        .moveTo(600, y - 10)
+                        .lineTo(770, y - 10)
+                        .stroke();
+                }
+
+                // ==========================================
+                // END PDF
+                // ==========================================
+                doc.end();
+            } else {
+                res.status(200).json({
+                    success: true,
+                    data: data, // contains data
+                });
+            }
+
+        } catch (err) {
+            console.error(err);
+            console.error("Error generating Student_Marks_Subjectwise", err.message);
+            res.status(500).json({
+                success: false,
+                message: "Error generating Student_Marks_Subjectwise",
             });
         }
     },
