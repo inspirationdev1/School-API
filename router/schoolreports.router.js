@@ -11,7 +11,7 @@ const { getMarksheetPrint, getProgressCardPrint, getIncomeExpensePrint, getExpen
 
 router.get("/fetch-print/:id", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getMarksheetPrint);
 
-router.get("/progresscard-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getProgressCardPrint);
+// router.get("/progresscard-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getProgressCardPrint);
 
 router.get("/income-expense-print", authMiddleware(['SCHOOL', 'USER']), getIncomeExpensePrint);
 router.get("/expense-print", authMiddleware(['SCHOOL', 'USER']), getExpensePrint);
@@ -36,5 +36,7 @@ router.post("/teacher-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 
 router.post("/employee-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getEmployeeListPrint);
 router.post("/studentlist-marks-subjectwise-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudentList_Marks_Subjectwise_Print);
 router.post("/student-marks-subjectwise-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudent_Marks_Subjectwise_Print);
-// getStudentList_Marks_Subjectwise_Print
+router.post("/progresscard-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getProgressCardPrint);
+
+
 module.exports = router;

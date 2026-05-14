@@ -57,6 +57,11 @@ module.exports = {
                 await Receiptdetail.insertMany(receiptDetails);
             }
 
+            // ****Update Number Seq****
+            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "receipt", schoolId: req.user.schoolId });
+            console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+            // *********************
+
             // 4️⃣ Response
             res.status(200).json({
                 success: true,

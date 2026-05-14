@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const Expense = require("../model/expense.model");
 const Expensedetail = require("../model/expensedetail.model");
 const paymentdetailModel = require("../model/paymentdetail.model");
-
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
 
 module.exports = {
 
@@ -22,10 +22,23 @@ module.exports = {
         try {
             const schoolId = req.user.schoolId;
 
+             //***Number seq */
+            const numberseqData = await getNumberseqWithScreenId({ screen_id: "expense", schoolId: req.user.schoolId });
+            console.log("numberseqData.data", numberseqData);
+            let seq = 1;
+            let code = "";
+            if (numberseqData) {
+                seq = numberseqData.seq || 1;
+                code = numberseqData.code || "";
+            }
+            //****** */
+
             // 1️⃣ Save expense
             const newExpense = new Expense({
                 ...req.body,
                 school: schoolId,
+                expenseCode: code,
+                seq: seq
             });
 
             const savedData = await newExpense.save();
@@ -43,6 +56,12 @@ module.exports = {
             if (expenseDetails.length > 0) {
                 await Expensedetail.insertMany(expenseDetails);
             }
+
+
+            // ****Update Number Seq****
+            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "expense", schoolId: req.user.schoolId });
+            console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+            // *********************
 
             // 4️⃣ Response
             res.status(200).json({

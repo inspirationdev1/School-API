@@ -6,7 +6,7 @@ const salesinvoiceSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-
+    siNumber: { type: String, default: "" },
     seq: { type: Number, default: 0 },
     invoiceDate: { type: Date, required: true, },
     invoiceTime: { type: Date, required: true, },
@@ -18,6 +18,7 @@ const salesinvoiceSchema = new mongoose.Schema({
     student_name: { type: String, default: '' },
     remarks: { type: String, default: '' },
     month: { type: Number, default: new Date().getMonth() + 1 },
+    monthname: { type: String, default: '' },
     year: { type: Number, default: new Date().getFullYear() },
     createdAt: { type: Date, default: new Date() }
 

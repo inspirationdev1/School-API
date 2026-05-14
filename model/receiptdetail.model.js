@@ -9,6 +9,8 @@ const receiptdetailSchema = new mongoose.Schema({
     parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Parent', required: false,default:null },
     siId: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesinvoice', required: true },
     siCode: { type: String, default: '' },
+    month: { type: Number, default: new Date().getMonth() + 1 },
+    monthname: { type: String, default: '' },
     invAmount: { type: Number, default: 0 },
     paidAmount: { type: Number, default: 0 },
     remarks: { type: String, default: '' },

@@ -11,6 +11,8 @@ const jwtSecret = process.env.JWTSECRET;
 
 const User = require("../model/user.model");
 const cloudinary = require("../config/cloudinary");
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
+
 module.exports = {
 
     getAllUsers: async (req, res) => {
@@ -69,11 +71,19 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
-
+                //*****Get Numberseq */
+                const numberseqData = await getNumberseqWithScreenId({ screen_id: "user", schoolId: req.user.schoolId });
+                console.log("numberseqData.data", numberseqData);
+                let seq = 1;
+                let code = "";
+                if (numberseqData) {
+                    seq = numberseqData.seq || 1;
+                    code = numberseqData.code || "";
+                }
+                //******** */
                 const newUser = new User({
                     email: fields.email[0],
                     name: fields.name[0],
-                    user_code: fields.user_code[0],
                     qualification: fields.qualification[0],
                     age: fields.age[0],
                     gender: fields.gender[0],
@@ -82,11 +92,18 @@ module.exports = {
                     year: fields.year[0],
                     user_image: photoUrl,
                     password: hashPassword,
+                    user_code: code || "",
+                    seq: seq || 1,
                     school: schoolId
 
                 })
 
                 const savedData = await newUser.save();
+
+                //*****Update numberseq */
+                const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "user", schoolId: req.user.schoolId });
+                console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+                //************ */
                 res.status(200).json({ success: true, data: savedData, message: "User is Registered Successfully." });
 
             } catch (e) {

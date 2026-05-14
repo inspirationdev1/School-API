@@ -24,6 +24,7 @@ const enquiryRouter = require("./router/enquiry.router");
 const attendeeRouter = require("./router/attendee.router");
 
 const uploadRouter = require("./router/upload.router");
+const whatsappRouter = require("./router/whatsapp.router");
 
 
 const appsettingRouter = require("./router/appsetting.router");
@@ -108,6 +109,7 @@ app.use("/api/attendee", attendeeRouter);
 
 app.use("/api/appsetting", appsettingRouter);
 app.use("/api/upload", uploadRouter);
+app.use("/api/whatsapp", whatsappRouter);
 
 
 app.use("/api/examtype", examtypeRouter);

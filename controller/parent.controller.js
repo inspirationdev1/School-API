@@ -10,6 +10,8 @@ const jwtSecret = process.env.JWTSECRET;
 const Parent = require("../model/parent.model");
 const cloudinary = require("../config/cloudinary");
 
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
+
 module.exports = {
 
     getAllParents: async (req, res) => {
@@ -68,10 +70,20 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
+                //*****Get Numberseq */
+                const numberseqData = await getNumberseqWithScreenId({ screen_id: "parent", schoolId: req.user.schoolId });
+                console.log("numberseqData.data", numberseqData);
+                let seq = 1;
+                let code = "";
+                if (numberseqData) {
+                    seq = numberseqData.seq || 1;
+                    code = numberseqData.code || "";
+                }
+                //******** */
+
                 const newParent = new Parent({
                     email: fields.email[0],
                     name: fields.name[0],
-                    parent_code: fields.parent_code[0],
                     qualification: fields.qualification[0],
                     age: fields.age[0],
                     gender: fields.gender[0],
@@ -81,11 +93,19 @@ module.exports = {
                     parent_image: photoUrl,
                     phoneno: fields.phoneno[0],
                     password: hashPassword,
+                    parent_code: code || "",
+                    seq: seq || 1,
                     school: req.user.id
 
-                })
+                });
 
                 const savedData = await newParent.save();
+                //*****Update numberseq */
+                const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "parent", schoolId: req.user.schoolId });
+                console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+                //************ */
+
+                
                 res.status(200).json({ success: true, data: savedData, message: "Parent is Registered Successfully." });
 
             } catch (e) {

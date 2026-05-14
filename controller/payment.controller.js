@@ -4,6 +4,8 @@ const Payment = require("../model/payment.model");
 const Paymentdetail = require("../model/paymentdetail.model");
 const Exam = require("../model/examination.model");
 const Period = require("../model/period.model");
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
+
 module.exports = {
 
     getAllPayments: async (req, res) => {
@@ -20,10 +22,22 @@ module.exports = {
     createPayment: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
+            //***Number seq */
+            const numberseqData = await getNumberseqWithScreenId({ screen_id: "payment", schoolId: req.user.schoolId });
+            console.log("numberseqData.data", numberseqData);
+            let seq = 1;
+            let code = "";
+            if (numberseqData) {
+                seq = numberseqData.seq || 1;
+                code = numberseqData.code || "";
+            }
+            //****** */
 
             // 1️⃣ Save payment
             const newPayment = new Payment({
                 ...req.body,
+                paymentCode: code,
+                seq: seq,
                 school: schoolId,
             });
 
@@ -42,6 +56,12 @@ module.exports = {
             if (paymentDetails.length > 0) {
                 await Paymentdetail.insertMany(paymentDetails);
             }
+
+            // ****Update Number Seq****
+            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "payment", schoolId: req.user.schoolId });
+            console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+            // *********************
+
 
             // 4️⃣ Response
             res.status(200).json({

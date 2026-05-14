@@ -41,7 +41,6 @@ module.exports = {
             const [dd, mm, yyyy] = formattedinvoiceDate.split("-").map(Number);
             const newSalesinvoice = new Salesinvoice({
                 ...req.body,
-                month: mm,
                 siCode: code,
                 seq: seq,
                 school: schoolId,
@@ -64,7 +63,7 @@ module.exports = {
             }
 
             // ****Update Number Seq****
-            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "receipt", schoolId: req.user.schoolId });
+            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "salesinvoice", schoolId: req.user.schoolId });
             console.log("numberseqAfterUpdate", numberseqAfterUpdate);
             // *********************
 
@@ -462,7 +461,7 @@ module.exports = {
         }
     }
     ,
-    createMonthlyInvoice: async (req, res) => {
+    createMultipleInvoice: async (req, res) => {
 
         try {
             const schoolId = req.user.schoolId;
@@ -478,6 +477,7 @@ module.exports = {
 
 
             const year = req.body?.year;
+            const month = req.body?.month;
             const invoiceDate = req.body?.invoiceDate;
             const remarks = req.body?.remarks;
 
@@ -488,8 +488,8 @@ module.exports = {
             const invoiceExistData = await Salesinvoice.find({
                 school: schoolId,
                 status: "valid",
-                month: mm
-                , year: year,
+                month: month,
+                year: year,
                 class: classId,
                 section: sectionId
             }).lean();

@@ -10,6 +10,8 @@ const jwtSecret = process.env.JWTSECRET;
 const Employee = require("../model/employee.model");
 const cloudinary = require("../config/cloudinary");
 
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
+
 module.exports = {
 
     getEmployeeWithQuery: async (req, res) => {
@@ -57,10 +59,20 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
+                //*****Get Numberseq */
+                const numberseqData = await getNumberseqWithScreenId({ screen_id: "employee", schoolId: req.user.schoolId });
+                console.log("numberseqData.data", numberseqData);
+                let seq = 1;
+                let code = "";
+                if (numberseqData) {
+                    seq = numberseqData.seq || 1;
+                    code = numberseqData.code || "";
+                }
+                //******** */
+
                 const newEmployee = new Employee({
                     email: fields.email[0],
                     employee_name: fields.employee_name[0],
-                    employee_code: fields.employee_code[0],
                     qualification: fields.qualification[0],
                     age: fields.age[0],
                     gender: fields.gender[0],
@@ -71,11 +83,19 @@ module.exports = {
                     employee_image: photoUrl,
                     phoneno: fields.phoneno[0],
                     password: hashPassword,
+                    employee_code: code || "",
+                    seq: seq || 1,
                     school: schoolId
 
                 })
 
                 const savedData = await newEmployee.save();
+
+                //*****Update numberseq */
+                const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "employee", schoolId: req.user.schoolId });
+                console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+                //************ */
+
                 res.status(200).json({ success: true, data: savedData, message: "Employee is Registered Successfully." });
 
             } catch (e) {

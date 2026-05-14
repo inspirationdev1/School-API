@@ -5,6 +5,8 @@ const Marksheetdetail = require("../model/marksheetdetail.model");
 const Exam = require("../model/examination.model");
 const Period = require("../model/period.model");
 const ReceiptdetailModel = require("../model/receiptdetail.model");
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
+
 module.exports = {
 
     getAllMarksheets: async (req, res) => {
@@ -22,9 +24,21 @@ module.exports = {
         try {
             const schoolId = req.user.schoolId;
 
+            const numberseqData = await getNumberseqWithScreenId({ screen_id: "marksheet", schoolId: req.user.schoolId });
+            console.log("numberseqData.data", numberseqData);
+            let seq = 1;
+            let code = "";
+            if (numberseqData) {
+                seq = numberseqData.seq || 1;
+                code = numberseqData.code || "";
+            }
+            //******** */
+
             // 1️⃣ Save marksheet
             const newMarksheet = new Marksheet({
                 ...req.body,
+                msCode: code || "",
+                seq: seq || 1,
                 school: schoolId,
             });
 
@@ -43,6 +57,11 @@ module.exports = {
             if (markSheetDetails.length > 0) {
                 await Marksheetdetail.insertMany(markSheetDetails);
             }
+
+            //*****Update numberseq */
+            const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "marksheet", schoolId: req.user.schoolId });
+            console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+            //************ */
 
             // 4️⃣ Response
             res.status(200).json({
@@ -431,7 +450,7 @@ module.exports = {
                         totalMarks: {
                             $sum: "$marksheetDetails.marks",
                         },
-                        
+
                     },
                 },
             ]);

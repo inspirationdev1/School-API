@@ -234,279 +234,7 @@ module.exports = {
             });
         }
     },
-    getProgressCardPrint: async (req, res) => {
-        try {
-            // const id = req.params.id;
-
-
-
-            const filterQuery = {};
-            const schoolId = req.user.schoolId;
-            console.log(schoolId, "schoolId")
-            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
-
-            if (req.query.hasOwnProperty('student')) {
-                const studentId = req.query.student;
-                filterQuery['student'] = new mongoose.Types.ObjectId(studentId);
-            }
-
-            if (req.query.hasOwnProperty('year')) {
-                const year = req.query.year;
-                filterQuery['year'] = year;
-            }
-
-            filterQuery['status'] = "valid";
-
-
-            const result = await Marksheetdetail.find(filterQuery)
-                .populate("school")
-                .populate("class")
-                .populate("section")
-                .populate("teacher")
-                .populate("subject")
-                .populate("examination")
-                .populate("questionpaper")
-                .populate("student")
-                .lean();
-            console.log(result);
-
-            // const result = await Marksheet.aggregate([
-
-            //     {
-            //         $match: filterQuery
-            //     },
-
-            //     // 🔹 Get marksheetDetails
-            //     {
-            //         $lookup: {
-            //             from: "marksheetdetails",
-            //             localField: "_id",
-            //             foreignField: "msId",
-            //             as: "marksheetDetails"
-            //         }
-            //     },
-
-            //     // FILTER ARRAY HERE
-            //     {
-            //         $addFields: {
-            //             marksheetDetails: {
-            //                 $filter: {
-            //                     input: "$marksheetDetails",
-            //                     as: "detail",
-            //                     cond: {
-            //                         $eq: [
-            //                             "$$detail.student",
-            //                             new mongoose.Types.ObjectId(req.query.student)
-            //                         ]
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     },
-
-            //     // Remove marksheets that now have empty array
-            //     {
-            //         $match: {
-            //             "marksheetDetails.0": { $exists: true }
-            //         }
-            //     },
-            //     // 🔹 FILTER BY STUDENT HERE
-            //     {
-            //         $match: {
-            //             "marksheetDetails.student": new mongoose.Types.ObjectId(req.query.student)
-            //         }
-            //     },
-
-            //     // 🔹 Populate students
-            //     {
-            //         $lookup: {
-            //             from: "students",
-            //             localField: "marksheetDetails.student",
-            //             foreignField: "_id",
-            //             as: "studentData"
-            //         }
-            //     },
-
-
-
-            //     // 🔹 Merge student data into marksheetDetails
-            //     {
-            //         $addFields: {
-            //             marksheetDetails: {
-            //                 $map: {
-            //                     input: "$marksheetDetails",
-            //                     as: "detail",
-            //                     in: {
-            //                         $mergeObjects: [
-            //                             "$$detail",
-            //                             {
-            //                                 student: {
-            //                                     $arrayElemAt: [
-            //                                         {
-            //                                             $filter: {
-            //                                                 input: "$studentData",
-            //                                                 as: "s",
-            //                                                 cond: {
-            //                                                     $eq: ["$$s._id", "$$detail.student"]
-            //                                                 }
-            //                                             }
-            //                                         },
-            //                                         0
-            //                                     ]
-            //                                 }
-            //                             }
-            //                         ]
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     },
-
-            //     // cleanup
-            //     {
-            //         $project: {
-            //             studentData: 0
-            //         }
-            //     },
-
-            //     // 🔹 Populate school
-            //     {
-            //         $lookup: {
-            //             from: "schools",
-            //             localField: "school",
-            //             foreignField: "_id",
-            //             as: "school"
-            //         }
-            //     },
-            //     { $unwind: "$school" },
-
-            //     // 🔹 Populate class
-            //     {
-            //         $lookup: {
-            //             from: "classes",
-            //             localField: "class",
-            //             foreignField: "_id",
-            //             as: "class"
-            //         }
-            //     },
-            //     {
-            //         $unwind: {
-            //             path: "$class",
-            //             preserveNullAndEmptyArrays: true
-            //         }
-            //     },
-
-            //     // 🔹 Populate section
-            //     {
-            //         $lookup: {
-            //             from: "sections",
-            //             localField: "section",
-            //             foreignField: "_id",
-            //             as: "section"
-            //         }
-            //     },
-            //     {
-            //         $unwind: {
-            //             path: "$section",
-            //             preserveNullAndEmptyArrays: true
-            //         }
-            //     },
-
-            //     // 🔹 Populate teacher
-            //     {
-            //         $lookup: {
-            //             from: "teachers",
-            //             localField: "teacher",
-            //             foreignField: "_id",
-            //             as: "teacher"
-            //         }
-            //     },
-            //     {
-            //         $unwind: {
-            //             path: "$teacher",
-            //             preserveNullAndEmptyArrays: true
-            //         }
-            //     },
-
-            //     // 🔹 Populate subject
-            //     {
-            //         $lookup: {
-            //             from: "subjects",
-            //             localField: "subject",
-            //             foreignField: "_id",
-            //             as: "subject"
-            //         }
-            //     },
-            //     {
-            //         $unwind: {
-            //             path: "$subject",
-            //             preserveNullAndEmptyArrays: true
-            //         }
-            //     },
-
-            //     // 🔹 Populate examination
-            //     {
-            //         $lookup: {
-            //             from: "examinations",
-            //             localField: "examination",
-            //             foreignField: "_id",
-            //             as: "examination"
-            //         }
-            //     },
-            //     {
-            //         $unwind: {
-            //             path: "$examination",
-            //             preserveNullAndEmptyArrays: true
-            //         }
-            //     },
-
-            //     // 🔹 Populate questionpaper
-            //     {
-            //         $lookup: {
-            //             from: "questionpapers",
-            //             localField: "questionpaper",
-            //             foreignField: "_id",
-            //             as: "questionpaper"
-            //         }
-            //     },
-            //     {
-            //         $unwind: {
-            //             path: "$questionpaper",
-            //             preserveNullAndEmptyArrays: true
-            //         }
-            //     },
-
-            //     // 🔹 SUM marks
-            //     {
-            //         $addFields: {
-            //             totalMarks: {
-            //                 $sum: "$marksheetDetails.marks"
-            //             }
-            //         }
-            //     }
-
-            // ]);
-
-            if (!result.length) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Marksheet not found",
-                });
-            }
-
-            res.status(200).json({
-                success: true,
-                data: result, // contains marksheet + marksheetDetails[]
-            });
-
-        } catch (e) {
-            console.error("Error in getMarksheetPrint", e);
-            res.status(500).json({
-                success: false,
-                message: "Error fetching getMarksheetPrint",
-            });
-        }
-    },
+    
 
     getIncomeExpensePrint: async (req, res) => {
         try {
@@ -4205,6 +3933,551 @@ module.exports = {
             res.status(500).json({
                 success: false,
                 message: "Error generating Student_Marks_Subjectwise",
+            });
+        }
+    },
+    getProgressCardPrint: async (req, res) => {
+
+
+        try {
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+
+
+
+
+            if (req.query?.class) {
+                filterQuery.class = req.query?.class;
+            }
+
+            if (req.query?.section) {
+                filterQuery.section = req.query?.section;
+            }
+
+            if (req.query?.student) {
+                filterQuery.student = req.query?.student;
+            }
+
+            if (req.query?.examination) {
+                filterQuery.examination = req.query?.examination;
+            }
+
+            let requesttype = "";
+            if (req.query?.requesttype) {
+                requesttype = req.query?.requesttype;
+            }
+
+
+            const data = await await Marksheetdetail.find(filterQuery)
+                .populate("school").populate("class").populate("section").populate("examination")
+                .populate("subject").populate("student")
+                .lean();
+            console.log(data);
+
+
+
+
+
+            if (requesttype === "PDF") {
+                // ============================================
+                // PDF DOCUMENT
+                // ============================================
+                const doc = new PDFDocument({
+                    size: "A4",
+                    layout: "landscape",
+                    margin: 30
+                });
+
+                // ============================================
+                // RESPONSE HEADERS
+                // ============================================
+                res.writeHead(200, {
+                    "Content-Type": "application/pdf",
+                    "Content-Disposition":
+                        "attachment; filename=Student-Subjectwise-Report.pdf"
+                });
+
+                doc.pipe(res);
+
+                // ============================================
+                // NO DATA
+                // ============================================
+                if (!data.length) {
+
+                    doc
+                        .font("Helvetica-Bold")
+                        .fontSize(18)
+                        .text("No Data Found", 0, 300, {
+                            align: "center"
+                        });
+
+                    doc.end();
+                    return;
+                }
+
+                // ============================================
+                // SCHOOL INFO
+                // ============================================
+                const schoolInfo = data[0]?.school || {};
+
+                // ============================================
+                // GROUP STUDENTS
+                // ============================================
+                const studentMap = {};
+                const subjectSet = new Set();
+
+                data.forEach(item => {
+
+                    const studentId = item.student?._id?.toString();
+                    const subjectName = item.subject?.subject_name || "-";
+
+                    subjectSet.add(subjectName);
+
+                    if (!studentMap[studentId]) {
+
+                        studentMap[studentId] = {
+                            studentName: item.student?.name || "-",
+                            studentCode: item.student?.student_code || "-",
+                            marks: {}
+                        };
+                    }
+
+                    studentMap[studentId].marks[subjectName] =
+                        item.marks || 0;
+                });
+
+                const students = Object.values(studentMap);
+                const subjects = Array.from(subjectSet);
+
+                // ============================================
+                // PAGE WIDTH
+                // ============================================
+                const pageWidth = doc.page.width;
+
+                // ============================================
+                // HEADER
+                // ============================================
+                const logoX = 40;
+                const logoY = 25;
+
+                // ============================================
+                // SCHOOL LOGO
+                // ============================================
+                if (schoolInfo?.school_image) {
+
+                    try {
+
+                        const img = await axios.get(
+                            schoolInfo.school_image,
+                            {
+                                responseType: "arraybuffer"
+                            }
+                        );
+
+                        doc.image(img.data, logoX, logoY, {
+                            width: 55,
+                            height: 55
+                        });
+
+                    } catch (err) {
+
+                        console.log("Logo load failed");
+                    }
+                }
+
+                // ============================================
+                // SCHOOL NAME
+                // ============================================
+                doc
+                    .font("Helvetica-Bold")
+                    .fontSize(20)
+                    .text(
+                        schoolInfo.school_name || "School Name",
+                        110,
+                        30
+                    );
+
+                // ============================================
+                // ADDRESS
+                // ============================================
+                doc
+                    .font("Helvetica")
+                    .fontSize(10)
+                    .text(
+                        `${schoolInfo.address || ""}, ${schoolInfo.city || ""}, ${schoolInfo.state || ""}`,
+                        110,
+                        55
+                    );
+
+                // ============================================
+                // REPORT TITLE
+                // ============================================
+                doc
+                    .font("Helvetica-Bold")
+                    .fontSize(15)
+                    .text(
+                        "PROGRESS CARD REPORT",
+                        0,
+                        100,
+                        {
+                            align: "center"
+                        }
+                    );
+
+                // ============================================
+                // DIVIDER
+                // ============================================
+                doc
+                    .moveTo(40, 125)
+                    .lineTo(pageWidth - 40, 125)
+                    .stroke();
+
+                // ============================================
+                // TABLE START
+                // ============================================
+                let y = 150;
+                const startX = 40;
+
+                // ============================================
+                // COLUMN WIDTHS
+                // ============================================
+                const snoWidth = 50;
+                const studentWidth = 220;
+                const subjectWidth = 90;
+                const totalWidth = 90;
+
+                // ============================================
+                // DRAW CELL FUNCTION
+                // ============================================
+                const drawCell = (
+                    text,
+                    x,
+                    y,
+                    width,
+                    height,
+                    bgColor = null,
+                    bold = false,
+                    align = "center"
+                ) => {
+
+                    // Background
+                    if (bgColor) {
+
+                        doc
+                            .rect(x, y, width, height)
+                            .fill(bgColor);
+                    }
+
+                    // Border
+                    doc
+                        .rect(x, y, width, height)
+                        .stroke();
+
+                    // Text
+                    doc
+                        .fillColor("black")
+                        .font(
+                            bold
+                                ? "Helvetica-Bold"
+                                : "Helvetica"
+                        )
+                        .fontSize(9)
+                        .text(
+                            String(text || "-"),
+                            x + 3,
+                            y + 8,
+                            {
+                                width: width - 6,
+                                align
+                            }
+                        );
+                };
+
+                // ============================================
+                // DRAW TABLE HEADER
+                // ============================================
+                let x = startX;
+
+                const headerHeight = 30;
+
+                // S.No
+                drawCell(
+                    "S.No",
+                    x,
+                    y,
+                    snoWidth,
+                    headerHeight,
+                    "#d9e8ff",
+                    true
+                );
+
+                x += snoWidth;
+
+                // Student Name
+                drawCell(
+                    "Student Name",
+                    x,
+                    y,
+                    studentWidth,
+                    headerHeight,
+                    "#d9e8ff",
+                    true
+                );
+
+                x += studentWidth;
+
+                // Dynamic Subjects
+                subjects.forEach(subject => {
+
+                    drawCell(
+                        subject,
+                        x,
+                        y,
+                        subjectWidth,
+                        headerHeight,
+                        "#d9e8ff",
+                        true
+                    );
+
+                    x += subjectWidth;
+                });
+
+                // Total
+                drawCell(
+                    "Total",
+                    x,
+                    y,
+                    totalWidth,
+                    headerHeight,
+                    "#d9e8ff",
+                    true
+                );
+
+                y += headerHeight;
+
+                // ============================================
+                // DRAW STUDENT ROWS
+                // ============================================
+                students.forEach((student, index) => {
+
+                    // ========================================
+                    // PAGE BREAK
+                    // ========================================
+                    if (y > doc.page.height - 50) {
+
+                        doc.addPage();
+
+                        y = 50;
+
+                        x = startX;
+
+                        drawCell(
+                            "S.No",
+                            x,
+                            y,
+                            snoWidth,
+                            headerHeight,
+                            "#d9e8ff",
+                            true
+                        );
+
+                        x += snoWidth;
+
+                        drawCell(
+                            "Student Name",
+                            x,
+                            y,
+                            studentWidth,
+                            headerHeight,
+                            "#d9e8ff",
+                            true
+                        );
+
+                        x += studentWidth;
+
+                        subjects.forEach(subject => {
+
+                            drawCell(
+                                subject,
+                                x,
+                                y,
+                                subjectWidth,
+                                headerHeight,
+                                "#d9e8ff",
+                                true
+                            );
+
+                            x += subjectWidth;
+                        });
+
+                        drawCell(
+                            "Total",
+                            x,
+                            y,
+                            totalWidth,
+                            headerHeight,
+                            "#d9e8ff",
+                            true
+                        );
+
+                        y += headerHeight;
+                    }
+
+                    let total = 0;
+
+                    x = startX;
+
+                    const rowColor =
+                        index % 2 === 0
+                            ? "#f7f7f7"
+                            : null;
+
+                    // ========================================
+                    // SERIAL NUMBER
+                    // ========================================
+                    drawCell(
+                        index + 1,
+                        x,
+                        y,
+                        snoWidth,
+                        28,
+                        rowColor
+                    );
+
+                    x += snoWidth;
+
+                    // ========================================
+                    // STUDENT NAME
+                    // ========================================
+                    drawCell(
+                        student.studentName,
+                        x,
+                        y,
+                        studentWidth,
+                        28,
+                        rowColor,
+                        false,
+                        "left"
+                    );
+
+                    x += studentWidth;
+
+                    // ========================================
+                    // SUBJECT MARKS
+                    // ========================================
+                    subjects.forEach(subject => {
+
+                        const marks =
+                            student.marks[subject] || 0;
+
+                        total += marks;
+
+                        drawCell(
+                            marks,
+                            x,
+                            y,
+                            subjectWidth,
+                            28,
+                            rowColor
+                        );
+
+                        x += subjectWidth;
+                    });
+
+                    // ========================================
+                    // TOTAL
+                    // ========================================
+                    drawCell(
+                        total,
+                        x,
+                        y,
+                        totalWidth,
+                        28,
+                        rowColor,
+                        true
+                    );
+
+                    y += 28;
+                });
+
+                // ============================================
+                // END PDF
+                // ============================================
+                doc.end();
+            } else {
+                res.status(200).json({
+                    success: true,
+                    data: data, // contains data
+                });
+            }
+
+        } catch (err) {
+            console.error(err);
+            console.error("Error generating Student_Marks_Subjectwise", err.message);
+            res.status(500).json({
+                success: false,
+                message: "Error generating Student_Marks_Subjectwise",
+            });
+        }
+    },
+    getProgressCardPrint_Old: async (req, res) => {
+        try {
+            // const id = req.params.id;
+
+
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+            console.log(schoolId, "schoolId")
+            filterQuery['school'] = new mongoose.Types.ObjectId(schoolId);
+
+            if (req.query.hasOwnProperty('student')) {
+                const studentId = req.query.student;
+                filterQuery['student'] = new mongoose.Types.ObjectId(studentId);
+            }
+
+            if (req.query.hasOwnProperty('year')) {
+                const year = req.query.year;
+                filterQuery['year'] = year;
+            }
+
+            filterQuery['status'] = "valid";
+
+
+            const result = await Marksheetdetail.find(filterQuery)
+                .populate("school")
+                .populate("class")
+                .populate("section")
+                .populate("teacher")
+                .populate("subject")
+                .populate("examination")
+                .populate("questionpaper")
+                .populate("student")
+                .lean();
+            console.log(result);
+
+           
+
+            if (!result.length) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Marksheet not found",
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result, // contains marksheet + marksheetDetails[]
+            });
+
+        } catch (e) {
+            console.error("Error in getMarksheetPrint", e);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching getMarksheetPrint",
             });
         }
     },

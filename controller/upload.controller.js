@@ -19,8 +19,6 @@ const Generalmaster = require("../model/generalmaster.model");
 const Employee = require("../model/employee.model");
 
 module.exports = {
-
-
     upload_accountlevel: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
@@ -659,3 +657,4 @@ async function CreateEmployee(employeeData) {
         return employee_id;
     }
 }
+

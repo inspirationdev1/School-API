@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     },
     name:{type:String, required:true},
     user_code:{type:String, required:true},
+    seq: { type: Number, default: 0 },
     qualification:{type:String, required:true},
     dOBDate: { type: Date, required: true, },
     age:{type:String, default:null},

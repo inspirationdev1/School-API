@@ -9,6 +9,9 @@ const jwtSecret = process.env.JWTSECRET;
 
 const Teacher = require("../model/teacher.model");
 const cloudinary = require("../config/cloudinary");
+
+const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
+
 module.exports = {
 
     getTeacherWithQuery: async (req, res) => {
@@ -57,12 +60,19 @@ module.exports = {
 
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
-                let seq = 0;
+                //*****Get Numberseq */
+                const numberseqData = await getNumberseqWithScreenId({ screen_id: "teacher", schoolId: req.user.schoolId });
+                console.log("numberseqData.data", numberseqData);
+                let seq = 1;
+                let code = "";
+                if (numberseqData) {
+                    seq = numberseqData.seq || 1;
+                    code = numberseqData.code || "";
+                }
+                //******** */
                 const newTeacher = new Teacher({
                     email: fields.email[0],
                     name: fields.name[0],
-                    teacher_code: fields.teacher_code[0],
-                    seq:seq||0,
                     qualification: fields.qualification[0],
                     age: fields.age[0],
                     gender: fields.gender[0],
@@ -73,11 +83,21 @@ module.exports = {
                     phoneno: fields.phoneno[0],
                     teacher_image: photoUrl,
                     password: hashPassword,
+                    teacher_code: code || "",
+                    seq: seq || 1,
                     school: schoolId
 
                 })
 
                 const savedData = await newTeacher.save();
+
+                //*****Update numberseq */
+                const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "teacher", schoolId: req.user.schoolId });
+                console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+                //************ */
+
+                
+
                 res.status(200).json({ success: true, data: savedData, message: "Teacher is Registered Successfully." });
 
             } catch (e) {

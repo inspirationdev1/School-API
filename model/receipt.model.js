@@ -6,7 +6,7 @@ const receiptSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    receiptNumber: { type: Number, default: 0 },
+    receiptNumber: { type: String, default: 0 },
     seq: { type: Number, default: 0 },
     receiptDate: { type: Date, required: true, },
     receiptTime: { type: Date, required: true, },
@@ -14,6 +14,7 @@ const receiptSchema = new mongoose.Schema({
     status: { type: String, default: 'valid' },
     remarks: { type: String, default: '' },
     year: { type: Number, default: new Date().getFullYear() },
+    month: { type: Number, default: new Date().getMonth() + 1 },
     academicyear: { type: String, default: '' },
     createdAt: { type: Date, default: new Date() }
 

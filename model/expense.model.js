@@ -6,7 +6,8 @@ const expenseSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    expenseNumber: { type: Number, default: 0 },
+    expenseNumber: { type: String, default: "" },
+    seq: { type: Number, default: 0 },
     expenseDate: { type: Date, required: true, },
     expenseTime: { type: Date, required: true, },
     employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },

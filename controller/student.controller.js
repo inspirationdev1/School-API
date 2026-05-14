@@ -85,6 +85,8 @@ module.exports = {
                 const salt = bcrypt.genSaltSync(10);
                 const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
+
+                //*****Get Numberseq */
                 const numberseqData = await getNumberseqWithScreenId({ screen_id: "student", schoolId: req.user.schoolId });
                 console.log("numberseqData.data", numberseqData);
                 let seq = 1;
@@ -93,6 +95,7 @@ module.exports = {
                     seq = numberseqData.seq || 1;
                     code = numberseqData.code || "";
                 }
+                //******** */
 
                 const newStudent = new Student({
                     email: fields.email[0],
@@ -151,8 +154,10 @@ module.exports = {
 
                 const savedData = await newStudent.save();
 
+                //*****Update numberseq */
                 const numberseqAfterUpdate = await updateNumberseqWithScreenId({ screen_id: "student", schoolId: req.user.schoolId });
                 console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+                //************ */
 
                 res.status(200).json({ success: true, data: savedData, message: "Student is Registered Successfully." });
 
