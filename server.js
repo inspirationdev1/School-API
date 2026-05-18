@@ -13,6 +13,8 @@ const subjectRouter = require("./router/subject.router")
 const sectionRouter = require("./router/section.router")
 const departmentRouter = require("./router/department.router")
 const feestypeRouter = require("./router/feestype.router");
+const gradeRouter = require("./router/grade.router");
+
 const accountlevelRouter = require("./router/accountlevel.router");
 const accountledgerRouter = require("./router/accountledger.router");
 const bonafidecertificateRouter = require("./router/bonafidecertificate.router");
@@ -111,6 +113,7 @@ app.use("/api/appsetting", appsettingRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/whatsapp", whatsappRouter);
 
+app.use("/api/grade", gradeRouter);
 
 app.use("/api/examtype", examtypeRouter);
 app.use("/api/generalmaster", generalmasterRouter);
