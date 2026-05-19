@@ -109,11 +109,11 @@ module.exports = {
 
 
             const results = [];
-
+            let phone_no = "";
             for (const num of numbers) {
 
                 try {
-                    let phone_no = num?.phoneno || num?.guardian_phone || num
+                    phone_no = num?.phoneno || num?.guardian_phone || num
                     phone_no = 'whatsapp:' + phone_no;
                     const message =
                         await client.messages.create({
@@ -135,7 +135,7 @@ module.exports = {
                     console.log("TO:", message.to);
 
                     results.push({
-                        to,
+                        phone_no,
                         sid: message.sid,
                         status: message.status,
                     });
