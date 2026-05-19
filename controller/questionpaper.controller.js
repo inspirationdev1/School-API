@@ -90,7 +90,8 @@ module.exports = {
     },
     getAllQuestionpapers: async (req, res) => {
         try {
-            const questionpapers = await Questionpaper.find().populate("subject")
+            const schoolId = req.user.schoolId;
+            const questionpapers = await Questionpaper.find({school: schoolId}).populate("subject")
             .populate("class").populate("section").populate("teacher").populate("subject").populate("examination");
             res.status(200).json({ success: true, message: "Success in fetching User Applications.", data: questionpapers })
         } catch (error) {

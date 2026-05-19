@@ -28,7 +28,8 @@ module.exports = {
     },
     getAllExaminations: async (req, res) => {
         try {
-            const examinations = await Examination.find();
+            const schoolId = req.user.schoolId;
+            const examinations = await Examination.find({school: schoolId});
             res.status(200).json({ success: true, message: "Success in fetching User Applications.", data: examinations })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in fetching user applications, try later." })

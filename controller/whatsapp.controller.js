@@ -67,38 +67,76 @@ module.exports = {
         }
     },
     send_bulk_whatsapp: async (req, res) => {
+    try {
+
         const client = twilio(
             process.env.TWILIO_ACCOUNT_SID,
-            process.env.TWILIO_AUTH_TOKEN,
+            process.env.TWILIO_AUTH_TOKEN
         );
-        // List of recipient numbers
-        const numbers = ["whatsapp:+919550345573", "whatsapp:+917674968840"];
+
+        const numbers = [
+            "whatsapp:+919550345573",
+            "whatsapp:+917674968840"
+        ];
+
+        const results = [];
+
         for (const to of numbers) {
+
             try {
-                const message = await client.messages.create({
-                     from: process.env.TWILIO_WHATSAPP_NUMBER,
-                    to: to,
-                    body: "Hello from Node.js and Twilio WhatsApp 🚀",
+
+                const message =
+                    await client.messages.create({
+                        from:
+                            process.env
+                                .TWILIO_WHATSAPP_NUMBER,
+                        to,
+                        body:
+                            "Hello from Node.js and Twilio WhatsApp 🚀",
+                    });
+
+                console.log(
+                    `Message sent to ${to}`
+                );
+
+                results.push({
+                    to,
+                    success: true,
+                    sid: message.sid,
                 });
 
-                console.log(`Message sent to ${to}`);
-                console.log(`SID: ${message.sid}`);
-
-                res.status(200).json({
-                success: true,
-                data: [],
-                message: "Whatsapp sent Successfully."
-            });
             } catch (error) {
-                console.error(`Failed for ${to}`);
-                console.error(error.message);
-                res.status(500).json({
-                success: false,
-                message: error.message
-            });
+
+                console.error(
+                    `Failed for ${to}`
+                );
+
+                results.push({
+                    to,
+                    success: false,
+                    error: error.message,
+                });
             }
         }
-    },
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Bulk WhatsApp process completed.",
+            data: results,
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+
+    }
+},
 
 }
 
