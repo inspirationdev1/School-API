@@ -6,6 +6,7 @@ const { getMarksheetPrint, getProgressCardPrint, getIncomeExpensePrint, getExpen
     , getIncomeExpenseDashboard, getAttendanceDashboard, getExamQuestionpaperPrint
     , getChartOfAccountPrint,getStudentListPrint,getParentListPrint
     ,getTeacherListPrint,getEmployeeListPrint,getStudentList_Marks_Subjectwise_Print,getStudent_Marks_Subjectwise_Print
+    ,getGradeListPrint
  } = require("../controller/schoolreports.controller");
 
 
@@ -37,6 +38,6 @@ router.post("/employee-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER',
 router.post("/studentlist-marks-subjectwise-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudentList_Marks_Subjectwise_Print);
 router.post("/student-marks-subjectwise-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudent_Marks_Subjectwise_Print);
 router.post("/progresscard-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getProgressCardPrint);
-
+router.post("/grade-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getGradeListPrint);
 
 module.exports = router;

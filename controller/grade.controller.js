@@ -22,7 +22,7 @@ module.exports = {
                     const schoolId = req.user.schoolId;
                     filterQuery['school'] = schoolId;
                     if (req.query.hasOwnProperty('search')) {
-                        filterQuery['class_name'] = { $regex: req.query.search, $options: 'i' }
+                        filterQuery['grade_code'] = { $regex: req.query.search, $options: 'i' }
                     }
         
                     

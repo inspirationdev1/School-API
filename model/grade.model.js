@@ -2,17 +2,26 @@ const mongoose = require("mongoose");
 
 const gradeSchema = new mongoose.Schema({
     school:{type:mongoose.Schema.ObjectId, ref:'School'},
-    grade_name: {
-        type: String,
-        required: true
-    },
     grade_code: {
         type: String,
         required: true
     },
-    grade_percentage: {
+    marks_limit: {
         type: Number,
         default:0
+    },
+   
+    marks_max: {
+        type: Number,
+        default:0
+    },
+     marks_min: {
+        type: Number,
+        default:0
+    },
+    gpa: {
+        type: String,
+        default:''
     },
     createdAt:{type:Date, default:new Date()}
 
@@ -20,5 +29,4 @@ const gradeSchema = new mongoose.Schema({
 
 // ✅ Compound unique index
 gradeSchema.index({ school: 1, grade_code: 1 }, { unique: true });
-gradeSchema.index({ school: 1, grade_name: 1 }, { unique: true });
 module.exports = mongoose.model("Grade", gradeSchema)
