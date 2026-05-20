@@ -28,5 +28,5 @@ const gradeSchema = new mongoose.Schema({
 })
 
 // ✅ Compound unique index
-gradeSchema.index({ school: 1, grade_code: 1 }, { unique: true });
+gradeSchema.index({ school: 1, grade_code: 1,marks_limit: 1 }, { unique: true });
 module.exports = mongoose.model("Grade", gradeSchema)
