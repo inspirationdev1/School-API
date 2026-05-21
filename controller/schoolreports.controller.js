@@ -4041,6 +4041,8 @@ module.exports = {
                 const subjectLength = Object.keys(subjects).length;
                 console.log(subjectLength); // 3
 
+                
+
                 const reportHeader = {
                     school_name: marksheetData[0].school.school_name,
                     address: marksheetData[0].school.address,
@@ -4360,7 +4362,7 @@ module.exports = {
                     // ============================================
                     // EXAM LOOP
                     // ============================================
-                    let denom = 0;
+                    
                     let sumofmarks = 0;
                     let sumofmarkslimit = 0;
                     examNames.forEach((exam) => {
@@ -4379,12 +4381,21 @@ module.exports = {
                         let avglimit = 0;
                         if (exam === "SA-1" || exam === "SA-2") {
                             sumofmarks -= marks || 0;
-                            avg = sumofmarks / denom;
+                            sumofmarkslimit -= marksLimit || 0;
+
+                            if (exam === "SA-1"){
+                                avg = sumofmarks / 2;
+                                avglimit = (sumofmarkslimit / 2);
+                            }else if (exam === "SA-2"){
+                                avg = sumofmarks / 4;
+                                avglimit = (sumofmarkslimit / 4);
+                            }
+                            
                             avg = Number(avg.toFixed(0));
                             examTotalAvg[exam] += avg;
 
-                            sumofmarkslimit -= marksLimit || 0;
-                            avglimit = (sumofmarkslimit / denom);
+                            
+                            
                             avglimit = Number(avglimit.toFixed(0));
                             avglimit += marksLimit;
                             examMarksLimitTotals[exam] += avglimit;
@@ -4408,13 +4419,13 @@ module.exports = {
                             currentX += subColumnWidth;
 
 
-                            sumofmarks = 0;
-                            sumofmarkslimit = 0;
-                            denom = 0;
+                            // sumofmarks = 0;
+                            // sumofmarkslimit = 0;
+                            
                         } else {
                             examMarksLimitTotals[exam] += marksLimit;
                         }
-                        denom++;
+                        
 
 
 
@@ -4566,8 +4577,7 @@ module.exports = {
 
                 examNames.forEach((exam) => {
 
-                    //         examTotalAvg[exam] = 0;
-                    // examTotalmarks[exam] = 0;
+                    
                     if (exam === "SA-1" || exam === "SA-2") {
                         // ============================================
                         // TOTAL AVG CELL
