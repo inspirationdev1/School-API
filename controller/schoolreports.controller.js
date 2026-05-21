@@ -4492,12 +4492,13 @@ module.exports = {
                         }
 
                         let filtered_gradeData = gradeData.filter(
-                            (item) => item.marks_min <= marks
+                            (item) => item.marks_min <= marks && item.marks_limit==20
                         );
                         if (exam === "SA-1" || exam === "SA-2") {
                             filtered_gradeData = gradeData.filter(
-                                (item) => item.marks_min <= totalmarks
+                                (item) => item.marks_min <= totalmarks && item.marks_limit==100
                             );
+                            console.log("filtered_gradeData",filtered_gradeData);
                         }
 
 
