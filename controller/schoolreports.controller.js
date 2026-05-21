@@ -3975,10 +3975,11 @@ module.exports = {
                 .populate("examination")
                 .populate("subject")
                 .populate("student")
+                .sort({ examination: 1 })
                 .lean();
 
             const gradeData = await Grade.find({ school: schoolId })
-                .sort({ grade_percentage: -1 })
+                .sort({ marks_min: -1 })
                 .lean();
 
             // ============================================
@@ -4036,6 +4037,9 @@ module.exports = {
 
                 const examNames = tableData.exams;
                 const subjects = tableData.subjects;
+
+                const subjectLength = Object.keys(subjects).length;
+                console.log(subjectLength); // 3
 
                 const reportHeader = {
                     school_name: marksheetData[0].school.school_name,
@@ -4369,9 +4373,8 @@ module.exports = {
 
 
                         examTotals[exam] += marks;
-                        // examMarksLimitTotals[exam] += marksLimit;
                         sumofmarks += marks || 0;
-                        sumofmarkslimit+=marksLimit;
+                        sumofmarkslimit += marksLimit;
                         let avg = 0;
                         let avglimit = 0;
                         if (exam === "SA-1" || exam === "SA-2") {
@@ -4381,9 +4384,9 @@ module.exports = {
                             examTotalAvg[exam] += avg;
 
                             sumofmarkslimit -= marksLimit || 0;
-                            avglimit = (sumofmarkslimit/denom);
+                            avglimit = (sumofmarkslimit / denom);
                             avglimit = Number(avglimit.toFixed(0));
-                            avglimit+=marksLimit;
+                            avglimit += marksLimit;
                             examMarksLimitTotals[exam] += avglimit;
                             // ============================================
                             // AVG CELL
@@ -4406,9 +4409,9 @@ module.exports = {
 
 
                             sumofmarks = 0;
-                            sumofmarkslimit=0;
+                            sumofmarkslimit = 0;
                             denom = 0;
-                        }else{
+                        } else {
                             examMarksLimitTotals[exam] += marksLimit;
                         }
                         denom++;
@@ -4477,14 +4480,22 @@ module.exports = {
                             }
                         }
 
-                        const filtered_gradeData = gradeData.filter(
-                            (item) => item.grade_percentage <= marks_per
+                        let filtered_gradeData = gradeData.filter(
+                            (item) => item.marks_min <= marks
                         );
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            filtered_gradeData = gradeData.filter(
+                                (item) => item.marks_min <= totalmarks
+                            );
+                        }
 
-                        let grade = "Fail";
+
+                        let grade = "E";
+                        let gpa = "-";
 
                         if (filtered_gradeData.length > 0) {
-                            grade = filtered_gradeData[0]?.grade_code || "Fail";
+                            grade = filtered_gradeData[0]?.grade_code || "E";
+                            gpa = filtered_gradeData[0]?.gpa || "-";
                         }
 
                         // ============================================
@@ -4506,8 +4517,7 @@ module.exports = {
                             doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
 
                             doc.text(
-                                // `${marks}/${marksLimit}`,
-                                `${0}`,
+                                `${gpa}`,
                                 currentX,
                                 startY + 7,
                                 {
@@ -4621,40 +4631,47 @@ module.exports = {
                     // TOTAL GRADE
                     // ============================================
                     let totalPercentage = 0;
+                    let totalMarksLimit = 0;
 
                     if (examMarksLimitTotals[exam] > 0) {
                         if (exam === "SA-1" || exam === "SA-2") {
-                             totalPercentage =
-                            (examTotals[exam] / examMarksLimitTotals[exam]) * 100;
-                        }else{
-                             totalPercentage =
-                            (examTotals[exam] / examMarksLimitTotals[exam]) * 100;
+                            totalMarksLimit = 100*subjectLength;
+                            totalPercentage =
+                                (examTotalmarks[exam] / totalMarksLimit) * 100;
+                        } else {
+                            // totalPercentage =
+                            //     (examTotals[exam] / examMarksLimitTotals[exam]) * 100;
+                            totalMarksLimit = 20*subjectLength;
+                            totalPercentage =
+                                (examTotals[exam] / totalMarksLimit) * 100;
                         }
-                       
-                        
+
+
                         totalPercentage = Number(totalPercentage.toFixed(0));
                     }
-                    
+
 
 
                     const filtered_gradeData = gradeData.filter(
-                        (item) => item.grade_percentage <= totalPercentage
+                        (item) => item.marks_min <= totalPercentage
                     );
 
-                    let totalGrade = "Fail";
+
+
+                    let totalGrade = "E";
+                    let totalGpa = "-";
 
                     if (filtered_gradeData.length > 0) {
                         totalGrade =
-                            filtered_gradeData[0]?.grade_code || "Fail";
+                            filtered_gradeData[0]?.grade_code || "E";
+                        totalGpa =
+                            filtered_gradeData[0]?.gpa || "-";
                     }
 
                     doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
 
                     doc.text(
-                        // totalGrade
-                        // `${examTotals[exam]}(${totalPercentage}%)`,
-                        // `${examTotals[exam]}/${examMarksLimitTotals[exam]}`,
-                        `${totalGrade}(${totalPercentage}%)`,
+                        `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`,
                         currentX, startY + 7, {
                         width: subColumnWidth,
                         align: "center",
@@ -4667,7 +4684,7 @@ module.exports = {
                         //GPA 
                         doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
                         doc.text(
-                            `${0}`,
+                            `${totalGpa}`,
                             currentX,
                             startY + 7,
                             {
@@ -4679,6 +4696,12 @@ module.exports = {
                         currentX += subColumnWidth;
                     }
                 });
+
+
+                //****FINAL RESULT*******
+                
+                //************ */
+
 
                 // ============================================
                 // END PDF
@@ -4860,7 +4883,7 @@ module.exports = {
                     { label: "Marks(Max)", key: "marks_max", width: tableWidth * 0.15 },
                     { label: "Grade", key: "grade_code", width: tableWidth * 0.12 },
                     { label: "GPA", key: "gpa", width: tableWidth * 0.12 },
-                   
+
                 ];
 
 

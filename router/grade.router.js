@@ -10,4 +10,6 @@ router.get("/fetch-single/:id",authMiddleware(['SCHOOL','USER']),  getGradeWithI
 router.patch("/update/:id",authMiddleware(['SCHOOL','USER']), updateGradeWithId);
 router.delete("/delete/:id",authMiddleware(['SCHOOL','USER']), deleteGradeWithId);
 
+
+
 module.exports = router;

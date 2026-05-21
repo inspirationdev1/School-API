@@ -7,7 +7,7 @@ const marksheetSchema = new mongoose.Schema({
         required: true
     },
      name: { type: String, default: '' },
-    msNumber: { type: Number, default: 0 },
+    seq: { type: Number, default: 0 },
     msDate: { type: Date, required: true, },
     msTime: { type: Date, required: true, },
     class: { type: mongoose.Schema.ObjectId, ref: "Class", required: true },

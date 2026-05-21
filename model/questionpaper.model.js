@@ -11,6 +11,7 @@ const questionpaperSchema = new mongoose.Schema({
     subject:{type:mongoose.Schema.ObjectId, ref:"Subject"},
     examination:{type:mongoose.Schema.ObjectId, ref:"Examination"},
     marksLimit:{type:Number,  default:0},
+    grade_markslimit:{type:Number,  default:0},
     fileType:{type:String,  default:''},
     fileName:{type:String,  default:''},
     public_id:{type:String,  default:''},

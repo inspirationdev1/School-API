@@ -20,6 +20,28 @@ module.exports = {
         }
 
     },
+    getMarksheetWithQuery: async (req, res) => {
+
+        try {
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+
+            filterQuery['school'] = schoolId;
+            if (req.query.search) {
+                filterQuery.$or = [
+                    { msCode: { $regex: req.query.search, $options: 'i' } },
+                    { name: { $regex: req.query.search, $options: 'i' } }
+                ];
+            }
+
+            const filteredMarkseets = await Marksheet.find(filterQuery);
+            res.status(200).json({ success: true, data: filteredMarkseets })
+        } catch (error) {
+            console.log("Error in fetching Marksheet with query", error);
+            res.status(500).json({ success: false, message: "Error  in fetching Marksheet  with query." })
+        }
+
+    },
     createMarksheet: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
