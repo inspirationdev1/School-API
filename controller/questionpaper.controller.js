@@ -63,6 +63,7 @@ module.exports = {
                     section: fields.section[0],
                     examination: fields.examination[0],
                     marksLimit: fields.marksLimit[0],
+                    avg_marks_limit: fields.avg_marks_limit[0],
                     fileName: fileName,
                     fileType: fileType,
                     public_id: Date.now() + "_" + cleanName,
