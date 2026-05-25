@@ -11,6 +11,7 @@ const examinationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    seq: { type: Number, default: 0 },
     status:{type:String, default:'active'},   
     remarks:{type:String,  default:''},
     createdAt:{type:Date, default: new Date()}

@@ -11,7 +11,11 @@ module.exports = {
 
     let  attendance_date= new Date(Date.UTC(yyyy, mm - 1, dd));
     const selectedDate = moment(attendance_date, "YYYY-MM-DD").startOf('day');
-    
+  
+    const month = mm;
+    const month_name = new Date(yyyy, mm - 1).toLocaleString("default", {
+                    month: "long",
+                });
 
     try {
       const updatedAttendance = await Attendance.findOneAndUpdate(
@@ -19,6 +23,9 @@ module.exports = {
           student: studentId,
           class: classId,
           section: sectionId,
+          month: month,
+          month_name:month_name,
+          year:yyyy,
           date: {
           $gte: selectedDate.toDate(), // Check if attendance date is greater than or equal to today's date
           $lt: moment(selectedDate).endOf('day').toDate(), // Less than the end of today
@@ -32,7 +39,10 @@ module.exports = {
 
         res.status(201).json(updatedAttendance);
       } else {
-        const attendance = new Attendance({ student: studentId, date:attendance_date, status, class: classId,section: sectionId, school: schoolId });
+        const attendance = new Attendance({ student: studentId, date:attendance_date, status
+          , class: classId,section: sectionId
+          , month: month, month_name: month_name, year: yyyy
+          , school: schoolId });
         await attendance.save();
         res.status(201).json(attendance);
       }

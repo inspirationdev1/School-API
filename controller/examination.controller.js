@@ -2,19 +2,29 @@ const Examination = require('../model/examination.model');
 
 module.exports = {
     newExamination: (req, res) => {
-        const newExamination = new Examination({
-            examination_code: req.body.examination_code,
-            examNo: req.body.examNo,
-            examination_name: req.body.examination_name,
-            marksLimit: req.body.marksLimit,
-            school: req.user.id
-        })
-        newExamination.save().then(resp => {
-            res.status(200).send({ success: true, message: "Exam assigned Successfully." })
-        }).catch(e => {
-            console.log(e)
-            res.status(500).send({ success: false, message: e.message })
-        })
+        // const newExamination = new Examination({
+        //     examination_code: req.body.examination_code,
+        //     examNo: req.body.examNo,
+        //     examination_name: req.body.examination_name,
+        //     marksLimit: req.body.marksLimit,
+        //     seq:req.body?.seq,
+        //     school: req.user.id
+        // })
+        // newExamination.save().then(resp => {
+        //     res.status(200).send({ success: true, message: "Exam assigned Successfully." })
+        // }).catch(e => {
+        //     console.log(e)
+        //     res.status(500).send({ success: false, message: e.message })
+        // })
+        const schoolId = req.user.schoolId;
+        const newExamination = new Examination({...req.body, school:schoolId});
+                                newExamination.save().then(savedData => {
+                                    console.log("Date saved", savedData);
+                                    res.status(200).json({ success: true, data: savedData, message:"Subject is Created Successfully." })
+                                }).catch(e => {
+                                    console.log("ERRORO in Register", e)
+                                    res.status(500).json({ success: false, message:e.message })
+                                })
 
     },
     getExaminationByClass: async (req, res) => {
@@ -29,7 +39,7 @@ module.exports = {
     getAllExaminations: async (req, res) => {
         try {
             const schoolId = req.user.schoolId;
-            const examinations = await Examination.find({school: schoolId});
+            const examinations = await Examination.find({school: schoolId}).sort({ seq: 1 });
             res.status(200).json({ success: true, message: "Success in fetching User Applications.", data: examinations })
         } catch (error) {
             res.status(500).send({ success: false, message: "Failure  in fetching user applications, try later." })
@@ -52,16 +62,27 @@ module.exports = {
         }
     },
     updateExaminaitonWithId: async (req, res) => {
-        try {
-            let id = req.params.id;
-            console.log(req.body, id)
-            await Examination.findOneAndUpdate({ _id: id }, { $set: { examination_name: req.body.examination_name, examination_code: req.body.examination_code } });
-            res.status(200).json({ success: true, message: "Examination Updated." })
-        } catch (error) {
+        // try {
+        //     let id = req.params.id;
+        //     console.log(req.body, id)
+        //     await Examination.findOneAndUpdate({ _id: id }, { $set: { examination_name: req.body.examination_name, examination_code: req.body.examination_code } });
+        //     res.status(200).json({ success: true, message: "Examination Updated." })
+        // } catch (error) {
 
-            console.log("Error in updateSchoolWithId", error);
-            res.status(500).json({ success: false, message: "Server Error in Update School. Try later" })
-        }
+        //     console.log("Error in updateSchoolWithId", error);
+        //     res.status(500).json({ success: false, message: "Server Error in Update School. Try later" })
+        // }
+        try {
+                    let id = req.params.id;
+                    console.log(req.body)
+                    await Examination.findOneAndUpdate({_id:id},{$set:{...req.body}});
+                    const ExaminationAfterUpdate =await Examination.findOne({_id:id});
+                    res.status(200).json({success:true, message:"Examination Updated", data:ExaminationAfterUpdate})
+                } catch (error) {
+                    
+                    console.log("Error in updateExaminationWithId", error);
+                    res.status(500).json({success:false, message:"Server Error in Update Examination. Try later"})
+                }
 
     },
     getExaminationWithQuery: async (req, res) => {

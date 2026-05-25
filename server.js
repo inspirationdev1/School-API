@@ -14,6 +14,7 @@ const sectionRouter = require("./router/section.router")
 const departmentRouter = require("./router/department.router")
 const feestypeRouter = require("./router/feestype.router");
 const gradeRouter = require("./router/grade.router");
+const workindaysRouter = require("./router/workingdays.router");
 
 const accountlevelRouter = require("./router/accountlevel.router");
 const accountledgerRouter = require("./router/accountledger.router");
@@ -114,6 +115,7 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/whatsapp", whatsappRouter);
 
 app.use("/api/grade", gradeRouter);
+app.use("/api/workingdays", workindaysRouter);
 
 app.use("/api/examtype", examtypeRouter);
 app.use("/api/generalmaster", generalmasterRouter);

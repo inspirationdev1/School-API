@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require('../auth/auth');
-const { getMarksheetPrint, getProgressCardPrint, getIncomeExpensePrint, getExpensePrint, getIncomePrint, getAttendancePrint, getPendingFeesPrint
+const { getMarksheetPrint, getProgressCardPrint,getAttendanceSummaryPrint, getIncomeExpensePrint, getExpensePrint
+    , getIncomePrint, getAttendancePrint, getPendingFeesPrint
     , getPaidFeesPrint, getPendingExpensesPrint, getPaidExpensesPrint, getSchedulePrint
     , getIncomeExpenseDashboard, getAttendanceDashboard, getExamQuestionpaperPrint
     , getChartOfAccountPrint,getStudentListPrint,getParentListPrint
@@ -38,6 +39,8 @@ router.post("/employee-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER',
 router.post("/studentlist-marks-subjectwise-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudentList_Marks_Subjectwise_Print);
 router.post("/student-marks-subjectwise-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getStudent_Marks_Subjectwise_Print);
 router.post("/progresscard-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getProgressCardPrint);
+router.post("/attendance-summary-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getAttendanceSummaryPrint);
+
 router.post("/grade-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getGradeListPrint);
 
 module.exports = router;

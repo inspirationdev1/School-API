@@ -10,6 +10,7 @@ const subjectSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    seq: { type: Number, default: 0 },
     createdAt:{type:Date, default:new Date()}
 
 })

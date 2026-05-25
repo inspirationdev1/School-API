@@ -6,6 +6,10 @@ const Marksheet = require("../model/marksheet.model");
 const Marksheetdetail = require("../model/marksheetdetail.model");
 const Grade = require("../model/grade.model");
 
+const Subject = require("../model/subject.model");
+const Examination = require("../model/examination.model");
+const WorkingDays = require("../model/workingdays.model");
+
 const Salesinvoice = require("../model/salesinvoice.model");
 const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
 const Expense = require("../model/expense.model");
@@ -3946,6 +3950,10 @@ module.exports = {
 
             filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
 
+            if (req.query?.year) {
+                filterQuery.year = req.query?.year;
+            }
+
             if (req.query?.class) {
                 filterQuery.class = req.query?.class;
             }
@@ -3981,6 +3989,2588 @@ module.exports = {
             const gradeData = await Grade.find({ school: schoolId })
                 .sort({ marks_min: -1 })
                 .lean();
+
+            const subjectsData = await Subject.find({ school: schoolId })
+                .select("subject_name -_id")
+                .sort({ seq: 1 })
+                .lean();
+            
+
+            const examsData = await Examination.find({ school: schoolId })
+                .select("examination_name -_id")
+                .sort({ seq: 1 })
+                .lean();
+            
+
+
+            const filterQuery_WD = {};
+            filterQuery_WD["school"] = new mongoose.Types.ObjectId(schoolId);
+            if (req.query?.year) {
+                filterQuery_WD.year = req.query?.year;
+            }
+            const workingdaysData = await WorkingDays.find(filterQuery_WD)
+                .sort({ seq: 1 })
+                .lean();
+            
+
+            if (req.query?.student) {
+                filterQuery_WD.student = req.query?.student;
+            }
+            filterQuery_WD.status = "Present";
+            const attendanceData = await Attendance.find(filterQuery_WD)
+                .sort({ month: 1 })
+                .lean();
+            
+
+
+            // ============================================
+            // PDF
+            // ============================================
+
+
+
+
+            let doc = new PDFDocument({
+                size: "A3",
+                layout: "landscape",
+                margins: {
+                    top: 25,
+                    bottom: 25,
+                    left: 25,
+                    right: 25,
+                },
+            });
+
+            res.writeHead(200, {
+                "Content-Type": "application/pdf",
+                "Content-Disposition":
+                    "attachment; filename=Progress-Card.pdf"
+            });
+
+            doc.pipe(res);
+
+            // ============================================
+            // NO DATA
+            // ============================================
+
+            if (!marksheetData.length) {
+
+                doc
+                    .font("Helvetica-Bold")
+                    .fontSize(18)
+                    .text("No Data Found", 0, 300, {
+                        align: "center"
+                    });
+
+                doc.end();
+                return;
+            }
+
+            // ============================================
+            // TRANSFORM DATA
+            // ============================================
+
+            const tableData = transformMarksheetData(marksheetData, subjectsData, examsData);
+
+            const examNames = tableData.exams;
+            const subjects = tableData.subjects;
+
+
+
+            const subjectLength = Object.keys(subjects).length;
+            console.log(subjectLength); // 3
+
+
+
+            const reportHeader = {
+                school_name: marksheetData[0].school.school_name,
+                address: marksheetData[0].school.address,
+                city: marksheetData[0].school.city,
+                state: marksheetData[0].school.state,
+                country: marksheetData[0].school.country,
+                class: marksheetData[0].class.class_name,
+                section: marksheetData[0].section.section_name,
+                student: marksheetData[0].student.name,
+                school_image: marksheetData[0].school.school_image
+            };
+
+            // ============================================
+            // SCHOOL LOGO
+            // ============================================
+
+            if (reportHeader?.school_image) {
+
+                try {
+
+                    const img = await axios.get(
+                        reportHeader.school_image,
+                        {
+                            responseType: "arraybuffer"
+                        }
+                    );
+
+                    doc.image(img.data, 30, 20, {
+                        width: 60,
+                    });
+
+                } catch (err) {
+
+                    console.log("Logo load failed");
+                }
+            }
+
+            // ============================================
+            // HEADER
+            // ============================================
+
+            doc
+                .fontSize(26)
+                .font("Helvetica-Bold")
+                .text(
+                    "PROGRESS CARD",
+                    0,
+                    25,
+                    {
+                        align: "center"
+                    }
+                );
+
+            doc
+                .fontSize(14)
+                .font("Helvetica-Bold")
+                .text(
+                    reportHeader.school_name,
+                    0,
+                    60,
+                    {
+                        align: "center"
+                    }
+                );
+
+            const address = reportHeader.address + "," + reportHeader.city
+                + "," + reportHeader.state + "," + reportHeader.country
+            doc
+                .fontSize(10)
+                .font("Helvetica")
+                .text(
+                    `${address}`,
+                    0,
+                    85,
+                    {
+                        align: "center"
+                    });
+
+            // ============================================
+            // STUDENT INFO
+            // ============================================
+
+            let startY = 120;
+
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Student :",
+                    40,
+                    startY
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.student,
+                    95,
+                    startY
+                );
+
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Class :",
+                    300,
+                    startY
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.class,
+                    340,
+                    startY
+                );
+
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Section :",
+                    500,
+                    startY
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.section,
+                    540,
+                    startY
+                );
+
+
+
+            // ============================================
+            // TABLE SETTINGS (A3 DYNAMIC)
+            // ============================================
+
+            startY += 30;
+
+            let pageWidth =
+                doc.page.width -
+                doc.page.margins.left -
+                doc.page.margins.right;
+
+            // const subjectWidth = 220;
+            const subjectWidth = 100;
+            let rowHeight = 30;
+
+            let totalColumns = 0;
+
+            examNames.forEach((exam) => {
+
+                if (exam === "SA-1" || exam === "SA-2") {
+                    totalColumns += 5;
+                } else {
+                    totalColumns += 2;
+                }
+
+                if (exam === "SA-2") {
+                    totalColumns += 5;
+                }
+
+            });
+
+            const availableWidth = pageWidth - subjectWidth;
+
+            const subColumnWidth =
+                Math.floor(availableWidth / totalColumns);
+
+            let currentX = doc.page.margins.left;
+
+            // ============================================
+            // HEADER ROW 1
+            // ============================================
+
+            doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
+
+            doc
+                .font("Helvetica-Bold")
+                .fontSize(11)
+                .text(
+                    "Subjects",
+                    currentX,
+                    startY + 8,
+                    {
+                        width: subjectWidth,
+                        align: "center"
+                    }
+                );
+
+            currentX += subjectWidth;
+
+            examNames.forEach((exam) => {
+
+                let span = (exam === "SA-1" || exam === "SA-2") ? 5 : 2;
+
+                let examWidth = subColumnWidth * span;
+
+                doc.rect(
+                    currentX,
+                    startY,
+                    examWidth,
+                    rowHeight
+                ).stroke();
+
+                doc.text(
+                    exam,
+                    currentX,
+                    startY + 8,
+                    {
+                        width: examWidth,
+                        align: "center"
+                    }
+                );
+
+                currentX += examWidth;
+
+                if (exam === "SA-2") {
+                    doc.rect(
+                        currentX,
+                        startY,
+                        examWidth,
+                        rowHeight
+                    ).stroke();
+
+                    doc.text(
+                        "Final Result",
+                        currentX,
+                        startY + 8,
+                        {
+                            width: examWidth,
+                            align: "center"
+                        }
+                    );
+
+                    currentX += examWidth;
+                }
+
+
+            });
+
+            // ============================================
+            // HEADER ROW 2
+            // ============================================
+
+            startY += rowHeight;
+
+            currentX = doc.page.margins.left;
+
+            doc.rect(
+                currentX,
+                startY,
+                subjectWidth,
+                rowHeight
+            ).stroke();
+
+            currentX += subjectWidth;
+
+            examNames.forEach((exam) => {
+
+                if (exam === "SA-1" || exam === "SA-2") {
+
+                    ["Avg", "Marks", "Total", "Grade", "GPA"]
+                        .forEach((label) => {
+
+                            doc.rect(
+                                currentX,
+                                startY,
+                                subColumnWidth,
+                                rowHeight
+                            ).stroke();
+
+                            doc.text(
+                                label,
+                                currentX,
+                                startY + 8,
+                                {
+                                    width: subColumnWidth,
+                                    align: "center"
+                                }
+                            );
+
+                            currentX += subColumnWidth;
+
+                        });
+
+                    if (exam === "SA-2") {
+                        ["Avg", "Marks", "Total", "Grade", "GPA"]
+                            .forEach((label) => {
+
+                                doc.rect(
+                                    currentX,
+                                    startY,
+                                    subColumnWidth,
+                                    rowHeight
+                                ).stroke();
+
+                                doc.text(
+                                    label,
+                                    currentX,
+                                    startY + 8,
+                                    {
+                                        width: subColumnWidth,
+                                        align: "center"
+                                    }
+                                );
+
+                                currentX += subColumnWidth;
+
+                            });
+                    }
+
+                } else {
+
+                    ["Marks", "Grade"]
+                        .forEach((label) => {
+
+                            doc.rect(
+                                currentX,
+                                startY,
+                                subColumnWidth,
+                                rowHeight
+                            ).stroke();
+
+                            doc.text(
+                                label,
+                                currentX,
+                                startY + 8,
+                                {
+                                    width: subColumnWidth,
+                                    align: "center"
+                                }
+                            );
+
+                            currentX += subColumnWidth;
+
+                        });
+
+                }
+
+            });
+
+            // ============================================
+            // TOTAL OBJECTS
+            // ============================================
+
+            const examTotals = {};
+            const examMarksLimitTotals = {};
+            const examTotalAvg = {};
+            const examTotalmarks = {};
+
+            examNames.forEach((exam) => {
+                examTotals[exam] = 0;
+                examMarksLimitTotals[exam] = 0;
+                examTotalAvg[exam] = 0;
+                examTotalmarks[exam] = 0;
+            });
+
+            // ============================================
+            // SUBJECT ROWS
+            // ============================================
+
+            startY += rowHeight;
+            let fail_exist = false;
+            let subject_index = 0;
+            Object.keys(subjects).forEach((subject) => {
+
+                currentX = doc.page.margins.left;
+
+                // Subject Name
+                doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
+
+                doc.font("Helvetica").text(subject, currentX + 5, startY + 7);
+
+                currentX += subjectWidth;
+
+                // ============================================
+                // EXAM LOOP
+                // ============================================
+
+                let sumofmarks = 0;
+                let sumofmarkslimit = 0;
+
+                examNames.forEach((exam) => {
+
+                    const examData = subjects[subject][exam] || {};
+
+                    const marks = Number(examData?.marks || 0);
+
+                    const marksLimit = Number(examData?.marksLimit || 0);
+
+
+                    examTotals[exam] += marks;
+                    sumofmarks += marks || 0;
+                    sumofmarkslimit += marksLimit;
+                    let avg = 0;
+                    let avglimit = 0;
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        sumofmarks -= marks || 0;
+                        sumofmarkslimit -= marksLimit || 0;
+
+                        if (exam === "SA-1") {
+                            avg = sumofmarks / 2;
+                            avglimit = (sumofmarkslimit / 2);
+                        } else if (exam === "SA-2") {
+                            avg = sumofmarks / 4;
+                            avglimit = (sumofmarkslimit / 4);
+                        }
+
+                        avg = Number(avg.toFixed(0));
+                        examTotalAvg[exam] += avg;
+
+
+
+                        avglimit = Number(avglimit.toFixed(0));
+                        avglimit += marksLimit;
+                        examMarksLimitTotals[exam] += avglimit;
+                        // ============================================
+                        // AVG CELL
+                        // ============================================
+
+                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                        doc.text(
+                            // `${marks}/${marksLimit}`,
+                            `${avg}`,
+                            currentX,
+                            startY + 7,
+                            {
+                                width: subColumnWidth,
+                                align: "center",
+                            }
+                        );
+
+                        currentX += subColumnWidth;
+
+
+
+                    } else {
+                        examMarksLimitTotals[exam] += marksLimit;
+                    }
+
+
+
+
+
+                    // ============================================
+                    // MARKS CELL
+                    // ============================================
+
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                    doc.text(
+                        // `${marks}/${marksLimit}`,
+                        `${marks}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+                    let totalmarks = 0;
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        // ============================================
+                        // TOTAL CELL
+                        // ============================================
+                        totalmarks = marks + avg;
+
+                        examTotalmarks[exam] += totalmarks;
+
+
+
+                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                        doc.text(
+                            // `${marks}/${marksLimit}`,
+                            `${totalmarks}`,
+                            currentX,
+                            startY + 7,
+                            {
+                                width: subColumnWidth,
+                                align: "center",
+                            }
+                        );
+
+                        currentX += subColumnWidth;
+
+                    }
+
+
+                    // ============================================
+                    // GRADE LOGIC
+                    // ============================================
+
+                    let marks_per = 0;
+
+                    if (marksLimit > 0) {
+                        marks_per = (marks / marksLimit) * 100;
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            marks_per = (totalmarks / avglimit) * 100;
+                        }
+                    }
+
+                    let filtered_gradeData = gradeData.filter(
+                        (item) => item.marks_min <= marks && item.marks_limit == 20
+                    );
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        filtered_gradeData = gradeData.filter(
+                            (item) => item.marks_min <= totalmarks && item.marks_limit == 100
+                        );
+                        console.log("filtered_gradeData", filtered_gradeData);
+                    }
+
+
+                    let grade = "E";
+                    let gpa = "-";
+
+                    if (filtered_gradeData.length > 0) {
+                        grade = filtered_gradeData[0]?.grade_code || "E";
+                        gpa = filtered_gradeData[0]?.gpa || "-";
+                    }
+
+                    // ============================================
+                    // GRADE CELL
+                    // ============================================
+
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                    doc.text(grade, currentX, startY + 7, {
+                        width: subColumnWidth,
+                        align: "center",
+                    });
+
+                    currentX += subColumnWidth;
+
+
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        // GPA
+                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                        doc.text(
+                            `${gpa}`,
+                            currentX,
+                            startY + 7,
+                            {
+                                width: subColumnWidth,
+                                align: "center",
+                            }
+                        );
+                        currentX += subColumnWidth;
+                        if (grade === "E" && exam === "SA-2") {
+                            fail_exist = true;
+                        }
+                        if (exam === "SA-2") {
+                            const mergedWidth = subColumnWidth * 5;
+
+                            // One merged rectangle across 5 columns
+                            doc.rect(currentX, startY, mergedWidth, rowHeight).stroke();
+                            if (subject_index === 0) {
+                                doc.text(
+                                    "Comments",
+                                    currentX,
+                                    startY + 7,
+                                    {
+                                        width: mergedWidth,
+                                        align: "center",
+                                    }
+                                );
+                            }
+
+                            // Move currentX by 5 columns
+                            currentX += mergedWidth;
+
+
+                            subject_index++;
+                        }
+                    }
+                });
+
+                startY += rowHeight;
+
+                // ============================================
+                // PAGE BREAK
+                // ============================================
+
+                if (
+                    startY >
+                    doc.page.height -
+                    doc.page.margins.bottom -
+                    100
+                ) {
+
+                    doc.addPage();
+
+                    startY = 50;
+                }
+            });
+
+            // ============================================
+            // TOTAL ROW
+            // ============================================
+
+            currentX = doc.page.margins.left;
+
+            doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
+
+            doc
+                .font("Helvetica-Bold")
+                .text("Total", currentX + 5, startY + 7);
+
+            currentX += subjectWidth;
+
+            examNames.forEach((exam) => {
+
+
+                if (exam === "SA-1" || exam === "SA-2") {
+                    // ============================================
+                    // TOTAL AVG CELL
+                    // ============================================
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotalAvg[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+
+                }
+
+
+
+                // ============================================
+                // TOTAL MARKS CELL
+                // ============================================
+
+                doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                doc.text(
+                    `${examTotals[exam]}`,
+                    currentX,
+                    startY + 7,
+                    {
+                        width: subColumnWidth,
+                        align: "center",
+                    }
+                );
+
+                currentX += subColumnWidth;
+
+                if (exam === "SA-1" || exam === "SA-2") {
+
+                    //Total 
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotalmarks[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+
+                }
+
+                // ============================================
+                // TOTAL GRADE
+                // ============================================
+                let totalPercentage = 0;
+                let totalMarksLimit = 0;
+
+                if (examMarksLimitTotals[exam] > 0) {
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        totalMarksLimit = 100 * subjectLength;
+                        totalPercentage =
+                            (examTotalmarks[exam] / totalMarksLimit) * 100;
+                    } else {
+                        totalMarksLimit = 20 * subjectLength;
+                        totalPercentage =
+                            (examTotals[exam] / totalMarksLimit) * 100;
+                    }
+
+
+                    totalPercentage = Number(totalPercentage.toFixed(0));
+                }
+
+
+
+                const filtered_gradeData = gradeData.filter(
+                    (item) => item.marks_min <= totalPercentage
+                );
+
+
+
+                let totalGrade = "E";
+                let totalGpa = "-";
+
+                if (filtered_gradeData.length > 0) {
+                    totalGrade =
+                        filtered_gradeData[0]?.grade_code || "E";
+                    totalGpa =
+                        filtered_gradeData[0]?.gpa || "-";
+
+
+                    totalGrade = `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`;
+                    if (fail_exist && exam === "SA-2") {
+                        totalGrade = "-";
+                        totalGpa = "-"
+
+                    }
+                }
+
+                doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                doc.text(
+                    // `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`,
+                    `${totalGrade}`,
+                    currentX, startY + 7, {
+                    width: subColumnWidth,
+                    align: "center",
+                });
+
+                currentX += subColumnWidth;
+
+
+                if (exam === "SA-1" || exam === "SA-2") {
+
+                    //GPA 
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${totalGpa}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+                }
+
+
+                if (exam === "SA-2") {
+                    // TOTAL AVG CELL
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotalAvg[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+                    currentX += subColumnWidth;
+
+                    // TOTAL MARKS CELL
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotals[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+                    //Total 
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotalmarks[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+
+                    //Grade
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                    doc.text(
+                        `${totalGrade}`,
+                        currentX, startY + 7, {
+                        width: subColumnWidth,
+                        align: "center",
+                    });
+
+                    currentX += subColumnWidth;
+
+                    //GPA 
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${totalGpa}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+
+                }
+            });
+
+
+
+            //*******Attendance Summary Report */
+
+            
+
+            const working_day_obj = workingdaysData.reduce(
+                (acc, item) => {
+                    acc[item.month_name] = item.work_days; // June:16, July:26...
+                    acc.Total += item.work_days;           // calculate total
+                    return acc;
+                },
+                {
+                    row_name: "Working Days",
+                    Total: 0,
+                    Percentage: 100
+                }
+            );
+
+            
+            const work_days = working_day_obj?.Total;
+
+
+            
+
+            const months = [
+                "June", "July", "August", "September", "October",
+                "November", "December", "January", "February", "March", "April"
+            ];
+
+            const present_day_obj = {
+                row_name: "Present Days",
+                ...Object.fromEntries(months.map(m => [m, 0])),
+                Total: 0,
+                Percentage: 100
+            };
+
+            attendanceData.forEach(item => {
+                present_day_obj[item.month_name] += item.attendance_flag;
+                present_day_obj.Total += item.attendance_flag;
+            });
+
+            
+
+            const present_days = present_day_obj?.Total;
+            const percentage = (present_days / work_days) * 100;
+            present_day_obj.Percentage = avg = Number(percentage.toFixed(0));
+
+            
+
+            const reportData = [
+                working_day_obj,
+                present_day_obj
+            ];
+            
+
+
+            const dynamicColumns = Object.keys(
+                reportData[0]
+            ).filter(
+                key =>
+                    key !== "row_name" &&
+                    key !== "Total" &&
+                    key !== "Percentage"
+            );
+
+            const headers = [
+                "Month Name",
+                ...dynamicColumns,
+                "Total",
+                "%"
+            ];
+
+
+            // -----------------------
+            // ATTENDANCE TITLE
+            // -----------------------
+
+            startY = startY + 50;
+
+            pageWidth =
+                doc.page.width -
+                doc.page.margins.left -
+                doc.page.margins.right;
+
+            doc
+                .fontSize(16)
+                .font("Helvetica-Bold")
+                .text(
+                    "Attendance Particulars",
+                    doc.page.margins.left,     // start X
+                    startY,                    // Y
+                    {
+                        width: pageWidth,      // full page width
+                        align: "center"
+                    }
+                );
+
+            startY += 40;
+
+
+            // -----------------------
+            // TABLE SETTINGS
+            // -----------------------
+
+            let startX = 20;
+            // startY = startY + 100;
+
+            rowHeight = 28;
+
+            pageWidth =
+                doc.page.width -
+                doc.page.margins.left -
+                doc.page.margins.right;
+
+            let firstColumnWidth = 110;
+            const totalWidth = 55;
+            const percentageWidth = 45;
+
+            // Dynamic month width
+
+            const remainingWidth =
+                pageWidth -
+                firstColumnWidth -
+                totalWidth -
+                percentageWidth;
+
+            const monthWidth =
+                remainingWidth /
+                dynamicColumns.length;
+
+            const columnWidths = [
+                firstColumnWidth,
+                ...dynamicColumns.map(
+                    () => monthWidth
+                ),
+                totalWidth,
+                percentageWidth
+            ];
+
+            // -----------------------
+            // DRAW ROW
+            // -----------------------
+            let drawRow = (
+                y,
+                row,
+                isHeader = false
+            ) => {
+
+                let currentX = startX;
+
+                row.forEach(
+                    (cell, index) => {
+
+                        const width =
+                            columnWidths[index];
+
+                        doc
+                            .rect(
+                                currentX,
+                                y,
+                                width,
+                                rowHeight
+                            )
+                            .stroke();
+
+                        doc
+                            .font(
+                                isHeader
+                                    ? "Helvetica-Bold"
+                                    : "Helvetica"
+                            )
+                            .fontSize(9)
+                            .text(
+                                String(cell ?? ""),
+                                currentX + 2,
+                                y + 8,
+                                {
+                                    width: width - 4,
+                                    align: "center"
+                                }
+                            );
+
+                        currentX += width;
+                    }
+                );
+            };
+
+            // -----------------------
+            // HEADER
+            // -----------------------
+
+            drawRow(
+                startY,
+                headers,
+                true
+            );
+
+            startY += rowHeight;
+
+            // -----------------------
+            // DATA
+            // -----------------------
+
+            reportData.forEach(
+                rowData => {
+
+                    if (
+                        startY >
+                        doc.page.height - 60
+                    ) {
+
+                        doc.addPage();
+
+                        startY = 50;
+
+                        drawRow(
+                            startY,
+                            headers,
+                            true
+                        );
+
+                        startY += rowHeight;
+                    }
+
+                    const row = [
+                        rowData.row_name,
+
+                        ...dynamicColumns.map(
+                            month =>
+                                rowData[month] ?? "-"
+                        ),
+
+                        rowData.Total ?? 0,
+                        rowData.Percentage ?? 0
+                    ];
+
+                    drawRow(
+                        startY,
+                        row
+                    );
+
+                    startY += rowHeight;
+                }
+            );
+
+
+            //********Nature of Assement*****
+            const nature_of_assementData = [
+                {
+                    nature_of_assement: "Signature of Class Teacher",
+                    "FA-1": "",
+                    "FA-2": "",
+                    "SA-1": "",
+                    "FA-3": "",
+                    "FA-4": "",
+                    "SA-2": "",
+                },
+                {
+                    nature_of_assement: "Signature of Principal",
+                    "FA-1": "",
+                    "FA-2": "",
+                    "SA-1": "",
+                    "FA-3": "",
+                    "FA-4": "",
+                    "SA-2": "",
+                },
+                {
+                    nature_of_assement: "Signature of Parent",
+                    "FA-1": "",
+                    "FA-2": "",
+                    "SA-1": "",
+                    "FA-3": "",
+                    "FA-4": "",
+                    "SA-2": "",
+                }
+            ];
+
+            const examColumns = Object.keys(
+                nature_of_assementData[0]
+            ).filter(
+                key => key !== "nature_of_assement"
+            );
+
+
+            // -----------------------------------
+            // TITLE
+            // -----------------------------------
+
+            startY += rowHeight;
+
+            doc
+                .fontSize(16)
+                .font("Helvetica-Bold")
+                .text(
+                    "Signature Particulars",
+                    doc.page.margins.left,     // start X
+                    startY,                    // Y
+                    {
+                        width: pageWidth,      // full page width
+                        align: "center"
+                    }
+                );
+
+            // startY += 80;
+            startY += 30;
+
+            // -----------------------------------
+            // TABLE SETTINGS
+            // -----------------------------------
+
+            pageWidth =
+                doc.page.width -
+                doc.page.margins.left -
+                doc.page.margins.right;
+
+            firstColumnWidth = 220;
+
+            const otherWidth =
+                (pageWidth - firstColumnWidth) /
+                examColumns.length;
+
+            rowHeight = 40;
+
+            // -----------------------------------
+            // DRAW ROW
+            // -----------------------------------
+
+            drawRow = (
+                y,
+                row,
+                isHeader = false
+            ) => {
+
+                let currentX =
+                    doc.page.margins.left;
+
+                row.forEach(
+                    (cell, index) => {
+
+                        const width =
+                            index === 0
+                                ? firstColumnWidth
+                                : otherWidth;
+
+                        doc
+                            .rect(
+                                currentX,
+                                y,
+                                width,
+                                rowHeight
+                            )
+                            .stroke();
+
+                        doc
+                            .font(
+                                isHeader
+                                    ? "Helvetica-Bold"
+                                    : "Helvetica"
+                            )
+                            .fontSize(10)
+                            .text(
+                                String(cell ?? ""),
+                                currentX + 4,
+                                y + 12,
+                                {
+                                    width: width - 8,
+                                    align: "center"
+                                }
+                            );
+
+                        currentX += width;
+                    }
+                );
+            };
+
+
+            // -----------------------------------
+            // HEADER
+            // -----------------------------------
+
+            drawRow(
+                startY,
+                [
+                    "Nature of Assement",
+                    ...examColumns
+                ],
+                true
+            );
+
+            startY += rowHeight;
+
+            // -----------------------------------
+            // DATA ROWS
+            // -----------------------------------
+
+            nature_of_assementData.forEach((item) => {
+
+                const row = [
+
+                    item.nature_of_assement,
+
+                    ...examColumns.map(
+                        exam => item[exam]
+                    )
+                ];
+
+                drawRow(startY, row);
+
+                startY += rowHeight;
+
+            });
+
+            //************* */
+
+            // ============================================
+            // END PDF
+            // ============================================
+
+            doc.end();
+
+
+
+        } catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Error generating Progress Card",
+            });
+        }
+    },
+    getProgressCardPrint_Orig1: async (req, res) => {
+        try {
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+
+            filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+            if (req.query?.class) {
+                filterQuery.class = req.query?.class;
+            }
+
+            if (req.query?.section) {
+                filterQuery.section = req.query?.section;
+            }
+
+            if (req.query?.student) {
+                filterQuery.student = req.query?.student;
+            }
+
+            if (req.query?.examination) {
+                filterQuery.examination = req.query?.examination;
+            }
+
+            let requesttype = "";
+
+            if (req.query?.requesttype) {
+                requesttype = req.query?.requesttype;
+            }
+
+            const marksheetData = await Marksheetdetail.find(filterQuery)
+                .populate("school")
+                .populate("class")
+                .populate("section")
+                .populate("examination")
+                .populate("subject")
+                .populate("student")
+                .sort({ examination: 1 })
+                .lean();
+
+            const gradeData = await Grade.find({ school: schoolId })
+                .sort({ marks_min: -1 })
+                .lean();
+
+            const subjectsData = await Subject.find({ school: schoolId })
+                .select("subject_name -_id")
+                .sort({ seq: 1 })
+                .lean();
+            console.log("subjectsData", subjectsData);
+
+            const examsData = await Examination.find({ school: schoolId })
+                .select("examination_name -_id")
+                .sort({ seq: 1 })
+                .lean();
+            console.log("examsData", examsData);
+
+
+            // ============================================
+            // PDF
+            // ============================================
+
+
+
+
+            let doc = new PDFDocument({
+                size: "A3",
+                layout: "landscape",
+                margins: {
+                    top: 25,
+                    bottom: 25,
+                    left: 25,
+                    right: 25,
+                },
+            });
+
+            res.writeHead(200, {
+                "Content-Type": "application/pdf",
+                "Content-Disposition":
+                    "attachment; filename=Progress-Card.pdf"
+            });
+
+            doc.pipe(res);
+
+            // ============================================
+            // NO DATA
+            // ============================================
+
+            if (!marksheetData.length) {
+
+                doc
+                    .font("Helvetica-Bold")
+                    .fontSize(18)
+                    .text("No Data Found", 0, 300, {
+                        align: "center"
+                    });
+
+                doc.end();
+                return;
+            }
+
+            // ============================================
+            // TRANSFORM DATA
+            // ============================================
+
+            const tableData = transformMarksheetData(marksheetData, subjectsData, examsData);
+
+            const examNames = tableData.exams;
+            const subjects = tableData.subjects;
+
+
+
+            const subjectLength = Object.keys(subjects).length;
+            console.log(subjectLength); // 3
+
+
+
+            const reportHeader = {
+                school_name: marksheetData[0].school.school_name,
+                address: marksheetData[0].school.address,
+                city: marksheetData[0].school.city,
+                state: marksheetData[0].school.state,
+                country: marksheetData[0].school.country,
+                class: marksheetData[0].class.class_name,
+                section: marksheetData[0].section.section_name,
+                student: marksheetData[0].student.name,
+                school_image: marksheetData[0].school.school_image
+            };
+
+            // ============================================
+            // SCHOOL LOGO
+            // ============================================
+
+            if (reportHeader?.school_image) {
+
+                try {
+
+                    const img = await axios.get(
+                        reportHeader.school_image,
+                        {
+                            responseType: "arraybuffer"
+                        }
+                    );
+
+                    doc.image(img.data, 30, 20, {
+                        width: 60,
+                    });
+
+                } catch (err) {
+
+                    console.log("Logo load failed");
+                }
+            }
+
+            // ============================================
+            // HEADER
+            // ============================================
+
+            doc
+                .fontSize(26)
+                .font("Helvetica-Bold")
+                .text(
+                    "PROGRESS CARD",
+                    0,
+                    25,
+                    {
+                        align: "center"
+                    }
+                );
+
+            doc
+                .fontSize(14)
+                .font("Helvetica-Bold")
+                .text(
+                    reportHeader.school_name,
+                    0,
+                    60,
+                    {
+                        align: "center"
+                    }
+                );
+
+            const address = reportHeader.address + "," + reportHeader.city
+                + "," + reportHeader.state + "," + reportHeader.country
+            doc
+                .fontSize(10)
+                .font("Helvetica")
+                .text(
+                    `${address}`,
+                    0,
+                    85,
+                    {
+                        align: "center"
+                    });
+
+            // ============================================
+            // STUDENT INFO
+            // ============================================
+
+            let startY = 150;
+
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Student :",
+                    40,
+                    startY
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.student,
+                    95,
+                    startY
+                );
+
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Class :",
+                    300,
+                    startY
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.class,
+                    340,
+                    startY
+                );
+
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Section :",
+                    500,
+                    startY
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.section,
+                    540,
+                    startY
+                );
+
+
+
+            // ============================================
+            // TABLE SETTINGS (A3 DYNAMIC)
+            // ============================================
+
+            startY += 50;
+
+            let pageWidth =
+                doc.page.width -
+                doc.page.margins.left -
+                doc.page.margins.right;
+
+            // const subjectWidth = 220;
+            const subjectWidth = 100;
+            let rowHeight = 30;
+
+            let totalColumns = 0;
+
+            examNames.forEach((exam) => {
+
+                if (exam === "SA-1" || exam === "SA-2") {
+                    totalColumns += 5;
+                } else {
+                    totalColumns += 2;
+                }
+
+                if (exam === "SA-2") {
+                    totalColumns += 5;
+                }
+
+            });
+
+            const availableWidth = pageWidth - subjectWidth;
+
+            const subColumnWidth =
+                Math.floor(availableWidth / totalColumns);
+
+            let currentX = doc.page.margins.left;
+
+            // ============================================
+            // HEADER ROW 1
+            // ============================================
+
+            doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
+
+            doc
+                .font("Helvetica-Bold")
+                .fontSize(11)
+                .text(
+                    "Subjects",
+                    currentX,
+                    startY + 8,
+                    {
+                        width: subjectWidth,
+                        align: "center"
+                    }
+                );
+
+            currentX += subjectWidth;
+
+            examNames.forEach((exam) => {
+
+                let span = (exam === "SA-1" || exam === "SA-2") ? 5 : 2;
+
+                let examWidth = subColumnWidth * span;
+
+                doc.rect(
+                    currentX,
+                    startY,
+                    examWidth,
+                    rowHeight
+                ).stroke();
+
+                doc.text(
+                    exam,
+                    currentX,
+                    startY + 8,
+                    {
+                        width: examWidth,
+                        align: "center"
+                    }
+                );
+
+                currentX += examWidth;
+
+                if (exam === "SA-2") {
+                    doc.rect(
+                        currentX,
+                        startY,
+                        examWidth,
+                        rowHeight
+                    ).stroke();
+
+                    doc.text(
+                        "Final Result",
+                        currentX,
+                        startY + 8,
+                        {
+                            width: examWidth,
+                            align: "center"
+                        }
+                    );
+
+                    currentX += examWidth;
+                }
+
+
+            });
+
+            // ============================================
+            // HEADER ROW 2
+            // ============================================
+
+            startY += rowHeight;
+
+            currentX = doc.page.margins.left;
+
+            doc.rect(
+                currentX,
+                startY,
+                subjectWidth,
+                rowHeight
+            ).stroke();
+
+            currentX += subjectWidth;
+
+            examNames.forEach((exam) => {
+
+                if (exam === "SA-1" || exam === "SA-2") {
+
+                    ["Avg", "Marks", "Total", "Grade", "GPA"]
+                        .forEach((label) => {
+
+                            doc.rect(
+                                currentX,
+                                startY,
+                                subColumnWidth,
+                                rowHeight
+                            ).stroke();
+
+                            doc.text(
+                                label,
+                                currentX,
+                                startY + 8,
+                                {
+                                    width: subColumnWidth,
+                                    align: "center"
+                                }
+                            );
+
+                            currentX += subColumnWidth;
+
+                        });
+
+                    if (exam === "SA-2") {
+                        ["Avg", "Marks", "Total", "Grade", "GPA"]
+                            .forEach((label) => {
+
+                                doc.rect(
+                                    currentX,
+                                    startY,
+                                    subColumnWidth,
+                                    rowHeight
+                                ).stroke();
+
+                                doc.text(
+                                    label,
+                                    currentX,
+                                    startY + 8,
+                                    {
+                                        width: subColumnWidth,
+                                        align: "center"
+                                    }
+                                );
+
+                                currentX += subColumnWidth;
+
+                            });
+                    }
+
+                } else {
+
+                    ["Marks", "Grade"]
+                        .forEach((label) => {
+
+                            doc.rect(
+                                currentX,
+                                startY,
+                                subColumnWidth,
+                                rowHeight
+                            ).stroke();
+
+                            doc.text(
+                                label,
+                                currentX,
+                                startY + 8,
+                                {
+                                    width: subColumnWidth,
+                                    align: "center"
+                                }
+                            );
+
+                            currentX += subColumnWidth;
+
+                        });
+
+                }
+
+            });
+
+            // ============================================
+            // TOTAL OBJECTS
+            // ============================================
+
+            const examTotals = {};
+            const examMarksLimitTotals = {};
+            const examTotalAvg = {};
+            const examTotalmarks = {};
+
+            examNames.forEach((exam) => {
+                examTotals[exam] = 0;
+                examMarksLimitTotals[exam] = 0;
+                examTotalAvg[exam] = 0;
+                examTotalmarks[exam] = 0;
+            });
+
+            // ============================================
+            // SUBJECT ROWS
+            // ============================================
+
+            startY += rowHeight;
+            let fail_exist = false;
+            let subject_index = 0;
+            Object.keys(subjects).forEach((subject) => {
+
+                currentX = doc.page.margins.left;
+
+                // Subject Name
+                doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
+
+                doc.font("Helvetica").text(subject, currentX + 5, startY + 7);
+
+                currentX += subjectWidth;
+
+                // ============================================
+                // EXAM LOOP
+                // ============================================
+
+                let sumofmarks = 0;
+                let sumofmarkslimit = 0;
+
+                examNames.forEach((exam) => {
+
+                    const examData = subjects[subject][exam] || {};
+
+                    const marks = Number(examData?.marks || 0);
+
+                    const marksLimit = Number(examData?.marksLimit || 0);
+
+
+                    examTotals[exam] += marks;
+                    sumofmarks += marks || 0;
+                    sumofmarkslimit += marksLimit;
+                    let avg = 0;
+                    let avglimit = 0;
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        sumofmarks -= marks || 0;
+                        sumofmarkslimit -= marksLimit || 0;
+
+                        if (exam === "SA-1") {
+                            avg = sumofmarks / 2;
+                            avglimit = (sumofmarkslimit / 2);
+                        } else if (exam === "SA-2") {
+                            avg = sumofmarks / 4;
+                            avglimit = (sumofmarkslimit / 4);
+                        }
+
+                        avg = Number(avg.toFixed(0));
+                        examTotalAvg[exam] += avg;
+
+
+
+                        avglimit = Number(avglimit.toFixed(0));
+                        avglimit += marksLimit;
+                        examMarksLimitTotals[exam] += avglimit;
+                        // ============================================
+                        // AVG CELL
+                        // ============================================
+
+                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                        doc.text(
+                            // `${marks}/${marksLimit}`,
+                            `${avg}`,
+                            currentX,
+                            startY + 7,
+                            {
+                                width: subColumnWidth,
+                                align: "center",
+                            }
+                        );
+
+                        currentX += subColumnWidth;
+
+
+
+                    } else {
+                        examMarksLimitTotals[exam] += marksLimit;
+                    }
+
+
+
+
+
+                    // ============================================
+                    // MARKS CELL
+                    // ============================================
+
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                    doc.text(
+                        // `${marks}/${marksLimit}`,
+                        `${marks}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+                    let totalmarks = 0;
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        // ============================================
+                        // TOTAL CELL
+                        // ============================================
+                        totalmarks = marks + avg;
+
+                        examTotalmarks[exam] += totalmarks;
+
+
+
+                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                        doc.text(
+                            // `${marks}/${marksLimit}`,
+                            `${totalmarks}`,
+                            currentX,
+                            startY + 7,
+                            {
+                                width: subColumnWidth,
+                                align: "center",
+                            }
+                        );
+
+                        currentX += subColumnWidth;
+
+                    }
+
+
+                    // ============================================
+                    // GRADE LOGIC
+                    // ============================================
+
+                    let marks_per = 0;
+
+                    if (marksLimit > 0) {
+                        marks_per = (marks / marksLimit) * 100;
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            marks_per = (totalmarks / avglimit) * 100;
+                        }
+                    }
+
+                    let filtered_gradeData = gradeData.filter(
+                        (item) => item.marks_min <= marks && item.marks_limit == 20
+                    );
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        filtered_gradeData = gradeData.filter(
+                            (item) => item.marks_min <= totalmarks && item.marks_limit == 100
+                        );
+                        console.log("filtered_gradeData", filtered_gradeData);
+                    }
+
+
+                    let grade = "E";
+                    let gpa = "-";
+
+                    if (filtered_gradeData.length > 0) {
+                        grade = filtered_gradeData[0]?.grade_code || "E";
+                        gpa = filtered_gradeData[0]?.gpa || "-";
+                    }
+
+                    // ============================================
+                    // GRADE CELL
+                    // ============================================
+
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                    doc.text(grade, currentX, startY + 7, {
+                        width: subColumnWidth,
+                        align: "center",
+                    });
+
+                    currentX += subColumnWidth;
+
+
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        // GPA
+                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                        doc.text(
+                            `${gpa}`,
+                            currentX,
+                            startY + 7,
+                            {
+                                width: subColumnWidth,
+                                align: "center",
+                            }
+                        );
+                        currentX += subColumnWidth;
+                        if (grade === "E" && exam === "SA-2") {
+                            fail_exist = true;
+                        }
+                        if (exam === "SA-2") {
+                            const mergedWidth = subColumnWidth * 5;
+
+                            // One merged rectangle across 5 columns
+                            doc.rect(currentX, startY, mergedWidth, rowHeight).stroke();
+                            if (subject_index === 0) {
+                                doc.text(
+                                    "Comments",
+                                    currentX,
+                                    startY + 7,
+                                    {
+                                        width: mergedWidth,
+                                        align: "center",
+                                    }
+                                );
+                            }
+
+                            // Move currentX by 5 columns
+                            currentX += mergedWidth;
+
+
+                            subject_index++;
+                        }
+                    }
+                });
+
+                startY += rowHeight;
+
+                // ============================================
+                // PAGE BREAK
+                // ============================================
+
+                if (
+                    startY >
+                    doc.page.height -
+                    doc.page.margins.bottom -
+                    100
+                ) {
+
+                    doc.addPage();
+
+                    startY = 50;
+                }
+            });
+
+            // ============================================
+            // TOTAL ROW
+            // ============================================
+
+            currentX = doc.page.margins.left;
+
+            doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
+
+            doc
+                .font("Helvetica-Bold")
+                .text("Total", currentX + 5, startY + 7);
+
+            currentX += subjectWidth;
+
+            examNames.forEach((exam) => {
+
+
+                if (exam === "SA-1" || exam === "SA-2") {
+                    // ============================================
+                    // TOTAL AVG CELL
+                    // ============================================
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotalAvg[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+
+                }
+
+
+
+                // ============================================
+                // TOTAL MARKS CELL
+                // ============================================
+
+                doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                doc.text(
+                    `${examTotals[exam]}`,
+                    currentX,
+                    startY + 7,
+                    {
+                        width: subColumnWidth,
+                        align: "center",
+                    }
+                );
+
+                currentX += subColumnWidth;
+
+                if (exam === "SA-1" || exam === "SA-2") {
+
+                    //Total 
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotalmarks[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+
+                }
+
+                // ============================================
+                // TOTAL GRADE
+                // ============================================
+                let totalPercentage = 0;
+                let totalMarksLimit = 0;
+
+                if (examMarksLimitTotals[exam] > 0) {
+                    if (exam === "SA-1" || exam === "SA-2") {
+                        totalMarksLimit = 100 * subjectLength;
+                        totalPercentage =
+                            (examTotalmarks[exam] / totalMarksLimit) * 100;
+                    } else {
+                        // totalPercentage =
+                        //     (examTotals[exam] / examMarksLimitTotals[exam]) * 100;
+                        totalMarksLimit = 20 * subjectLength;
+                        totalPercentage =
+                            (examTotals[exam] / totalMarksLimit) * 100;
+                    }
+
+
+                    totalPercentage = Number(totalPercentage.toFixed(0));
+                }
+
+
+
+                const filtered_gradeData = gradeData.filter(
+                    (item) => item.marks_min <= totalPercentage
+                );
+
+
+
+                let totalGrade = "E";
+                let totalGpa = "-";
+
+                if (filtered_gradeData.length > 0) {
+                    totalGrade =
+                        filtered_gradeData[0]?.grade_code || "E";
+                    totalGpa =
+                        filtered_gradeData[0]?.gpa || "-";
+
+
+                    totalGrade = `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`;
+                    if (fail_exist && exam === "SA-2") {
+                        totalGrade = "-";
+                        totalGpa = "-"
+
+                    }
+                }
+
+                doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                doc.text(
+                    // `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`,
+                    `${totalGrade}`,
+                    currentX, startY + 7, {
+                    width: subColumnWidth,
+                    align: "center",
+                });
+
+                currentX += subColumnWidth;
+
+
+                if (exam === "SA-1" || exam === "SA-2") {
+
+                    //GPA 
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${totalGpa}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+                }
+
+
+                if (exam === "SA-2") {
+                    // TOTAL AVG CELL
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotalAvg[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+                    currentX += subColumnWidth;
+
+                    // TOTAL MARKS CELL
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotals[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+                    //Total 
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${examTotalmarks[exam]}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+
+                    //Grade
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+
+                    doc.text(
+                        `${totalGrade}`,
+                        currentX, startY + 7, {
+                        width: subColumnWidth,
+                        align: "center",
+                    });
+
+                    currentX += subColumnWidth;
+
+                    //GPA 
+                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
+                    doc.text(
+                        `${totalGpa}`,
+                        currentX,
+                        startY + 7,
+                        {
+                            width: subColumnWidth,
+                            align: "center",
+                        }
+                    );
+
+                    currentX += subColumnWidth;
+
+
+                }
+            });
+
+
+
+            //*******Attendance Summary Report */
+            const reportData = [
+                {
+                    row_name: "Working Days",
+                    June: 16,
+                    July: 26,
+                    August: 22,
+                    September: 15,
+                    October: 23,
+                    November: 22,
+                    December: 25,
+                    January: 20,
+                    February: 23,
+                    March: 18,
+                    April: 12,
+                    Total: 222,
+                    Percentage: 100
+                },
+                {
+                    row_name: "Present Days",
+                    June: 16,
+                    July: 26,
+                    August: 19,
+                    September: 15,
+                    October: 22,
+                    November: 20,
+                    December: 23,
+                    January: 20,
+                    February: 15,
+                    March: 17,
+                    April: 12,
+                    Total: 205,
+                    Percentage: 92
+                }
+            ];
+
+            const dynamicColumns = Object.keys(
+                reportData[0]
+            ).filter(
+                key =>
+                    key !== "row_name" &&
+                    key !== "Total" &&
+                    key !== "Percentage"
+            );
+
+            const headers = [
+                "Month Name",
+                ...dynamicColumns,
+                "Total",
+                "%"
+            ];
+
+
+            // -----------------------
+            // TITLE
+            // -----------------------
+            doc.moveDown();
+            doc.moveDown();
+            doc
+                .fontSize(16)
+                .font("Helvetica-Bold")
+                .text(
+                    "Attendance Particulars",
+                    { align: "center" }
+                );
+
+            doc.moveDown();
+
+
+            // -----------------------
+            // TABLE SETTINGS
+            // -----------------------
+
+            let startX = 20;
+            startY = startY + 100;
+
+            rowHeight = 28;
+
+            pageWidth =
+                doc.page.width -
+                doc.page.margins.left -
+                doc.page.margins.right;
+
+            const firstColumnWidth = 110;
+            const totalWidth = 55;
+            const percentageWidth = 45;
+
+            // Dynamic month width
+
+            const remainingWidth =
+                pageWidth -
+                firstColumnWidth -
+                totalWidth -
+                percentageWidth;
+
+            const monthWidth =
+                remainingWidth /
+                dynamicColumns.length;
+
+            const columnWidths = [
+                firstColumnWidth,
+                ...dynamicColumns.map(
+                    () => monthWidth
+                ),
+                totalWidth,
+                percentageWidth
+            ];
+
+            // -----------------------
+            // DRAW ROW
+            // -----------------------
+            const drawRow = (
+                y,
+                row,
+                isHeader = false
+            ) => {
+
+                let currentX = startX;
+
+                row.forEach(
+                    (cell, index) => {
+
+                        const width =
+                            columnWidths[index];
+
+                        doc
+                            .rect(
+                                currentX,
+                                y,
+                                width,
+                                rowHeight
+                            )
+                            .stroke();
+
+                        doc
+                            .font(
+                                isHeader
+                                    ? "Helvetica-Bold"
+                                    : "Helvetica"
+                            )
+                            .fontSize(9)
+                            .text(
+                                String(cell ?? ""),
+                                currentX + 2,
+                                y + 8,
+                                {
+                                    width: width - 4,
+                                    align: "center"
+                                }
+                            );
+
+                        currentX += width;
+                    }
+                );
+            };
+
+            // -----------------------
+            // HEADER
+            // -----------------------
+
+            drawRow(
+                startY,
+                headers,
+                true
+            );
+
+            startY += rowHeight;
+
+            // -----------------------
+            // DATA
+            // -----------------------
+
+            reportData.forEach(
+                rowData => {
+
+                    if (
+                        startY >
+                        doc.page.height - 60
+                    ) {
+
+                        doc.addPage();
+
+                        startY = 50;
+
+                        drawRow(
+                            startY,
+                            headers,
+                            true
+                        );
+
+                        startY += rowHeight;
+                    }
+
+                    const row = [
+                        rowData.row_name,
+
+                        ...dynamicColumns.map(
+                            month =>
+                                rowData[month] ?? "-"
+                        ),
+
+                        rowData.Total ?? 0,
+                        rowData.Percentage ?? 0
+                    ];
+
+                    drawRow(
+                        startY,
+                        row
+                    );
+
+                    startY += rowHeight;
+                }
+            );
+
+            // ============================================
+            // END PDF
+            // ============================================
+
+            doc.end();
+
+
+
+        } catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Error generating Progress Card",
+            });
+        }
+    },
+    getProgressCardPrint_Orig: async (req, res) => {
+        try {
+
+            const filterQuery = {};
+            const schoolId = req.user.schoolId;
+
+            filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+            if (req.query?.class) {
+                filterQuery.class = req.query?.class;
+            }
+
+            if (req.query?.section) {
+                filterQuery.section = req.query?.section;
+            }
+
+            if (req.query?.student) {
+                filterQuery.student = req.query?.student;
+            }
+
+            if (req.query?.examination) {
+                filterQuery.examination = req.query?.examination;
+            }
+
+            let requesttype = "";
+
+            if (req.query?.requesttype) {
+                requesttype = req.query?.requesttype;
+            }
+
+            const marksheetData = await Marksheetdetail.find(filterQuery)
+                .populate("school")
+                .populate("class")
+                .populate("section")
+                .populate("examination")
+                .populate("subject")
+                .populate("student")
+                .sort({ examination: 1 })
+                .lean();
+
+            const gradeData = await Grade.find({ school: schoolId })
+                .sort({ marks_min: -1 })
+                .lean();
+
+            const subjectsData = await Subject.find({ school: schoolId })
+                .select("subject_name -_id")
+                .sort({ seq: 1 })
+                .lean();
+            console.log("subjectsData", subjectsData);
+
+            const examsData = await Examination.find({ school: schoolId })
+                .select("examination_name -_id")
+                .sort({ seq: 1 })
+                .lean();
+            console.log("examsData", examsData);
+
 
             // ============================================
             // PDF
@@ -4033,10 +6623,12 @@ module.exports = {
                 // TRANSFORM DATA
                 // ============================================
 
-                const tableData = transformMarksheetData(marksheetData);
+                const tableData = transformMarksheetData(marksheetData, subjectsData, examsData);
 
                 const examNames = tableData.exams;
                 const subjects = tableData.subjects;
+
+
 
                 const subjectLength = Object.keys(subjects).length;
                 console.log(subjectLength); // 3
@@ -4108,14 +6700,13 @@ module.exports = {
                         }
                     );
 
+                const address = reportHeader.address + "," + reportHeader.city
+                    + "," + reportHeader.state + "," + reportHeader.country
                 doc
                     .fontSize(10)
                     .font("Helvetica")
                     .text(
-                        `${reportHeader.address},
-                            ${reportHeader.city},
-                            ${reportHeader.state},
-                            ${reportHeader.country}`,
+                        `${address}`,
                         0,
                         85,
                         {
@@ -4130,45 +6721,47 @@ module.exports = {
 
                 doc.font("Helvetica-Bold")
                     .text(
-                        "Class :",
+                        "Student :",
                         40,
                         startY
                     );
 
                 doc.font("Helvetica")
                     .text(
-                        reportHeader.class,
+                        reportHeader.student,
                         95,
                         startY
                     );
 
                 doc.font("Helvetica-Bold")
                     .text(
-                        "Section :",
-                        260,
+                        "Class :",
+                        300,
                         startY
                     );
 
                 doc.font("Helvetica")
                     .text(
-                        reportHeader.section,
+                        reportHeader.class,
                         340,
                         startY
                     );
 
                 doc.font("Helvetica-Bold")
                     .text(
-                        "Student :",
+                        "Section :",
                         500,
                         startY
                     );
 
                 doc.font("Helvetica")
                     .text(
-                        reportHeader.student,
-                        590,
+                        reportHeader.section,
+                        540,
                         startY
                     );
+
+
 
                 // ============================================
                 // TABLE SETTINGS (A3 DYNAMIC)
@@ -4590,86 +7183,33 @@ module.exports = {
                                     align: "center",
                                 }
                             );
-
                             currentX += subColumnWidth;
-
                             if (grade === "E" && exam === "SA-2") {
                                 fail_exist = true;
                             }
+                            if (exam === "SA-2") {
+                                const mergedWidth = subColumnWidth * 5;
 
-                            // if (exam === "SA-2") { //Irfan
+                                // One merged rectangle across 5 columns
+                                doc.rect(currentX, startY, mergedWidth, rowHeight).stroke();
+                                if (subject_index === 0) {
+                                    doc.text(
+                                        "Comments",
+                                        currentX,
+                                        startY + 7,
+                                        {
+                                            width: mergedWidth,
+                                            align: "center",
+                                        }
+                                    );
+                                }
 
-                            //     if (subject_index === 0) {
-                            //         doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-                            //         doc.text(
-                            //             ``,
-                            //             currentX,
-                            //             startY + 7,
-                            //             {
-                            //                 width: subColumnWidth,
-                            //                 align: "center",
-                            //             }
-                            //         );
-
-                            //         currentX += subColumnWidth;
-
-                            //         doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-                            //         doc.text(
-                            //             ``,
-                            //             currentX,
-                            //             startY + 7,
-                            //             {
-                            //                 width: subColumnWidth,
-                            //                 align: "center",
-                            //             }
-                            //         );
-
-                            //         currentX += subColumnWidth;
-
-                            //         doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-                            //         doc.text(
-                            //             ``,
-                            //             currentX,
-                            //             startY + 7,
-                            //             {
-                            //                 width: subColumnWidth,
-                            //                 align: "center",
-                            //             }
-                            //         );
-
-                            //         currentX += subColumnWidth;
-
-                            //         doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-                            //         doc.text(
-                            //             ``,
-                            //             currentX,
-                            //             startY + 7,
-                            //             {
-                            //                 width: subColumnWidth,
-                            //                 align: "center",
-                            //             }
-                            //         );
-
-                            //         currentX += subColumnWidth;
-
-                            //         doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-                            //         doc.text(
-                            //             ``,
-                            //             currentX,
-                            //             startY + 7,
-                            //             {
-                            //                 width: subColumnWidth,
-                            //                 align: "center",
-                            //             }
-                            //         );
-
-                            //         currentX += subColumnWidth;
-                            //     }
-
-                            //     subject_index++;
-                            // }
+                                // Move currentX by 5 columns
+                                currentX += mergedWidth;
 
 
+                                subject_index++;
+                            }
                         }
                     });
 
@@ -4949,824 +7489,491 @@ module.exports = {
             });
         }
     },
-    getProgressCardPrint_Orig: async (req, res) => {
+    getAttendanceSummaryPrint: async (req, res) => {
         try {
 
-            const filterQuery = {};
-            const schoolId = req.user.schoolId;
-
-            filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
-
-            if (req.query?.class) {
-                filterQuery.class = req.query?.class;
-            }
-
-            if (req.query?.section) {
-                filterQuery.section = req.query?.section;
-            }
-
-            if (req.query?.student) {
-                filterQuery.student = req.query?.student;
-            }
-
-            if (req.query?.examination) {
-                filterQuery.examination = req.query?.examination;
-            }
-
-            let requesttype = "";
-
-            if (req.query?.requesttype) {
-                requesttype = req.query?.requesttype;
-            }
-
-            const marksheetData = await Marksheetdetail.find(filterQuery)
-                .populate("school")
-                .populate("class")
-                .populate("section")
-                .populate("examination")
-                .populate("subject")
-                .populate("student")
-                .sort({ examination: 1 })
-                .lean();
-
-            const gradeData = await Grade.find({ school: schoolId })
-                .sort({ marks_min: -1 })
-                .lean();
-
-            // ============================================
-            // PDF
-            // ============================================
-
-            if (requesttype === "PDF") {
-
-                // const doc = new PDFDocument({
-                //     size: "A4",
-                //     layout: "landscape",
-                //     margin: 30,
-                // });
-                const doc = new PDFDocument({
-                    size: "A3",
-                    layout: "landscape",
-                    margins: {
-                        top: 25,
-                        bottom: 25,
-                        left: 25,
-                        right: 25,
-                    },
-                });
-
-                res.writeHead(200, {
-                    "Content-Type": "application/pdf",
-                    "Content-Disposition":
-                        "attachment; filename=Progress-Card.pdf"
-                });
-
-                doc.pipe(res);
-
-                // ============================================
-                // NO DATA
-                // ============================================
-
-                if (!marksheetData.length) {
-
-                    doc
-                        .font("Helvetica-Bold")
-                        .fontSize(18)
-                        .text("No Data Found", 0, 300, {
-                            align: "center"
-                        });
-
-                    doc.end();
-                    return;
+            const reportData = [
+                {
+                    row_name: "Working Days",
+                    June: 16,
+                    July: 26,
+                    August: 22,
+                    September: 15,
+                    October: 23,
+                    November: 22,
+                    December: 25,
+                    January: 20,
+                    February: 23,
+                    March: 18,
+                    April: 12,
+                    Total: 222,
+                    Percentage: 100
+                },
+                {
+                    row_name: "Present Days",
+                    June: 16,
+                    July: 26,
+                    August: 19,
+                    September: 15,
+                    October: 22,
+                    November: 20,
+                    December: 23,
+                    January: 20,
+                    February: 15,
+                    March: 17,
+                    April: 12,
+                    Total: 205,
+                    Percentage: 92
                 }
+            ];
+
+            const dynamicColumns = Object.keys(
+                reportData[0]
+            ).filter(
+                key =>
+                    key !== "row_name" &&
+                    key !== "Total" &&
+                    key !== "Percentage"
+            );
+
+            const headers = [
+                "Month Name",
+                ...dynamicColumns,
+                "Total",
+                "%"
+            ];
+
+            const doc = new PDFDocument({
+                margin: 20,
+                size: "A4",
+                layout: "landscape"
+            });
+
+            res.setHeader(
+                "Content-Type",
+                "application/pdf"
+            );
+
+            res.setHeader(
+                "Content-Disposition",
+                "inline; filename=attendance-report.pdf"
+            );
+
+            doc.pipe(res);
+
+            // -----------------------
+            // TITLE
+            // -----------------------
+
+            doc
+                .fontSize(16)
+                .font("Helvetica-Bold")
+                .text(
+                    "Monthly Attendance Report",
+                    { align: "center" }
+                );
+
+            doc.moveDown();
+
+            // -----------------------
+            // TABLE SETTINGS
+            // -----------------------
+
+            let startX = 20;
+            let startY = 80;
+
+            const rowHeight = 28;
+
+            const pageWidth =
+                doc.page.width -
+                doc.page.margins.left -
+                doc.page.margins.right;
+
+            const firstColumnWidth = 110;
+            const totalWidth = 55;
+            const percentageWidth = 45;
+
+            // Dynamic month width
+
+            const remainingWidth =
+                pageWidth -
+                firstColumnWidth -
+                totalWidth -
+                percentageWidth;
+
+            const monthWidth =
+                remainingWidth /
+                dynamicColumns.length;
+
+            const columnWidths = [
+                firstColumnWidth,
+                ...dynamicColumns.map(
+                    () => monthWidth
+                ),
+                totalWidth,
+                percentageWidth
+            ];
+
+            // -----------------------
+            // DRAW ROW
+            // -----------------------
+
+            const drawRow = (
+                y,
+                row,
+                isHeader = false
+            ) => {
+
+                let currentX = startX;
+
+                row.forEach(
+                    (cell, index) => {
 
-                // ============================================
-                // TRANSFORM DATA
-                // ============================================
-
-                const tableData = transformMarksheetData(marksheetData);
-
-                const examNames = tableData.exams;
-                const subjects = tableData.subjects;
-
-                const subjectLength = Object.keys(subjects).length;
-                console.log(subjectLength); // 3
-
-
-
-                const reportHeader = {
-                    school_name: marksheetData[0].school.school_name,
-                    address: marksheetData[0].school.address,
-                    city: marksheetData[0].school.city,
-                    state: marksheetData[0].school.state,
-                    country: marksheetData[0].school.country,
-                    class: marksheetData[0].class.class_name,
-                    section: marksheetData[0].section.section_name,
-                    student: marksheetData[0].student.name,
-                    school_image: marksheetData[0].school.school_image
-                };
-
-                // ============================================
-                // SCHOOL LOGO
-                // ============================================
-
-                if (reportHeader?.school_image) {
-
-                    try {
-
-                        const img = await axios.get(
-                            reportHeader.school_image,
-                            {
-                                responseType: "arraybuffer"
-                            }
-                        );
-
-                        doc.image(img.data, 30, 20, {
-                            width: 60,
-                        });
-
-                    } catch (err) {
-
-                        console.log("Logo load failed");
-                    }
-                }
-
-                // ============================================
-                // HEADER
-                // ============================================
-
-                doc
-                    .fontSize(26)
-                    .font("Helvetica-Bold")
-                    .text(
-                        "PROGRESS CARD",
-                        0,
-                        25,
-                        {
-                            align: "center"
-                        }
-                    );
-
-                doc
-                    .fontSize(14)
-                    .font("Helvetica-Bold")
-                    .text(
-                        reportHeader.school_name,
-                        0,
-                        60,
-                        {
-                            align: "center"
-                        }
-                    );
-
-                doc
-                    .fontSize(10)
-                    .font("Helvetica")
-                    .text(
-                        `${reportHeader.address},
-                            ${reportHeader.city},
-                            ${reportHeader.state},
-                            ${reportHeader.country}`,
-                        0,
-                        85,
-                        {
-                            align: "center"
-                        });
-
-                // ============================================
-                // STUDENT INFO
-                // ============================================
-
-                let startY = 150;
-
-                doc.font("Helvetica-Bold")
-                    .text(
-                        "Class :",
-                        40,
-                        startY
-                    );
-
-                doc.font("Helvetica")
-                    .text(
-                        reportHeader.class,
-                        95,
-                        startY
-                    );
-
-                doc.font("Helvetica-Bold")
-                    .text(
-                        "Section :",
-                        260,
-                        startY
-                    );
-
-                doc.font("Helvetica")
-                    .text(
-                        reportHeader.section,
-                        340,
-                        startY
-                    );
-
-                doc.font("Helvetica-Bold")
-                    .text(
-                        "Student :",
-                        500,
-                        startY
-                    );
+                        const width =
+                            columnWidths[index];
 
-                doc.font("Helvetica")
-                    .text(
-                        reportHeader.student,
-                        590,
-                        startY
-                    );
-
-                // ============================================
-                // TABLE SETTINGS (A3 DYNAMIC)
-                // ============================================
-
-                startY += 50;
-
-                const pageWidth =
-                    doc.page.width -
-                    doc.page.margins.left -
-                    doc.page.margins.right;
-
-                const subjectWidth = 220;
-                const rowHeight = 30;
-
-                let totalColumns = 0;
-
-                examNames.forEach((exam) => {
-
-                    if (exam === "SA-1" || exam === "SA-2") {
-                        totalColumns += 5;
-                    } else {
-                        totalColumns += 2;
-                    }
-
-                });
-
-                const availableWidth = pageWidth - subjectWidth;
-
-                const subColumnWidth =
-                    Math.floor(availableWidth / totalColumns);
-
-                let currentX = doc.page.margins.left;
-
-                // ============================================
-                // HEADER ROW 1
-                // ============================================
-
-                doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
-
-                doc
-                    .font("Helvetica-Bold")
-                    .fontSize(11)
-                    .text(
-                        "Subjects",
-                        currentX,
-                        startY + 8,
-                        {
-                            width: subjectWidth,
-                            align: "center"
-                        }
-                    );
-
-                currentX += subjectWidth;
-
-                examNames.forEach((exam) => {
-
-                    let span = (exam === "SA-1" || exam === "SA-2") ? 5 : 2;
-
-                    let examWidth = subColumnWidth * span;
-
-                    doc.rect(
-                        currentX,
-                        startY,
-                        examWidth,
-                        rowHeight
-                    ).stroke();
-
-                    doc.text(
-                        exam,
-                        currentX,
-                        startY + 8,
-                        {
-                            width: examWidth,
-                            align: "center"
-                        }
-                    );
-
-                    currentX += examWidth;
-
-
-
-
-                });
-
-                // ============================================
-                // HEADER ROW 2
-                // ============================================
-
-                startY += rowHeight;
-
-                currentX = doc.page.margins.left;
-
-                doc.rect(
-                    currentX,
-                    startY,
-                    subjectWidth,
-                    rowHeight
-                ).stroke();
-
-                currentX += subjectWidth;
-
-                examNames.forEach((exam) => {
-
-                    if (exam === "SA-1" || exam === "SA-2") {
-
-                        ["Avg", "Marks", "Total", "Grade", "GPA"]
-                            .forEach((label) => {
-
-                                doc.rect(
-                                    currentX,
-                                    startY,
-                                    subColumnWidth,
-                                    rowHeight
-                                ).stroke();
-
-                                doc.text(
-                                    label,
-                                    currentX,
-                                    startY + 8,
-                                    {
-                                        width: subColumnWidth,
-                                        align: "center"
-                                    }
-                                );
-
-                                currentX += subColumnWidth;
-
-                            });
-
-                    } else {
-
-                        ["Marks", "Grade"]
-                            .forEach((label) => {
-
-                                doc.rect(
-                                    currentX,
-                                    startY,
-                                    subColumnWidth,
-                                    rowHeight
-                                ).stroke();
-
-                                doc.text(
-                                    label,
-                                    currentX,
-                                    startY + 8,
-                                    {
-                                        width: subColumnWidth,
-                                        align: "center"
-                                    }
-                                );
-
-                                currentX += subColumnWidth;
-
-                            });
-
-                    }
-
-                });
-
-                // ============================================
-                // TOTAL OBJECTS
-                // ============================================
-
-                const examTotals = {};
-                const examMarksLimitTotals = {};
-                const examTotalAvg = {};
-                const examTotalmarks = {};
-
-                examNames.forEach((exam) => {
-                    examTotals[exam] = 0;
-                    examMarksLimitTotals[exam] = 0;
-                    examTotalAvg[exam] = 0;
-                    examTotalmarks[exam] = 0;
-                });
-
-                // ============================================
-                // SUBJECT ROWS
-                // ============================================
-
-                startY += rowHeight;
-                let fail_exist = false;
-                Object.keys(subjects).forEach((subject) => {
-
-                    currentX = doc.page.margins.left;
-
-                    // Subject Name
-                    doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
-
-                    doc.font("Helvetica").text(subject, currentX + 5, startY + 7);
-
-                    currentX += subjectWidth;
-
-                    // ============================================
-                    // EXAM LOOP
-                    // ============================================
-
-                    let sumofmarks = 0;
-                    let sumofmarkslimit = 0;
-
-                    examNames.forEach((exam) => {
-
-                        const examData = subjects[subject][exam] || {};
-
-                        const marks = Number(examData?.marks || 0);
-
-                        const marksLimit = Number(examData?.marksLimit || 0);
-
-
-                        examTotals[exam] += marks;
-                        sumofmarks += marks || 0;
-                        sumofmarkslimit += marksLimit;
-                        let avg = 0;
-                        let avglimit = 0;
-                        if (exam === "SA-1" || exam === "SA-2") {
-                            sumofmarks -= marks || 0;
-                            sumofmarkslimit -= marksLimit || 0;
-
-                            if (exam === "SA-1") {
-                                avg = sumofmarks / 2;
-                                avglimit = (sumofmarkslimit / 2);
-                            } else if (exam === "SA-2") {
-                                avg = sumofmarks / 4;
-                                avglimit = (sumofmarkslimit / 4);
-                            }
-
-                            avg = Number(avg.toFixed(0));
-                            examTotalAvg[exam] += avg;
-
-
-
-                            avglimit = Number(avglimit.toFixed(0));
-                            avglimit += marksLimit;
-                            examMarksLimitTotals[exam] += avglimit;
-                            // ============================================
-                            // AVG CELL
-                            // ============================================
-
-                            doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-
-                            doc.text(
-                                // `${marks}/${marksLimit}`,
-                                `${avg}`,
+                        doc
+                            .rect(
                                 currentX,
-                                startY + 7,
+                                y,
+                                width,
+                                rowHeight
+                            )
+                            .stroke();
+
+                        doc
+                            .font(
+                                isHeader
+                                    ? "Helvetica-Bold"
+                                    : "Helvetica"
+                            )
+                            .fontSize(9)
+                            .text(
+                                String(cell ?? ""),
+                                currentX + 2,
+                                y + 8,
                                 {
-                                    width: subColumnWidth,
-                                    align: "center",
+                                    width: width - 4,
+                                    align: "center"
                                 }
                             );
 
-                            currentX += subColumnWidth;
+                        currentX += width;
+                    }
+                );
+            };
 
+            // -----------------------
+            // HEADER
+            // -----------------------
 
-                            // sumofmarks = 0;
-                            // sumofmarkslimit = 0;
+            drawRow(
+                startY,
+                headers,
+                true
+            );
 
-                        } else {
-                            examMarksLimitTotals[exam] += marksLimit;
-                        }
+            startY += rowHeight;
 
+            // -----------------------
+            // DATA
+            // -----------------------
 
-
-
-
-                        // ============================================
-                        // MARKS CELL
-                        // ============================================
-
-                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-
-                        doc.text(
-                            // `${marks}/${marksLimit}`,
-                            `${marks}`,
-                            currentX,
-                            startY + 7,
-                            {
-                                width: subColumnWidth,
-                                align: "center",
-                            }
-                        );
-
-                        currentX += subColumnWidth;
-
-                        let totalmarks = 0;
-                        if (exam === "SA-1" || exam === "SA-2") {
-                            // ============================================
-                            // TOTAL CELL
-                            // ============================================
-                            totalmarks = marks + avg;
-
-                            examTotalmarks[exam] += totalmarks;
-
-
-
-                            doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-
-                            doc.text(
-                                // `${marks}/${marksLimit}`,
-                                `${totalmarks}`,
-                                currentX,
-                                startY + 7,
-                                {
-                                    width: subColumnWidth,
-                                    align: "center",
-                                }
-                            );
-
-                            currentX += subColumnWidth;
-
-                        }
-
-
-                        // ============================================
-                        // GRADE LOGIC
-                        // ============================================
-
-                        let marks_per = 0;
-
-                        if (marksLimit > 0) {
-                            marks_per = (marks / marksLimit) * 100;
-                            if (exam === "SA-1" || exam === "SA-2") {
-                                marks_per = (totalmarks / avglimit) * 100;
-                            }
-                        }
-
-                        let filtered_gradeData = gradeData.filter(
-                            (item) => item.marks_min <= marks && item.marks_limit == 20
-                        );
-                        if (exam === "SA-1" || exam === "SA-2") {
-                            filtered_gradeData = gradeData.filter(
-                                (item) => item.marks_min <= totalmarks && item.marks_limit == 100
-                            );
-                            console.log("filtered_gradeData", filtered_gradeData);
-                        }
-
-
-                        let grade = "E";
-                        let gpa = "-";
-
-                        if (filtered_gradeData.length > 0) {
-                            grade = filtered_gradeData[0]?.grade_code || "E";
-                            gpa = filtered_gradeData[0]?.gpa || "-";
-                        }
-
-                        // ============================================
-                        // GRADE CELL
-                        // ============================================
-
-                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-
-                        doc.text(grade, currentX, startY + 7, {
-                            width: subColumnWidth,
-                            align: "center",
-                        });
-
-                        currentX += subColumnWidth;
-
-
-                        if (exam === "SA-1" || exam === "SA-2") {
-                            // GPA
-                            doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-
-                            doc.text(
-                                `${gpa}`,
-                                currentX,
-                                startY + 7,
-                                {
-                                    width: subColumnWidth,
-                                    align: "center",
-                                }
-                            );
-
-                            currentX += subColumnWidth;
-
-                            if (grade === "E" && exam === "SA-2") {
-                                fail_exist = true;
-                            }
-
-                        }
-                    });
-
-                    startY += rowHeight;
-
-                    // ============================================
-                    // PAGE BREAK
-                    // ============================================
+            reportData.forEach(
+                rowData => {
 
                     if (
                         startY >
-                        doc.page.height -
-                        doc.page.margins.bottom -
-                        100
+                        doc.page.height - 60
                     ) {
 
                         doc.addPage();
 
                         startY = 50;
-                    }
-                });
 
-                // ============================================
-                // TOTAL ROW
-                // ============================================
-
-                currentX = doc.page.margins.left;
-
-                doc.rect(currentX, startY, subjectWidth, rowHeight).stroke();
-
-                doc
-                    .font("Helvetica-Bold")
-                    .text("Total", currentX + 5, startY + 7);
-
-                currentX += subjectWidth;
-
-                examNames.forEach((exam) => {
-
-
-                    if (exam === "SA-1" || exam === "SA-2") {
-                        // ============================================
-                        // TOTAL AVG CELL
-                        // ============================================
-                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-                        doc.text(
-                            `${examTotalAvg[exam]}`,
-                            currentX,
-                            startY + 7,
-                            {
-                                width: subColumnWidth,
-                                align: "center",
-                            }
+                        drawRow(
+                            startY,
+                            headers,
+                            true
                         );
 
-                        currentX += subColumnWidth;
-
-
+                        startY += rowHeight;
                     }
 
+                    const row = [
+                        rowData.row_name,
 
+                        ...dynamicColumns.map(
+                            month =>
+                                rowData[month] ?? "-"
+                        ),
 
-                    // ============================================
-                    // TOTAL MARKS CELL
-                    // ============================================
+                        rowData.Total ?? 0,
+                        rowData.Percentage ?? 0
+                    ];
 
-                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-
-                    doc.text(
-                        `${examTotals[exam]}`,
-                        currentX,
-                        startY + 7,
-                        {
-                            width: subColumnWidth,
-                            align: "center",
-                        }
+                    drawRow(
+                        startY,
+                        row
                     );
 
-                    currentX += subColumnWidth;
+                    startY += rowHeight;
+                }
+            );
 
-                    if (exam === "SA-1" || exam === "SA-2") {
+            doc.end();
 
-                        //Total 
-                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-                        doc.text(
-                            `${examTotalmarks[exam]}`,
-                            currentX,
-                            startY + 7,
-                            {
-                                width: subColumnWidth,
-                                align: "center",
-                            }
-                        );
+        }
+        catch (error) {
 
-                        currentX += subColumnWidth;
+            console.log(error);
 
-
-                    }
-
-                    // ============================================
-                    // TOTAL GRADE
-                    // ============================================
-                    let totalPercentage = 0;
-                    let totalMarksLimit = 0;
-
-                    if (examMarksLimitTotals[exam] > 0) {
-                        if (exam === "SA-1" || exam === "SA-2") {
-                            totalMarksLimit = 100 * subjectLength;
-                            totalPercentage =
-                                (examTotalmarks[exam] / totalMarksLimit) * 100;
-                        } else {
-                            // totalPercentage =
-                            //     (examTotals[exam] / examMarksLimitTotals[exam]) * 100;
-                            totalMarksLimit = 20 * subjectLength;
-                            totalPercentage =
-                                (examTotals[exam] / totalMarksLimit) * 100;
-                        }
-
-
-                        totalPercentage = Number(totalPercentage.toFixed(0));
-                    }
-
-
-
-                    const filtered_gradeData = gradeData.filter(
-                        (item) => item.marks_min <= totalPercentage
-                    );
-
-
-
-                    let totalGrade = "E";
-                    let totalGpa = "-";
-
-                    if (filtered_gradeData.length > 0) {
-                        totalGrade =
-                            filtered_gradeData[0]?.grade_code || "E";
-                        totalGpa =
-                            filtered_gradeData[0]?.gpa || "-";
-
-
-                        totalGrade = `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`;
-                        if (fail_exist && exam === "SA-2") {
-                            totalGrade = "-";
-                            totalGpa = "-"
-
-                        }
-                    }
-
-                    doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-
-                    doc.text(
-                        // `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`,
-                        `${totalGrade}`,
-                        currentX, startY + 7, {
-                        width: subColumnWidth,
-                        align: "center",
-                    });
-
-                    currentX += subColumnWidth;
-
-
-                    if (exam === "SA-1" || exam === "SA-2") {
-
-                        //GPA 
-                        doc.rect(currentX, startY, subColumnWidth, rowHeight).stroke();
-                        doc.text(
-                            `${totalGpa}`,
-                            currentX,
-                            startY + 7,
-                            {
-                                width: subColumnWidth,
-                                align: "center",
-                            }
-                        );
-
-                        currentX += subColumnWidth;
-                    }
-                });
-
-
-                //****FINAL RESULT*******
-
-                //************ */
-
-
-                // ============================================
-                // END PDF
-                // ============================================
-
-                doc.end();
-
-            } else {
-
-                res.status(200).json({
-                    success: true,
-                    data: marksheetData,
-                });
-            }
-
-        } catch (err) {
-
-            console.error(err);
-
-            res.status(500).json({
+            return res.status(500).json({
                 success: false,
-                message: "Error generating Progress Card",
+                message: error.message
             });
+
         }
     },
+    getAttendanceSummaryPrint_Orig: async (req, res) => {
+        try {
+
+            // SAMPLE DATA
+
+            const reportData = [
+                {
+                    row_name: "Working Days",
+                    June: 16,
+                    July: 26,
+                    August: 22,
+                    September: 15,
+                    October: 23,
+                    November: 22,
+                    December: 25,
+                    January: 20,
+                    February: 23,
+                    March: 18,
+                    April: 12,
+                    Total: 222,
+                    Percentage: 100
+                },
+                {
+                    row_name: "Present Days",
+                    June: 16,
+                    July: 26,
+                    August: 19,
+                    September: 15,
+                    October: 22,
+                    November: 20,
+                    December: 23,
+                    January: 20,
+                    February: 15,
+                    March: 17,
+                    April: 12,
+                    Total: 205,
+                    Percentage: 92
+                }
+            ];
+
+            // Dynamic Month Columns
+
+            const dynamicColumns = Object.keys(
+                reportData[0]
+            ).filter(
+                key =>
+                    key !== "row_name" &&
+                    key !== "Total" &&
+                    key !== "Percentage"
+            );
+
+            const headers = [
+                "Month Name",
+                ...dynamicColumns,
+                "Total",
+                "%"
+            ];
+
+            const doc = new PDFDocument({
+                margin: 30,
+                size: "A4",
+                layout: "landscape"
+            });
+
+            res.setHeader(
+                "Content-Type",
+                "application/pdf"
+            );
+
+            res.setHeader(
+                "Content-Disposition",
+                "inline; filename=attendance-report.pdf"
+            );
+
+            doc.pipe(res);
+
+            // -------------------------
+            // TITLE
+            // -------------------------
+
+            doc
+                .fontSize(18)
+                .font("Helvetica-Bold")
+                .text(
+                    "Monthly Attendance Report",
+                    { align: "center" }
+                );
+
+            doc.moveDown();
+
+            // -------------------------
+            // TABLE SETTINGS
+            // -------------------------
+
+            let startX = 30;
+            let startY = 100;
+
+            const rowHeight = 30;
+
+            const firstColumnWidth = 160;
+            const monthWidth = 65;
+            const totalWidth = 70;
+            const percentageWidth = 60;
+
+            const columnWidths = [
+                firstColumnWidth,
+                ...dynamicColumns.map(
+                    () => monthWidth
+                ),
+                totalWidth,
+                percentageWidth
+            ];
+
+            // -------------------------
+            // DRAW TABLE ROW
+            // -------------------------
+
+            const drawRow = (
+                y,
+                row,
+                isHeader = false
+            ) => {
+
+                let currentX = startX;
+
+                row.forEach(
+                    (cell, index) => {
+
+                        const width =
+                            columnWidths[index];
+
+                        // Border
+
+                        doc
+                            .rect(
+                                currentX,
+                                y,
+                                width,
+                                rowHeight
+                            )
+                            .stroke();
+
+                        // Text
+
+                        doc
+                            .font(
+                                isHeader
+                                    ? "Helvetica-Bold"
+                                    : "Helvetica"
+                            )
+                            .fontSize(10)
+                            .text(
+                                String(cell ?? ""),
+                                currentX + 5,
+                                y + 9,
+                                {
+                                    width: width - 10,
+                                    align: "center"
+                                }
+                            );
+
+                        currentX += width;
+                    }
+                );
+            };
+
+            // -------------------------
+            // DRAW HEADER
+            // -------------------------
+
+            drawRow(
+                startY,
+                headers,
+                true
+            );
+
+            startY += rowHeight;
+
+            // -------------------------
+            // DRAW DATA
+            // -------------------------
+
+            reportData.forEach(
+                rowData => {
+
+                    // AUTO PAGE BREAK
+
+                    if (
+                        startY >
+                        doc.page.height - 70
+                    ) {
+
+                        doc.addPage();
+
+                        startY = 50;
+
+                        drawRow(
+                            startY,
+                            headers,
+                            true
+                        );
+
+                        startY += rowHeight;
+                    }
+
+                    const row = [
+                        rowData.row_name,
+
+                        ...dynamicColumns.map(
+                            month =>
+                                rowData[month] ?? 0
+                        ),
+
+                        rowData.Total,
+
+                        rowData.Percentage
+                    ];
+
+                    drawRow(startY, row);
+
+                    startY += rowHeight;
+                }
+            );
+
+            doc.end();
+
+        }
+        catch (error) {
+
+            console.log(error);
+
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+
+        }
+    },
+
     getGradeListPrint: async (req, res) => {
 
 
@@ -6064,7 +8271,51 @@ module.exports = {
 
 }
 
-const transformMarksheetData = (data) => {
+const transformMarksheetData = (data, subjectsData, examsData) => {
+
+    const subjects = {};
+    const exams = new Set();
+
+    subjectsData.forEach(item_subject => {
+        const subject = item_subject?.subject_name;
+        examsData.forEach(item_exam => {
+            const exam = item_exam?.examination_name;
+            exams.add(exam);
+
+            if (!subjects[subject]) {
+                subjects[subject] = {};
+            }
+            subjects[subject][exam] = {
+                marks: 0,
+                marksLimit: 0
+            };
+
+        });
+    });
+
+    data.forEach(item => {
+        const subject = item.subject.subject_name || item.subject;
+        const exam = item.examination.examination_name || item.examination;
+
+        exams.add(exam);
+
+        if (!subjects[subject]) {
+            subjects[subject] = {};
+        }
+
+        subjects[subject][exam] = {
+            marks: item?.marks || 0,
+            marksLimit: item?.marksLimit || 0
+        };
+    });
+
+    return {
+        exams: Array.from(exams),
+        subjects
+    };
+};
+
+const transformMarksheetData_Orig = (data) => {
 
     const subjects = {};
     const exams = new Set();
@@ -6090,3 +8341,6 @@ const transformMarksheetData = (data) => {
         subjects
     };
 };
+
+
+

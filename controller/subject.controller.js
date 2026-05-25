@@ -8,7 +8,7 @@ module.exports = {
     getAllSubjects: async(req,res)=>{
          try {
             const schoolId = req.user.schoolId;
-            const allSubject= await Subject.find({school:schoolId});
+            const allSubject= await Subject.find({school:schoolId}).sort({ seq: 1 });
             res.status(200).json({success:true, message:"Success in fetching all  Subject", data:allSubject})
          } catch (error) {
             console.log("Error in getAllSubject", error);
