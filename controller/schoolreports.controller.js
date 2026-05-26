@@ -9,6 +9,7 @@ const Grade = require("../model/grade.model");
 const Subject = require("../model/subject.model");
 const Examination = require("../model/examination.model");
 const WorkingDays = require("../model/workingdays.model");
+const Classsubject = require("../model/classsubject.model");
 
 const Salesinvoice = require("../model/salesinvoice.model");
 const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
@@ -3990,10 +3991,24 @@ module.exports = {
                 .sort({ marks_min: -1 })
                 .lean();
 
-            const subjectsData = await Subject.find({ school: schoolId })
-                .select("subject_name -_id")
+            let subjectsData = await Classsubject.find({
+                school: schoolId,
+                class: req.query?.class
+            })
+                .populate({
+                    path: "subject",
+                    select: "subject_name -_id"
+                })
+                .select("subject")
                 .sort({ seq: 1 })
                 .lean();
+
+            if (subjectsData.length == 0) {
+                subjectsData = await Subject.find({ school: schoolId })
+                    .select("subject_name -_id")
+                    .sort({ seq: 1 })
+                    .lean();
+            }
 
 
             const examsData = await Examination.find({ school: schoolId })
@@ -4223,7 +4238,7 @@ module.exports = {
 
             // const subjectWidth = 220;
             const subjectWidth = 100;
-            let rowHeight = 30;
+            let rowHeight = 35;
 
             let totalColumns = 0;
 
@@ -4339,9 +4354,15 @@ module.exports = {
 
                 if (exam === "SA-1" || exam === "SA-2") {
 
-                    ["2FA Avg", "Marks", "Total", "Grade", "GPA"]
+                    ["2FAs Avg", "Marks", "Total", "Grade", "GPA"]
                         .forEach((label) => {
 
+                            if (exam === "SA-2") {
+                                if (label === "2FAs Avg") {
+                                    label = "4FAs Avg";
+                                }
+
+                            }
                             doc.rect(
                                 currentX,
                                 startY,
@@ -4363,14 +4384,16 @@ module.exports = {
 
                         });
 
+
+
                     if (exam === "SA-2") {
                         ["Comments"]
                             .forEach((label) => {
                                 const mergedWidth = subColumnWidth * 5;
 
-                            // One merged rectangle across 5 columns
-                            doc.rect(currentX, startY, mergedWidth, rowHeight).stroke();
-                            doc.text(
+                                // One merged rectangle across 5 columns
+                                doc.rect(currentX, startY, mergedWidth, rowHeight).stroke();
+                                doc.text(
                                     label,
                                     currentX,
                                     startY + 8,
@@ -4379,8 +4402,8 @@ module.exports = {
                                         align: "center"
                                     }
                                 );
-                            
-                                
+
+
                                 currentX += subColumnWidth;
 
                             });
@@ -4439,7 +4462,7 @@ module.exports = {
             startY += rowHeight;
             let fail_exist = false;
             let subject_index = 0;
-            let subject_length =    Object.keys(subjects).length || 0;
+            let subject_length = Object.keys(subjects).length || 0;
 
             Object.keys(subjects).forEach((subject) => {
 
@@ -4638,26 +4661,26 @@ module.exports = {
 
                             // One merged rectangle across 5 columns
                             doc.rect(currentX, startY, mergedWidth, rowHeight).stroke();
-                                
-                                let exam_name = ""
-                                if (subject_index === 0){exam_name=" FA-1 :"}
-                                if (subject_index === 1){exam_name=" FA-2 :"}
-                                if (subject_index === 2){exam_name=" SA-1 :"}
-                                if (subject_index === 3){exam_name=" FA-3 :"}
-                                if (subject_index === 4){exam_name=" FA-4 :"}
-                                if (subject_index === 5 && subject_length===5){exam_name="SA-5 :"}
-                                
 
-                                doc.text(
-                                    exam_name,
-                                    currentX,
-                                    startY + 7,
-                                    {
-                                        width: mergedWidth,
-                                        align: "left",
-                                    }
-                                );
-                            
+                            let exam_name = ""
+                            if (subject_index === 0) { exam_name = " FA-1 :" }
+                            if (subject_index === 1) { exam_name = " FA-2 :" }
+                            if (subject_index === 2) { exam_name = " SA-1 :" }
+                            if (subject_index === 3) { exam_name = " FA-3 :" }
+                            if (subject_index === 4) { exam_name = " FA-4 :" }
+                            if (subject_index === 5 && subject_length === 5) { exam_name = "SA-5 :" }
+
+
+                            doc.text(
+                                exam_name,
+                                currentX,
+                                startY + 7,
+                                {
+                                    width: mergedWidth,
+                                    align: "left",
+                                }
+                            );
+
 
                             if (subject_length == (subject_index + 1)) {
                                 // doc.text(
@@ -4670,8 +4693,8 @@ module.exports = {
                                 //     }
                                 // );
                                 if (exam === "SA-2") {
-                                    ["4FA Avg", "Marks", "Total", "Grade", "GPA"]
-                                    .forEach((label) => {
+                                    ["4FAs Avg", "Marks", "Total", "Grade", "GPA"]
+                                        .forEach((label) => {
 
                                             doc.rect(
                                                 currentX,
@@ -4681,15 +4704,15 @@ module.exports = {
                                             ).stroke();
 
                                             doc.font("Helvetica-Bold")
-                                            .text(
-                                                label,
-                                                currentX,
-                                                startY + 8,
-                                                {
-                                                    width: subColumnWidth,
-                                                    align: "center"
-                                                }
-                                            );
+                                                .text(
+                                                    label,
+                                                    currentX,
+                                                    startY + 8,
+                                                    {
+                                                        width: subColumnWidth,
+                                                        align: "center"
+                                                    }
+                                                );
 
                                             currentX += subColumnWidth;
 
@@ -4998,7 +5021,7 @@ module.exports = {
 
             const present_days = present_day_obj?.Total;
             const percentage = (present_days / work_days) * 100;
-            present_day_obj.Percentage = avg = Number(percentage.toFixed(0));
+            present_day_obj.Percentage =  Number(percentage.toFixed(0));
 
 
 
@@ -5050,7 +5073,7 @@ module.exports = {
                     }
                 );
 
-            startY += 40;
+            startY += 20;
 
 
             // -----------------------
@@ -5257,7 +5280,7 @@ module.exports = {
                 );
 
             // startY += 80;
-            startY += 30;
+            startY += 20;
 
             // -----------------------------------
             // TABLE SETTINGS
@@ -5387,41 +5410,110 @@ module.exports = {
     },
     getAttendanceSummaryPrint: async (req, res) => {
         try {
+            const schoolId = req.user.schoolId;
 
-            const reportData = [
-                {
-                    row_name: "Working Days",
-                    June: 16,
-                    July: 26,
-                    August: 22,
-                    September: 15,
-                    October: 23,
-                    November: 22,
-                    December: 25,
-                    January: 20,
-                    February: 23,
-                    March: 18,
-                    April: 12,
-                    Total: 222,
-                    Percentage: 100
+            const filterQuery_WD = {};
+            filterQuery_WD["school"] = new mongoose.Types.ObjectId(schoolId);
+            if (req.query?.year) {
+                filterQuery_WD.year = req.query?.year;
+            }
+            const workingdaysData = await WorkingDays.find(filterQuery_WD)
+                .sort({ seq: 1 })
+                .lean();
+
+
+            if (req.query?.student) {
+                filterQuery_WD.student = req.query?.student;
+            }
+            filterQuery_WD.status = "Present";
+            const attendanceData = await Attendance.find(filterQuery_WD)
+                .sort({ month: 1 })
+                .lean();
+
+
+            const working_day_obj = workingdaysData.reduce(
+                (acc, item) => {
+                    acc[item.month_name] = item.work_days; // June:16, July:26...
+                    acc.Total += item.work_days;           // calculate total
+                    return acc;
                 },
                 {
-                    row_name: "Present Days",
-                    June: 16,
-                    July: 26,
-                    August: 19,
-                    September: 15,
-                    October: 22,
-                    November: 20,
-                    December: 23,
-                    January: 20,
-                    February: 15,
-                    March: 17,
-                    April: 12,
-                    Total: 205,
-                    Percentage: 92
+                    row_name: "Working Days",
+                    Total: 0,
+                    Percentage: 100
                 }
+            );
+
+
+            const work_days = working_day_obj?.Total;
+
+
+
+
+            const months = [
+                "June", "July", "August", "September", "October",
+                "November", "December", "January", "February", "March", "April"
             ];
+
+            const present_day_obj = {
+                row_name: "Present Days",
+                ...Object.fromEntries(months.map(m => [m, 0])),
+                Total: 0,
+                Percentage: 100
+            };
+
+            attendanceData.forEach(item => {
+                present_day_obj[item.month_name] += item.attendance_flag;
+                present_day_obj.Total += item.attendance_flag;
+            });
+
+
+
+            const present_days = present_day_obj?.Total;
+            const percentage = (present_days / work_days) * 100;
+            present_day_obj.Percentage =  Number(percentage.toFixed(0));
+
+
+
+            const reportData = [
+                working_day_obj,
+                present_day_obj
+            ];
+
+            // const reportData = [
+            //     {
+            //         row_name: "Working Days",
+            //         June: 16,
+            //         July: 26,
+            //         August: 22,
+            //         September: 15,
+            //         October: 23,
+            //         November: 22,
+            //         December: 25,
+            //         January: 20,
+            //         February: 23,
+            //         March: 18,
+            //         April: 12,
+            //         Total: 222,
+            //         Percentage: 100
+            //     },
+            //     {
+            //         row_name: "Present Days",
+            //         June: 16,
+            //         July: 26,
+            //         August: 19,
+            //         September: 15,
+            //         October: 22,
+            //         November: 20,
+            //         December: 23,
+            //         January: 20,
+            //         February: 15,
+            //         March: 17,
+            //         April: 12,
+            //         Total: 205,
+            //         Percentage: 92
+            //     }
+            // ];
 
             const dynamicColumns = Object.keys(
                 reportData[0]
@@ -5631,244 +5723,7 @@ module.exports = {
 
         }
     },
-    getAttendanceSummaryPrint_Orig: async (req, res) => {
-        try {
-
-            // SAMPLE DATA
-
-            const reportData = [
-                {
-                    row_name: "Working Days",
-                    June: 16,
-                    July: 26,
-                    August: 22,
-                    September: 15,
-                    October: 23,
-                    November: 22,
-                    December: 25,
-                    January: 20,
-                    February: 23,
-                    March: 18,
-                    April: 12,
-                    Total: 222,
-                    Percentage: 100
-                },
-                {
-                    row_name: "Present Days",
-                    June: 16,
-                    July: 26,
-                    August: 19,
-                    September: 15,
-                    October: 22,
-                    November: 20,
-                    December: 23,
-                    January: 20,
-                    February: 15,
-                    March: 17,
-                    April: 12,
-                    Total: 205,
-                    Percentage: 92
-                }
-            ];
-
-            // Dynamic Month Columns
-
-            const dynamicColumns = Object.keys(
-                reportData[0]
-            ).filter(
-                key =>
-                    key !== "row_name" &&
-                    key !== "Total" &&
-                    key !== "Percentage"
-            );
-
-            const headers = [
-                "Month Name",
-                ...dynamicColumns,
-                "Total",
-                "%"
-            ];
-
-            const doc = new PDFDocument({
-                margin: 30,
-                size: "A4",
-                layout: "landscape"
-            });
-
-            res.setHeader(
-                "Content-Type",
-                "application/pdf"
-            );
-
-            res.setHeader(
-                "Content-Disposition",
-                "inline; filename=attendance-report.pdf"
-            );
-
-            doc.pipe(res);
-
-            // -------------------------
-            // TITLE
-            // -------------------------
-
-            doc
-                .fontSize(18)
-                .font("Helvetica-Bold")
-                .text(
-                    "Monthly Attendance Report",
-                    { align: "center" }
-                );
-
-            doc.moveDown();
-
-            // -------------------------
-            // TABLE SETTINGS
-            // -------------------------
-
-            let startX = 30;
-            let startY = 100;
-
-            const rowHeight = 30;
-
-            const firstColumnWidth = 160;
-            const monthWidth = 65;
-            const totalWidth = 70;
-            const percentageWidth = 60;
-
-            const columnWidths = [
-                firstColumnWidth,
-                ...dynamicColumns.map(
-                    () => monthWidth
-                ),
-                totalWidth,
-                percentageWidth
-            ];
-
-            // -------------------------
-            // DRAW TABLE ROW
-            // -------------------------
-
-            const drawRow = (
-                y,
-                row,
-                isHeader = false
-            ) => {
-
-                let currentX = startX;
-
-                row.forEach(
-                    (cell, index) => {
-
-                        const width =
-                            columnWidths[index];
-
-                        // Border
-
-                        doc
-                            .rect(
-                                currentX,
-                                y,
-                                width,
-                                rowHeight
-                            )
-                            .stroke();
-
-                        // Text
-
-                        doc
-                            .font(
-                                isHeader
-                                    ? "Helvetica-Bold"
-                                    : "Helvetica"
-                            )
-                            .fontSize(10)
-                            .text(
-                                String(cell ?? ""),
-                                currentX + 5,
-                                y + 9,
-                                {
-                                    width: width - 10,
-                                    align: "center"
-                                }
-                            );
-
-                        currentX += width;
-                    }
-                );
-            };
-
-            // -------------------------
-            // DRAW HEADER
-            // -------------------------
-
-            drawRow(
-                startY,
-                headers,
-                true
-            );
-
-            startY += rowHeight;
-
-            // -------------------------
-            // DRAW DATA
-            // -------------------------
-
-            reportData.forEach(
-                rowData => {
-
-                    // AUTO PAGE BREAK
-
-                    if (
-                        startY >
-                        doc.page.height - 70
-                    ) {
-
-                        doc.addPage();
-
-                        startY = 50;
-
-                        drawRow(
-                            startY,
-                            headers,
-                            true
-                        );
-
-                        startY += rowHeight;
-                    }
-
-                    const row = [
-                        rowData.row_name,
-
-                        ...dynamicColumns.map(
-                            month =>
-                                rowData[month] ?? 0
-                        ),
-
-                        rowData.Total,
-
-                        rowData.Percentage
-                    ];
-
-                    drawRow(startY, row);
-
-                    startY += rowHeight;
-                }
-            );
-
-            doc.end();
-
-        }
-        catch (error) {
-
-            console.log(error);
-
-            return res.status(500).json({
-                success: false,
-                message: error.message
-            });
-
-        }
-    },
+    
 
     getGradeListPrint: async (req, res) => {
 
@@ -6173,7 +6028,11 @@ const transformMarksheetData = (data, subjectsData, examsData) => {
     const exams = new Set();
 
     subjectsData.forEach(item_subject => {
-        const subject = item_subject?.subject_name;
+        let subject = item_subject?.subject_name;
+        if (item_subject?.subject){
+            subject = item_subject?.subject?.subject_name;
+        }
+
         examsData.forEach(item_exam => {
             const exam = item_exam?.examination_name;
             exams.add(exam);
