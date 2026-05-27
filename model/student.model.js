@@ -23,6 +23,7 @@ const studentSchema = new mongoose.Schema({
     guardian_phone: { type: String, required: true },
     pen_no: { type: String, default: null },
     aadhar_no: { type: String, default: null },
+    roll_no: { type: Number, default: 0 },
     admission_no: { type: String, default: null },
     student_image: { type: String, required: true },
     public_id: { type: String, default: '' },

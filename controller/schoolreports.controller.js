@@ -1,6 +1,8 @@
 require("dotenv").config();
 const axios = require("axios");
 const PDFDocument = require("pdfkit");
+const fs = require("fs");
+
 const mongoose = require("mongoose");
 const Marksheet = require("../model/marksheet.model");
 const Marksheetdetail = require("../model/marksheetdetail.model");
@@ -3943,6 +3945,321 @@ module.exports = {
             });
         }
     },
+    getAttendanceSummaryPrint: async (req, res) => {
+        try {
+            const schoolId = req.user.schoolId;
+
+            const filterQuery_WD = {};
+            filterQuery_WD["school"] = new mongoose.Types.ObjectId(schoolId);
+            if (req.query?.year) {
+                filterQuery_WD.year = req.query?.year;
+            }
+            const workingdaysData = await WorkingDays.find(filterQuery_WD)
+                .sort({ seq: 1 })
+                .lean();
+
+
+            if (req.query?.student) {
+                filterQuery_WD.student = req.query?.student;
+            }
+            filterQuery_WD.status = "Present";
+            const attendanceData = await Attendance.find(filterQuery_WD)
+                .sort({ month: 1 })
+                .lean();
+
+
+            const working_day_obj = workingdaysData.reduce(
+                (acc, item) => {
+                    acc[item.month_name] = item.work_days; // June:16, July:26...
+                    acc.Total += item.work_days;           // calculate total
+                    return acc;
+                },
+                {
+                    row_name: "Working Days",
+                    Total: 0,
+                    Percentage: 100
+                }
+            );
+
+
+            const work_days = working_day_obj?.Total;
+
+
+
+
+            const months = [
+                "June", "July", "August", "September", "October",
+                "November", "December", "January", "February", "March", "April"
+            ];
+
+            const present_day_obj = {
+                row_name: "Present Days",
+                ...Object.fromEntries(months.map(m => [m, 0])),
+                Total: 0,
+                Percentage: 100
+            };
+
+            attendanceData.forEach(item => {
+                present_day_obj[item.month_name] += item.attendance_flag;
+                present_day_obj.Total += item.attendance_flag;
+            });
+
+
+
+            const present_days = present_day_obj?.Total;
+            const percentage = (present_days / work_days) * 100;
+            present_day_obj.Percentage = Number(percentage.toFixed(0));
+
+
+
+            const reportData = [
+                working_day_obj,
+                present_day_obj
+            ];
+
+            // const reportData = [
+            //     {
+            //         row_name: "Working Days",
+            //         June: 16,
+            //         July: 26,
+            //         August: 22,
+            //         September: 15,
+            //         October: 23,
+            //         November: 22,
+            //         December: 25,
+            //         January: 20,
+            //         February: 23,
+            //         March: 18,
+            //         April: 12,
+            //         Total: 222,
+            //         Percentage: 100
+            //     },
+            //     {
+            //         row_name: "Present Days",
+            //         June: 16,
+            //         July: 26,
+            //         August: 19,
+            //         September: 15,
+            //         October: 22,
+            //         November: 20,
+            //         December: 23,
+            //         January: 20,
+            //         February: 15,
+            //         March: 17,
+            //         April: 12,
+            //         Total: 205,
+            //         Percentage: 92
+            //     }
+            // ];
+
+            const dynamicColumns = Object.keys(
+                reportData[0]
+            ).filter(
+                key =>
+                    key !== "row_name" &&
+                    key !== "Total" &&
+                    key !== "Percentage"
+            );
+
+            const headers = [
+                "Month Name",
+                ...dynamicColumns,
+                "Total",
+                "%"
+            ];
+
+            const doc = new PDFDocument({
+                margin: 20,
+                size: "A4",
+                layout: "landscape"
+            });
+
+            res.setHeader(
+                "Content-Type",
+                "application/pdf"
+            );
+
+            res.setHeader(
+                "Content-Disposition",
+                "inline; filename=attendance-report.pdf"
+            );
+
+            doc.pipe(res);
+
+            // -----------------------
+            // TITLE
+            // -----------------------
+
+            doc
+                .fontSize(16)
+                .font("Helvetica-Bold")
+                .text(
+                    "Monthly Attendance Report",
+                    { align: "center" }
+                );
+
+            doc.moveDown();
+
+            // -----------------------
+            // TABLE SETTINGS
+            // -----------------------
+
+            let startX = 20;
+            let startY = 80;
+
+            const rowHeight = 28;
+
+            const pageWidth =
+                doc.page.width -
+                doc.page.margins.left -
+                doc.page.margins.right;
+
+            const firstColumnWidth = 110;
+            const totalWidth = 55;
+            const percentageWidth = 45;
+
+            // Dynamic month width
+
+            const remainingWidth =
+                pageWidth -
+                firstColumnWidth -
+                totalWidth -
+                percentageWidth;
+
+            const monthWidth =
+                remainingWidth /
+                dynamicColumns.length;
+
+            const columnWidths = [
+                firstColumnWidth,
+                ...dynamicColumns.map(
+                    () => monthWidth
+                ),
+                totalWidth,
+                percentageWidth
+            ];
+
+            // -----------------------
+            // DRAW ROW
+            // -----------------------
+
+            const drawRow = (
+                y,
+                row,
+                isHeader = false
+            ) => {
+
+                let currentX = startX;
+
+                row.forEach(
+                    (cell, index) => {
+
+                        const width =
+                            columnWidths[index];
+
+                        doc
+                            .rect(
+                                currentX,
+                                y,
+                                width,
+                                rowHeight
+                            )
+                            .stroke();
+
+                        doc
+                            .font(
+                                isHeader
+                                    ? "Helvetica-Bold"
+                                    : "Helvetica"
+                            )
+                            .fontSize(9)
+                            .text(
+                                String(cell ?? ""),
+                                currentX + 2,
+                                y + 8,
+                                {
+                                    width: width - 4,
+                                    align: "center"
+                                }
+                            );
+
+                        currentX += width;
+                    }
+                );
+            };
+
+            // -----------------------
+            // HEADER
+            // -----------------------
+
+            drawRow(
+                startY,
+                headers,
+                true
+            );
+
+            startY += rowHeight;
+
+            // -----------------------
+            // DATA
+            // -----------------------
+
+            reportData.forEach(
+                rowData => {
+
+                    if (
+                        startY >
+                        doc.page.height - 60
+                    ) {
+
+                        doc.addPage();
+
+                        startY = 50;
+
+                        drawRow(
+                            startY,
+                            headers,
+                            true
+                        );
+
+                        startY += rowHeight;
+                    }
+
+                    const row = [
+                        rowData.row_name,
+
+                        ...dynamicColumns.map(
+                            month =>
+                                rowData[month] ?? "-"
+                        ),
+
+                        rowData.Total ?? 0,
+                        rowData.Percentage ?? 0
+                    ];
+
+                    drawRow(
+                        startY,
+                        row
+                    );
+
+                    startY += rowHeight;
+                }
+            );
+
+            doc.end();
+
+        }
+        catch (error) {
+
+            console.log(error);
+
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+
+        }
+    },
     getProgressCardPrint: async (req, res) => {
         try {
 
@@ -5021,7 +5338,7 @@ module.exports = {
 
             const present_days = present_day_obj?.Total;
             const percentage = (present_days / work_days) * 100;
-            present_day_obj.Percentage =  Number(percentage.toFixed(0));
+            present_day_obj.Percentage = Number(percentage.toFixed(0));
 
 
 
@@ -5408,322 +5725,1035 @@ module.exports = {
             });
         }
     },
-    getAttendanceSummaryPrint: async (req, res) => {
+
+    generateGraphReport: async (req, res) => {
         try {
-            const schoolId = req.user.schoolId;
 
-            const filterQuery_WD = {};
-            filterQuery_WD["school"] = new mongoose.Types.ObjectId(schoolId);
-            if (req.query?.year) {
-                filterQuery_WD.year = req.query?.year;
-            }
-            const workingdaysData = await WorkingDays.find(filterQuery_WD)
-                .sort({ seq: 1 })
-                .lean();
-
-
-            if (req.query?.student) {
-                filterQuery_WD.student = req.query?.student;
-            }
-            filterQuery_WD.status = "Present";
-            const attendanceData = await Attendance.find(filterQuery_WD)
-                .sort({ month: 1 })
-                .lean();
-
-
-            const working_day_obj = workingdaysData.reduce(
-                (acc, item) => {
-                    acc[item.month_name] = item.work_days; // June:16, July:26...
-                    acc.Total += item.work_days;           // calculate total
-                    return acc;
-                },
-                {
-                    row_name: "Working Days",
-                    Total: 0,
-                    Percentage: 100
-                }
-            );
-
-
-            const work_days = working_day_obj?.Total;
-
-
-
-
-            const months = [
-                "June", "July", "August", "September", "October",
-                "November", "December", "January", "February", "March", "April"
-            ];
-
-            const present_day_obj = {
-                row_name: "Present Days",
-                ...Object.fromEntries(months.map(m => [m, 0])),
-                Total: 0,
-                Percentage: 100
-            };
-
-            attendanceData.forEach(item => {
-                present_day_obj[item.month_name] += item.attendance_flag;
-                present_day_obj.Total += item.attendance_flag;
-            });
-
-
-
-            const present_days = present_day_obj?.Total;
-            const percentage = (present_days / work_days) * 100;
-            present_day_obj.Percentage =  Number(percentage.toFixed(0));
-
-
-
-            const reportData = [
-                working_day_obj,
-                present_day_obj
-            ];
-
-            // const reportData = [
-            //     {
-            //         row_name: "Working Days",
-            //         June: 16,
-            //         July: 26,
-            //         August: 22,
-            //         September: 15,
-            //         October: 23,
-            //         November: 22,
-            //         December: 25,
-            //         January: 20,
-            //         February: 23,
-            //         March: 18,
-            //         April: 12,
-            //         Total: 222,
-            //         Percentage: 100
-            //     },
-            //     {
-            //         row_name: "Present Days",
-            //         June: 16,
-            //         July: 26,
-            //         August: 19,
-            //         September: 15,
-            //         October: 22,
-            //         November: 20,
-            //         December: 23,
-            //         January: 20,
-            //         February: 15,
-            //         March: 17,
-            //         April: 12,
-            //         Total: 205,
-            //         Percentage: 92
-            //     }
-            // ];
-
-            const dynamicColumns = Object.keys(
-                reportData[0]
-            ).filter(
-                key =>
-                    key !== "row_name" &&
-                    key !== "Total" &&
-                    key !== "Percentage"
-            );
-
-            const headers = [
-                "Month Name",
-                ...dynamicColumns,
-                "Total",
-                "%"
-            ];
+            // const PDFDocument = require("pdfkit");
 
             const doc = new PDFDocument({
-                margin: 20,
-                size: "A4",
-                layout: "landscape"
+                size: "A3",
+                layout: "landscape",
+                margin: 20
             });
 
-            res.setHeader(
-                "Content-Type",
-                "application/pdf"
-            );
-
+            res.setHeader("Content-Type", "application/pdf");
             res.setHeader(
                 "Content-Disposition",
-                "inline; filename=attendance-report.pdf"
+                'inline; filename="SA-2-Graph-Report.pdf"'
             );
 
             doc.pipe(res);
 
-            // -----------------------
-            // TITLE
-            // -----------------------
+            // ---------------- SAMPLE DATA ----------------
 
-            doc
-                .fontSize(16)
-                .font("Helvetica-Bold")
+            const schoolId = req.user.schoolId;
+
+            const filterQuery = {};
+            filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+
+
+            if (req.query?.class) {
+                filterQuery.student_class = req.query?.class;
+            }
+            if (req.query?.section) {
+                filterQuery.section = req.query?.section;
+            }
+            if (req.query?.student) {
+                filterQuery._id = new mongoose.Types.ObjectId(req.query?.student);
+            }
+
+            const studentsData = await Student.find(filterQuery).populate("student_class").populate("section")
+                .sort({ roll_no: 1 }).lean();
+            console.log("studentsData", studentsData);
+
+            let class_name = "";
+            let section_name = "";
+            if (studentsData.length>0){
+                class_name = studentsData[0]?.class?.class_name||"";
+                section_name = studentsData[0]?.class?.section_name||"";
+            }
+
+            let year_name = "";
+            if (req.query?.year) {
+                filterQuery.year = req.query?.year;
+                year_name = req.query?.year_name||"";
+            }
+            if (req.query?.class) {
+                if (filterQuery.student_class) {
+                    delete filterQuery.student_class;
+                }
+                filterQuery.class = req.query?.class;
+            }
+
+            if (filterQuery._id) {
+                delete filterQuery._id;
+            }
+            if (req.query?.student) {
+                filterQuery.student = new mongoose.Types.ObjectId(req.query?.student);
+            }
+
+            const marksheetData = await Marksheetdetail.find(filterQuery)
+                .populate("school")
+                .populate("class")
+                .populate("section")
+                .populate("examination")
+                .populate("subject")
+                .populate("student")
+                .sort({ examination: 1 })
+                .lean();
+
+            const gradeData = await Grade.find({ school: schoolId })
+                .sort({ marks_min: -1 })
+                .lean();
+
+            let subjectsData = await Classsubject.find({
+                school: schoolId,
+                class: req.query?.class
+            })
+                .populate({
+                    path: "subject",
+                    select: "subject_name -_id"
+                })
+                .select("subject")
+                .sort({ seq: 1 })
+                .lean();
+
+            if (subjectsData.length == 0) {
+                subjectsData = await Subject.find({ school: schoolId })
+                    .select("subject_name -_id")
+                    .sort({ seq: 1 })
+                    .lean();
+            }
+
+
+            const examsData = await Examination.find({ school: schoolId })
+                .select("examination_name -_id")
+                .sort({ seq: 1 })
+                .lean();
+
+
+            const reportHeader = {
+                school_name: marksheetData[0].school.school_name,
+                address: marksheetData[0].school.address,
+                city: marksheetData[0].school.city,
+                state: marksheetData[0].school.state,
+                country: marksheetData[0].school.country,
+                class: marksheetData[0].class.class_name,
+                section: marksheetData[0].section.section_name,
+                student: marksheetData[0].student.name,
+                school_image: marksheetData[0].school.school_image
+            };
+
+            let reportData = [];
+            let obj_student = {}
+
+            studentsData.forEach(item => {
+
+                const student_id = String(item?._id).trim();
+
+                const student_marksheet_data = marksheetData.filter(marksheet => {
+                    return marksheet?.student?._id.toString() === student_id;
+                });
+
+                const tableData = transformMarksheetData(student_marksheet_data, subjectsData, examsData);
+
+                const examNames = tableData.exams;
+                const subjects = tableData.subjects;
+
+
+
+                const subjectLength = Object.keys(subjects).length;
+                console.log(subjectLength); // 3
+
+
+                const examTotals = {};
+                const examMarksLimitTotals = {};
+                const examTotalAvg = {};
+                const examTotalmarks = {};
+
+                examNames.forEach((exam) => {
+                    examTotals[exam] = 0;
+                    examMarksLimitTotals[exam] = 0;
+                    examTotalAvg[exam] = 0;
+                    examTotalmarks[exam] = 0;
+                });
+
+                // ============================================
+                // SUBJECT ROWS
+                // ============================================
+
+                let fail_exist = false;
+                let subject_index = 0;
+                let subject_length = Object.keys(subjects).length || 0;
+
+                Object.keys(subjects).forEach((subject) => {
+
+
+
+                    // ============================================
+                    // EXAM LOOP
+                    // ============================================
+
+                    let sumofmarks = 0;
+                    let sumofmarkslimit = 0;
+
+                    examNames.forEach((exam) => {
+
+                        const examData = subjects[subject][exam] || {};
+
+                        const marks = Number(examData?.marks || 0);
+
+                        const marksLimit = Number(examData?.marksLimit || 0);
+
+
+                        examTotals[exam] += marks;
+                        sumofmarks += marks || 0;
+                        sumofmarkslimit += marksLimit;
+                        let avg = 0;
+                        let avglimit = 0;
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            sumofmarks -= marks || 0;
+                            sumofmarkslimit -= marksLimit || 0;
+
+                            if (exam === "SA-1") {
+                                avg = sumofmarks / 2;
+                                avglimit = (sumofmarkslimit / 2);
+                            } else if (exam === "SA-2") {
+                                avg = sumofmarks / 4;
+                                avglimit = (sumofmarkslimit / 4);
+                            }
+
+                            avg = Number(avg.toFixed(0));
+                            examTotalAvg[exam] += avg;
+
+
+
+                            avglimit = Number(avglimit.toFixed(0));
+                            avglimit += marksLimit;
+                            examMarksLimitTotals[exam] += avglimit;
+                            // ============================================
+                            // AVG CELL
+                            // ============================================
+
+
+
+
+
+                        } else {
+                            examMarksLimitTotals[exam] += marksLimit;
+                        }
+
+
+
+
+
+                        // ============================================
+                        // MARKS CELL
+                        // ============================================
+
+
+
+                        let totalmarks = 0;
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            // ============================================
+                            // TOTAL CELL
+                            // ============================================
+                            totalmarks = marks + avg;
+
+                            examTotalmarks[exam] += totalmarks;
+
+
+
+
+
+                        }
+
+
+                        // ============================================
+                        // GRADE LOGIC
+                        // ============================================
+
+                        let marks_per = 0;
+
+                        if (marksLimit > 0) {
+                            marks_per = (marks / marksLimit) * 100;
+                            if (exam === "SA-1" || exam === "SA-2") {
+                                marks_per = (totalmarks / avglimit) * 100;
+                            }
+                        }
+
+                        let filtered_gradeData = gradeData.filter(
+                            (item) => item.marks_min <= marks && item.marks_limit == 20
+                        );
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            filtered_gradeData = gradeData.filter(
+                                (item) => item.marks_min <= totalmarks && item.marks_limit == 100
+                            );
+                            console.log("filtered_gradeData", filtered_gradeData);
+                        }
+
+
+                        let grade = "E";
+                        let gpa = "-";
+
+                        if (filtered_gradeData.length > 0) {
+                            grade = filtered_gradeData[0]?.grade_code || "E";
+                            gpa = filtered_gradeData[0]?.gpa || "-";
+                        }
+
+
+
+
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            // GPA
+
+                            if (grade === "E" && exam === "SA-2") {
+                                fail_exist = true;
+                            }
+
+                        }
+                    });
+
+
+
+
+                });
+
+
+                let totalPercentage = 0;
+                examNames.forEach((exam) => {
+                    // ============================================
+                    // TOTAL GRADE
+                    // ============================================
+                    // let totalPercentage = 0;
+                    let totalMarksLimit = 0;
+
+                    if (examMarksLimitTotals[exam] > 0) {
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            totalMarksLimit = 100 * subjectLength;
+                            totalPercentage =
+                                (examTotalmarks[exam] / totalMarksLimit) * 100;
+                        } else {
+                            totalMarksLimit = 20 * subjectLength;
+                            totalPercentage =
+                                (examTotals[exam] / totalMarksLimit) * 100;
+                        }
+
+
+                        totalPercentage = Number(totalPercentage.toFixed(0));
+                    }
+
+
+
+                    const filtered_gradeData = gradeData.filter(
+                        (item) => item.marks_min <= totalPercentage
+                    );
+
+
+
+                    let totalGrade = "E";
+                    let totalGpa = "-";
+
+                    if (filtered_gradeData.length > 0) {
+                        totalGrade =
+                            filtered_gradeData[0]?.grade_code || "E";
+                        totalGpa =
+                            filtered_gradeData[0]?.gpa || "-";
+
+
+                        totalGrade = `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`;
+                        if (fail_exist && exam === "SA-2") {
+                            totalGrade = "-";
+                            totalGpa = "-"
+
+                        }
+                    }
+
+
+                });
+
+                obj_student = {
+                    roll: item?.roll_no || 0,
+                    name: item?.name,
+                    percentage: totalPercentage
+                }
+                reportData.push(obj_student);
+
+            });
+
+
+            
+
+            // ---------------- WHITE BACKGROUND ----------------
+
+            doc.rect(
+                0,
+                0,
+                doc.page.width,
+                doc.page.height
+            )
+                .fill("#FFFFFF");
+
+
+            // ============================================
+            // SCHOOL LOGO
+            // ============================================
+
+            if (reportHeader?.school_image) {
+
+                try {
+
+                    const img = await axios.get(
+                        reportHeader.school_image,
+                        {
+                            responseType: "arraybuffer"
+                        }
+                    );
+
+                    doc.image(img.data, 30, 20, {
+                        width: 60,
+                    });
+
+                } catch (err) {
+
+                    console.log("Logo load failed");
+                }
+            }
+
+            // ---------------- TITLE ----------------
+            doc.fillColor("black")
+                .fontSize(18)
                 .text(
-                    "Monthly Attendance Report",
+                    "STUDENT PERCENTAGE REPORT " + year_name,
+                    0,
+                    30,
                     { align: "center" }
                 );
 
-            doc.moveDown();
 
-            // -----------------------
-            // TABLE SETTINGS
-            // -----------------------
-
-            let startX = 20;
-            let startY = 80;
-
-            const rowHeight = 28;
-
-            const pageWidth =
-                doc.page.width -
-                doc.page.margins.left -
-                doc.page.margins.right;
-
-            const firstColumnWidth = 110;
-            const totalWidth = 55;
-            const percentageWidth = 45;
-
-            // Dynamic month width
-
-            const remainingWidth =
-                pageWidth -
-                firstColumnWidth -
-                totalWidth -
-                percentageWidth;
-
-            const monthWidth =
-                remainingWidth /
-                dynamicColumns.length;
-
-            const columnWidths = [
-                firstColumnWidth,
-                ...dynamicColumns.map(
-                    () => monthWidth
-                ),
-                totalWidth,
-                percentageWidth
-            ];
-
-            // -----------------------
-            // DRAW ROW
-            // -----------------------
-
-            const drawRow = (
-                y,
-                row,
-                isHeader = false
-            ) => {
-
-                let currentX = startX;
-
-                row.forEach(
-                    (cell, index) => {
-
-                        const width =
-                            columnWidths[index];
-
-                        doc
-                            .rect(
-                                currentX,
-                                y,
-                                width,
-                                rowHeight
-                            )
-                            .stroke();
-
-                        doc
-                            .font(
-                                isHeader
-                                    ? "Helvetica-Bold"
-                                    : "Helvetica"
-                            )
-                            .fontSize(9)
-                            .text(
-                                String(cell ?? ""),
-                                currentX + 2,
-                                y + 8,
-                                {
-                                    width: width - 4,
-                                    align: "center"
-                                }
-                            );
-
-                        currentX += width;
-                    }
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Class :",
+                    50,
+                    100
                 );
-            };
 
-            // -----------------------
-            // HEADER
-            // -----------------------
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.class,
+                    120,
+                    100
+                );
 
-            drawRow(
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Section :",
+                    400,
+                    100
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.section,
+                    490,
+                    100
+                );
+
+
+            // ---------------- TABLE ----------------
+
+            // let startX = 30;
+            let startX = 50;
+            // let startY = 70;
+            let startY = 130;
+
+            let rollWidth = 50;
+            let nameWidth = 250;
+            let percentWidth = 100;
+            let rowHeight = 22;
+
+            doc.lineWidth(1);
+
+            // Header
+
+            drawCell(
+                startX,
                 startY,
-                headers,
-                true
+                rollWidth,
+                rowHeight,
+                "ROLL"
+            );
+
+            drawCell(
+                startX + rollWidth,
+                startY,
+                nameWidth,
+                rowHeight,
+                "NAME OF STUDENT"
+            );
+
+            drawCell(
+                startX + rollWidth + nameWidth,
+                startY,
+                percentWidth,
+                rowHeight,
+                "%"
             );
 
             startY += rowHeight;
 
-            // -----------------------
-            // DATA
-            // -----------------------
+            // Rows
 
-            reportData.forEach(
-                rowData => {
+            reportData.forEach((row) => {
 
-                    if (
-                        startY >
-                        doc.page.height - 60
-                    ) {
+                drawCell(
+                    startX,
+                    startY,
+                    rollWidth,
+                    rowHeight,
+                    row.roll.toString()
+                );
 
-                        doc.addPage();
+                drawCell(
+                    startX + rollWidth,
+                    startY,
+                    nameWidth,
+                    rowHeight,
+                    row.name
+                );
 
-                        startY = 50;
+                drawCell(
+                    startX + rollWidth + nameWidth,
+                    startY,
+                    percentWidth,
+                    rowHeight,
+                    row.percentage.toFixed(2)
+                );
 
-                        drawRow(
-                            startY,
-                            headers,
-                            true
-                        );
+                startY += rowHeight;
 
-                        startY += rowHeight;
-                    }
+            });
 
-                    const row = [
-                        rowData.row_name,
+            // ---------------- GRAPH ----------------
 
-                        ...dynamicColumns.map(
-                            month =>
-                                rowData[month] ?? "-"
-                        ),
+            const chartX = 70;
+            const chartY = startY + 60;
+            const chartWidth = 700;
+            const chartHeight = 200;
 
-                        rowData.Total ?? 0,
-                        rowData.Percentage ?? 0
-                    ];
+            // Graph Border
 
-                    drawRow(
-                        startY,
-                        row
+            doc.strokeColor("black")
+                .rect(
+                    chartX - 20,
+                    chartY - 20,
+                    chartWidth + 60,
+                    chartHeight + 120
+                )
+                .stroke();
+
+            // Graph Title
+
+            doc.fillColor("black")
+                .fontSize(12)
+                .text(
+                    "% vs NAME OF THE STUDENT",
+                    chartX,
+                    chartY - 45
+                );
+
+            // Y Axis
+
+            doc.strokeColor("black")
+                .moveTo(chartX, chartY)
+                .lineTo(chartX, chartY + chartHeight)
+                .stroke();
+
+            // X Axis
+
+            doc.moveTo(
+                chartX,
+                chartY + chartHeight
+            )
+                .lineTo(
+                    chartX + chartWidth,
+                    chartY + chartHeight
+                )
+                .stroke();
+
+            // Grid Lines
+
+            [0, 25, 50, 75, 100].forEach(val => {
+
+                let gy =
+                    chartY +
+                    chartHeight -
+                    (val / 100) * chartHeight;
+
+                doc.strokeColor("#999999")
+                    .moveTo(chartX, gy)
+                    .lineTo(
+                        chartX + chartWidth,
+                        gy
+                    )
+                    .stroke();
+
+                doc.fillColor("black")
+                    .fontSize(8)
+                    .text(
+                        val.toString(),
+                        chartX - 25,
+                        gy - 5
                     );
 
-                    startY += rowHeight;
-                }
-            );
+            });
+
+            // Bars
+
+            let barWidth = 14;
+            let gap = 12;
+
+            reportData.forEach((row, index) => {
+
+                let x =
+                    chartX +
+                    20 +
+                    index * (barWidth + gap);
+
+                let barHeight =
+                    (row.percentage / 100)
+                    * chartHeight;
+
+                let y =
+                    chartY +
+                    chartHeight -
+                    barHeight;
+
+                // Pink Bar
+
+                doc.fillColor("#d56db6")
+                    .rect(
+                        x,
+                        y,
+                        barWidth,
+                        barHeight
+                    )
+                    .fill();
+
+                // Rotated Labels
+
+                doc.save();
+
+                doc.rotate(
+                    -45,
+                    {
+                        origin: [
+                            x,
+                            chartY +
+                            chartHeight +
+                            20
+                        ]
+                    }
+                );
+
+                doc.fillColor("black")
+                    .fontSize(7)
+                    .text(
+                        row.name,
+                        x,
+                        chartY +
+                        chartHeight +
+                        20,
+                        {
+                            width: 90
+                        }
+                    );
+
+                doc.restore();
+
+            });
+
+            // X Axis Title
+
+            doc.fillColor("black")
+                .fontSize(10)
+                .text(
+                    "NAME OF THE STUDENT",
+                    chartX + 220,
+                    chartY + chartHeight + 85
+                );
 
             doc.end();
 
+            // ---------- CELL FUNCTION ----------
+
+            function drawCell(
+                x,
+                y,
+                width,
+                height,
+                text
+            ) {
+
+                doc.strokeColor("black")
+                    .rect(
+                        x,
+                        y,
+                        width,
+                        height
+                    )
+                    .stroke();
+
+                doc.fillColor("black")
+                    .fontSize(9)
+                    .text(
+                        text,
+                        x + 5,
+                        y + 6,
+                        {
+                            width: width - 10
+                        }
+                    );
+            }
+
         }
-        catch (error) {
+        catch (err) {
 
-            console.log(error);
+            console.log(err);
 
-            return res.status(500).json({
+            res.status(500).json({
                 success: false,
-                message: error.message
+                message: err.message
             });
 
         }
     },
-    
+    generateGraphReport_Orig: async (req, res) => {
+        try {
+
+            // const PDFDocument = require("pdfkit");
+
+            const doc = new PDFDocument({
+                size: "A3",
+                layout: "landscape",
+                margin: 20
+            });
+
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader(
+                "Content-Disposition",
+                'inline; filename="SA-2-Graph-Report.pdf"'
+            );
+
+            doc.pipe(res);
+
+            // ---------------- SAMPLE DATA ----------------
+
+            const reportData = [
+                { roll: 1, name: "Abdul Azeez", percentage: 65.41 },
+                { roll: 2, name: "Abdul Rahman", percentage: 82.08 },
+                { roll: 3, name: "Anware Ahmedi", percentage: 43.75 },
+                { roll: 4, name: "Alveena Firdose", percentage: 81.04 },
+                { roll: 5, name: "Ameer Hamza", percentage: 95.62 },
+                { roll: 6, name: "Anabiya Nabi", percentage: 25.41 },
+                { roll: 7, name: "Mohammed Anas", percentage: 44.16 },
+                { roll: 8, name: "Mohammed Farhan", percentage: 83.33 },
+                { roll: 9, name: "Hafsa Fatima", percentage: 87.08 },
+                { roll: 10, name: "Iram Khan", percentage: 44.58 },
+                { roll: 11, name: "Mohammed Jawaad", percentage: 49.16 },
+                { roll: 12, name: "Madiha Amjad", percentage: 83.95 }
+            ];
+
+            // ---------------- WHITE BACKGROUND ----------------
+
+            doc.rect(
+                0,
+                0,
+                doc.page.width,
+                doc.page.height
+            )
+                .fill("#FFFFFF");
+
+            // ---------------- TITLE ----------------
+
+            doc.fillColor("black")
+                .fontSize(18)
+                .text(
+                    "SA-2 GRAPH REPORT 2025-26",
+                    0,
+                    20,
+                    { align: "center" }
+                );
+
+            // ---------------- TABLE ----------------
+
+            let startX = 30;
+            let startY = 70;
+
+            let rollWidth = 50;
+            let nameWidth = 250;
+            let percentWidth = 100;
+            let rowHeight = 22;
+
+            doc.lineWidth(1);
+
+            // Header
+
+            drawCell(
+                startX,
+                startY,
+                rollWidth,
+                rowHeight,
+                "ROLL"
+            );
+
+            drawCell(
+                startX + rollWidth,
+                startY,
+                nameWidth,
+                rowHeight,
+                "NAME OF STUDENT"
+            );
+
+            drawCell(
+                startX + rollWidth + nameWidth,
+                startY,
+                percentWidth,
+                rowHeight,
+                "%"
+            );
+
+            startY += rowHeight;
+
+            // Rows
+
+            reportData.forEach((row) => {
+
+                drawCell(
+                    startX,
+                    startY,
+                    rollWidth,
+                    rowHeight,
+                    row.roll.toString()
+                );
+
+                drawCell(
+                    startX + rollWidth,
+                    startY,
+                    nameWidth,
+                    rowHeight,
+                    row.name
+                );
+
+                drawCell(
+                    startX + rollWidth + nameWidth,
+                    startY,
+                    percentWidth,
+                    rowHeight,
+                    row.percentage.toFixed(2)
+                );
+
+                startY += rowHeight;
+
+            });
+
+            // ---------------- GRAPH ----------------
+
+            const chartX = 70;
+            const chartY = startY + 60;
+            const chartWidth = 700;
+            const chartHeight = 200;
+
+            // Graph Border
+
+            doc.strokeColor("black")
+                .rect(
+                    chartX - 20,
+                    chartY - 20,
+                    chartWidth + 60,
+                    chartHeight + 120
+                )
+                .stroke();
+
+            // Graph Title
+
+            doc.fillColor("black")
+                .fontSize(12)
+                .text(
+                    "% vs NAME OF THE STUDENT",
+                    chartX,
+                    chartY - 45
+                );
+
+            // Y Axis
+
+            doc.strokeColor("black")
+                .moveTo(chartX, chartY)
+                .lineTo(chartX, chartY + chartHeight)
+                .stroke();
+
+            // X Axis
+
+            doc.moveTo(
+                chartX,
+                chartY + chartHeight
+            )
+                .lineTo(
+                    chartX + chartWidth,
+                    chartY + chartHeight
+                )
+                .stroke();
+
+            // Grid Lines
+
+            [0, 25, 50, 75, 100].forEach(val => {
+
+                let gy =
+                    chartY +
+                    chartHeight -
+                    (val / 100) * chartHeight;
+
+                doc.strokeColor("#999999")
+                    .moveTo(chartX, gy)
+                    .lineTo(
+                        chartX + chartWidth,
+                        gy
+                    )
+                    .stroke();
+
+                doc.fillColor("black")
+                    .fontSize(8)
+                    .text(
+                        val.toString(),
+                        chartX - 25,
+                        gy - 5
+                    );
+
+            });
+
+            // Bars
+
+            let barWidth = 14;
+            let gap = 12;
+
+            reportData.forEach((row, index) => {
+
+                let x =
+                    chartX +
+                    20 +
+                    index * (barWidth + gap);
+
+                let barHeight =
+                    (row.percentage / 100)
+                    * chartHeight;
+
+                let y =
+                    chartY +
+                    chartHeight -
+                    barHeight;
+
+                // Pink Bar
+
+                doc.fillColor("#d56db6")
+                    .rect(
+                        x,
+                        y,
+                        barWidth,
+                        barHeight
+                    )
+                    .fill();
+
+                // Rotated Labels
+
+                doc.save();
+
+                doc.rotate(
+                    -45,
+                    {
+                        origin: [
+                            x,
+                            chartY +
+                            chartHeight +
+                            20
+                        ]
+                    }
+                );
+
+                doc.fillColor("black")
+                    .fontSize(7)
+                    .text(
+                        row.name,
+                        x,
+                        chartY +
+                        chartHeight +
+                        20,
+                        {
+                            width: 90
+                        }
+                    );
+
+                doc.restore();
+
+            });
+
+            // X Axis Title
+
+            doc.fillColor("black")
+                .fontSize(10)
+                .text(
+                    "NAME OF THE STUDENT",
+                    chartX + 220,
+                    chartY + chartHeight + 85
+                );
+
+            doc.end();
+
+            // ---------- CELL FUNCTION ----------
+
+            function drawCell(
+                x,
+                y,
+                width,
+                height,
+                text
+            ) {
+
+                doc.strokeColor("black")
+                    .rect(
+                        x,
+                        y,
+                        width,
+                        height
+                    )
+                    .stroke();
+
+                doc.fillColor("black")
+                    .fontSize(9)
+                    .text(
+                        text,
+                        x + 5,
+                        y + 6,
+                        {
+                            width: width - 10
+                        }
+                    );
+            }
+
+        }
+        catch (err) {
+
+            console.log(err);
+
+            res.status(500).json({
+                success: false,
+                message: err.message
+            });
+
+        }
+    },
+
 
     getGradeListPrint: async (req, res) => {
 
@@ -6029,7 +7059,7 @@ const transformMarksheetData = (data, subjectsData, examsData) => {
 
     subjectsData.forEach(item_subject => {
         let subject = item_subject?.subject_name;
-        if (item_subject?.subject){
+        if (item_subject?.subject) {
             subject = item_subject?.subject?.subject_name;
         }
 

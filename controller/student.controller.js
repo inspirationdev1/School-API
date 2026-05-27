@@ -105,6 +105,7 @@ module.exports = {
                     guardian_phone: fields.guardian_phone[0],
                     pen_no: fields.pen_no[0],
                     aadhar_no: fields.aadhar_no[0],
+                    roll_no:fields?.roll_no[0],
                     admission_no: fields.admission_no[0],
                     age: fields.age[0],
                     dOBDate: fields.dOBDate[0],
