@@ -5770,15 +5770,15 @@ module.exports = {
 
             let class_name = "";
             let section_name = "";
-            if (studentsData.length>0){
-                class_name = studentsData[0]?.class?.class_name||"";
-                section_name = studentsData[0]?.class?.section_name||"";
+            if (studentsData.length > 0) {
+                class_name = studentsData[0]?.class?.class_name || "";
+                section_name = studentsData[0]?.class?.section_name || "";
             }
 
             let year_name = "";
             if (req.query?.year) {
                 filterQuery.year = req.query?.year;
-                year_name = req.query?.year_name||"";
+                year_name = req.query?.year_name || "";
             }
             if (req.query?.class) {
                 if (filterQuery.student_class) {
@@ -6084,7 +6084,7 @@ module.exports = {
             });
 
 
-            
+
 
             // ---------------- WHITE BACKGROUND ----------------
 
@@ -6430,7 +6430,7 @@ module.exports = {
 
         }
     },
-    generateGraphReport_Orig: async (req, res) => {
+    generateResultGraphReport: async (req, res) => {
         try {
 
             // const PDFDocument = require("pdfkit");
@@ -6451,20 +6451,336 @@ module.exports = {
 
             // ---------------- SAMPLE DATA ----------------
 
-            const reportData = [
-                { roll: 1, name: "Abdul Azeez", percentage: 65.41 },
-                { roll: 2, name: "Abdul Rahman", percentage: 82.08 },
-                { roll: 3, name: "Anware Ahmedi", percentage: 43.75 },
-                { roll: 4, name: "Alveena Firdose", percentage: 81.04 },
-                { roll: 5, name: "Ameer Hamza", percentage: 95.62 },
-                { roll: 6, name: "Anabiya Nabi", percentage: 25.41 },
-                { roll: 7, name: "Mohammed Anas", percentage: 44.16 },
-                { roll: 8, name: "Mohammed Farhan", percentage: 83.33 },
-                { roll: 9, name: "Hafsa Fatima", percentage: 87.08 },
-                { roll: 10, name: "Iram Khan", percentage: 44.58 },
-                { roll: 11, name: "Mohammed Jawaad", percentage: 49.16 },
-                { roll: 12, name: "Madiha Amjad", percentage: 83.95 }
-            ];
+            const schoolId = req.user.schoolId;
+
+            const filterQuery = {};
+            filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+
+
+            if (req.query?.class) {
+                filterQuery.student_class = req.query?.class;
+            }
+            if (req.query?.section) {
+                filterQuery.section = req.query?.section;
+            }
+            if (req.query?.student) {
+                filterQuery._id = new mongoose.Types.ObjectId(req.query?.student);
+            }
+
+            const studentsData = await Student.find(filterQuery).populate("student_class").populate("section")
+                .sort({ roll_no: 1 }).lean();
+            console.log("studentsData", studentsData);
+
+            let class_name = "";
+            let section_name = "";
+            if (studentsData.length > 0) {
+                class_name = studentsData[0]?.class?.class_name || "";
+                section_name = studentsData[0]?.class?.section_name || "";
+            }
+
+            let year_name = "";
+            if (req.query?.year) {
+                filterQuery.year = req.query?.year;
+                year_name = req.query?.year_name || "";
+            }
+            if (req.query?.class) {
+                if (filterQuery.student_class) {
+                    delete filterQuery.student_class;
+                }
+                filterQuery.class = req.query?.class;
+            }
+
+            if (filterQuery._id) {
+                delete filterQuery._id;
+            }
+            if (req.query?.student) {
+                filterQuery.student = new mongoose.Types.ObjectId(req.query?.student);
+            }
+
+            const marksheetData = await Marksheetdetail.find(filterQuery)
+                .populate("school")
+                .populate("class")
+                .populate("section")
+                .populate("examination")
+                .populate("subject")
+                .populate("student")
+                .sort({ examination: 1 })
+                .lean();
+
+            const gradeData = await Grade.find({ school: schoolId })
+                .sort({ marks_min: -1 })
+                .lean();
+
+            let subjectsData = await Classsubject.find({
+                school: schoolId,
+                class: req.query?.class
+            })
+                .populate({
+                    path: "subject",
+                    select: "subject_name -_id"
+                })
+                .select("subject")
+                .sort({ seq: 1 })
+                .lean();
+
+            if (subjectsData.length == 0) {
+                subjectsData = await Subject.find({ school: schoolId })
+                    .select("subject_name -_id")
+                    .sort({ seq: 1 })
+                    .lean();
+            }
+
+
+            const examsData = await Examination.find({ school: schoolId })
+                .select("examination_name -_id")
+                .sort({ seq: 1 })
+                .lean();
+
+
+            const reportHeader = {
+                school_name: marksheetData[0].school.school_name,
+                address: marksheetData[0].school.address,
+                city: marksheetData[0].school.city,
+                state: marksheetData[0].school.state,
+                country: marksheetData[0].school.country,
+                class: marksheetData[0].class.class_name,
+                section: marksheetData[0].section.section_name,
+                student: marksheetData[0].student.name,
+                school_image: marksheetData[0].school.school_image
+            };
+
+            let reportData = [];
+            let obj_student = {}
+
+            studentsData.forEach(item => {
+
+                const student_id = String(item?._id).trim();
+
+                const student_marksheet_data = marksheetData.filter(marksheet => {
+                    return marksheet?.student?._id.toString() === student_id;
+                });
+
+                const tableData = transformMarksheetData(student_marksheet_data, subjectsData, examsData);
+
+                const examNames = tableData.exams;
+                const subjects = tableData.subjects;
+
+
+
+                const subjectLength = Object.keys(subjects).length;
+                console.log(subjectLength); // 3
+
+
+                const examTotals = {};
+                const examMarksLimitTotals = {};
+                const examTotalAvg = {};
+                const examTotalmarks = {};
+
+                examNames.forEach((exam) => {
+                    examTotals[exam] = 0;
+                    examMarksLimitTotals[exam] = 0;
+                    examTotalAvg[exam] = 0;
+                    examTotalmarks[exam] = 0;
+                });
+
+                // ============================================
+                // SUBJECT ROWS
+                // ============================================
+
+                let fail_exist = false;
+                let subject_index = 0;
+                let subject_length = Object.keys(subjects).length || 0;
+
+                Object.keys(subjects).forEach((subject) => {
+
+
+
+                    // ============================================
+                    // EXAM LOOP
+                    // ============================================
+
+                    let sumofmarks = 0;
+                    let sumofmarkslimit = 0;
+
+                    examNames.forEach((exam) => {
+
+                        const examData = subjects[subject][exam] || {};
+
+                        const marks = Number(examData?.marks || 0);
+
+                        const marksLimit = Number(examData?.marksLimit || 0);
+
+
+                        examTotals[exam] += marks;
+                        sumofmarks += marks || 0;
+                        sumofmarkslimit += marksLimit;
+                        let avg = 0;
+                        let avglimit = 0;
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            sumofmarks -= marks || 0;
+                            sumofmarkslimit -= marksLimit || 0;
+
+                            if (exam === "SA-1") {
+                                avg = sumofmarks / 2;
+                                avglimit = (sumofmarkslimit / 2);
+                            } else if (exam === "SA-2") {
+                                avg = sumofmarks / 4;
+                                avglimit = (sumofmarkslimit / 4);
+                            }
+
+                            avg = Number(avg.toFixed(0));
+                            examTotalAvg[exam] += avg;
+
+
+
+                            avglimit = Number(avglimit.toFixed(0));
+                            avglimit += marksLimit;
+                            examMarksLimitTotals[exam] += avglimit;
+                            // ============================================
+                            // AVG CELL
+                            // ============================================
+
+
+
+
+
+                        } else {
+                            examMarksLimitTotals[exam] += marksLimit;
+                        }
+
+                        // ============================================
+                        // MARKS CELL
+                        // ============================================
+
+
+
+                        let totalmarks = 0;
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            // ============================================
+                            // TOTAL CELL
+                            // ============================================
+                            totalmarks = marks + avg;
+                            examTotalmarks[exam] += totalmarks;
+                        }
+
+
+                        // ============================================
+                        // GRADE LOGIC
+                        // ============================================
+
+                        let marks_per = 0;
+
+                        if (marksLimit > 0) {
+                            marks_per = (marks / marksLimit) * 100;
+                            if (exam === "SA-1" || exam === "SA-2") {
+                                marks_per = (totalmarks / avglimit) * 100;
+                            }
+                        }
+
+                        let filtered_gradeData = gradeData.filter(
+                            (item) => item.marks_min <= marks && item.marks_limit == 20
+                        );
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            filtered_gradeData = gradeData.filter(
+                                (item) => item.marks_min <= totalmarks && item.marks_limit == 100
+                            );
+                            console.log("filtered_gradeData", filtered_gradeData);
+                        }
+
+
+                        let grade = "E";
+                        let gpa = "-";
+
+                        if (filtered_gradeData.length > 0) {
+                            grade = filtered_gradeData[0]?.grade_code || "E";
+                            gpa = filtered_gradeData[0]?.gpa || "-";
+                        }
+
+
+
+
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            // GPA
+
+                            if (grade === "E" && exam === "SA-2") {
+                                fail_exist = true;
+                            }
+
+                        }
+                    });
+
+
+
+
+                });
+
+
+                let sno=0;
+                examNames.forEach((exam) => {
+                    // ============================================
+                    // TOTAL GRADE
+                    // ============================================
+                    let totalPercentage = 0;
+                    let totalMarksLimit = 0;
+
+                    if (examMarksLimitTotals[exam] > 0) {
+                        if (exam === "SA-1" || exam === "SA-2") {
+                            totalMarksLimit = 100 * subjectLength;
+                            totalPercentage =
+                                (examTotalmarks[exam] / totalMarksLimit) * 100;
+                        } else {
+                            totalMarksLimit = 20 * subjectLength;
+                            totalPercentage =
+                                (examTotals[exam] / totalMarksLimit) * 100;
+                        }
+                        totalPercentage = Number(totalPercentage.toFixed(0));
+                    }
+
+
+
+                    const filtered_gradeData = gradeData.filter(
+                        (item) => item.marks_min <= totalPercentage
+                    );
+
+                    let totalGrade = "E";
+                    let totalGpa = "-";
+                    if (filtered_gradeData.length > 0) {
+                        totalGrade =
+                            filtered_gradeData[0]?.grade_code || "E";
+                        totalGpa =
+                            filtered_gradeData[0]?.gpa || "-";
+
+
+                        totalGrade = `${totalGrade}(${totalPercentage}%) (${totalMarksLimit})`;
+                        if (fail_exist && exam === "SA-2") {
+                            totalGrade = "-";
+                            totalGpa = "-"
+
+                        }
+                    }
+
+                    sno++;
+                    obj_student = {
+                        roll: sno || 0,
+                        name: exam,
+                        percentage: totalPercentage
+                    }
+                    reportData.push(obj_student);
+
+                });
+
+                // obj_student = {
+                //     roll: item?.roll_no || 0,
+                //     name: item?.name,
+                //     percentage: totalPercentage
+                // }
+                // reportData.push(obj_student);
+
+            });
+
+
+
 
             // ---------------- WHITE BACKGROUND ----------------
 
@@ -6476,21 +6792,92 @@ module.exports = {
             )
                 .fill("#FFFFFF");
 
-            // ---------------- TITLE ----------------
 
+            // ============================================
+            // SCHOOL LOGO
+            // ============================================
+
+            if (reportHeader?.school_image) {
+
+                try {
+
+                    const img = await axios.get(
+                        reportHeader.school_image,
+                        {
+                            responseType: "arraybuffer"
+                        }
+                    );
+
+                    doc.image(img.data, 30, 20, {
+                        width: 60,
+                    });
+
+                } catch (err) {
+
+                    console.log("Logo load failed");
+                }
+            }
+
+            // ---------------- TITLE ----------------
             doc.fillColor("black")
                 .fontSize(18)
                 .text(
-                    "SA-2 GRAPH REPORT 2025-26",
+                    "STUDENT RESULT PERCENTAGE REPORT " + year_name,
                     0,
-                    20,
+                    30,
                     { align: "center" }
                 );
 
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Student :",
+                    50,
+                    100
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.student,
+                    140,
+                    100
+                );
+
+
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Class :",
+                    400,
+                    100
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.class,
+                    460,
+                    100
+                );
+
+            doc.font("Helvetica-Bold")
+                .text(
+                    "Section :",
+                    600,
+                    100
+                );
+
+            doc.font("Helvetica")
+                .text(
+                    reportHeader.section,
+                    690,
+                    100
+                );
+
+
             // ---------------- TABLE ----------------
 
-            let startX = 30;
-            let startY = 70;
+            // let startX = 30;
+            let startX = 50;
+            // let startY = 70;
+            let startY = 130;
 
             let rollWidth = 50;
             let nameWidth = 250;
@@ -6506,7 +6893,7 @@ module.exports = {
                 startY,
                 rollWidth,
                 rowHeight,
-                "ROLL"
+                "S.NO"
             );
 
             drawCell(
@@ -6514,7 +6901,7 @@ module.exports = {
                 startY,
                 nameWidth,
                 rowHeight,
-                "NAME OF STUDENT"
+                "EXAM NAME"
             );
 
             drawCell(
@@ -6582,7 +6969,7 @@ module.exports = {
             doc.fillColor("black")
                 .fontSize(12)
                 .text(
-                    "% vs NAME OF THE STUDENT",
+                    "% vs NAME OF THE EXAM",
                     chartX,
                     chartY - 45
                 );
@@ -6703,7 +7090,7 @@ module.exports = {
             doc.fillColor("black")
                 .fontSize(10)
                 .text(
-                    "NAME OF THE STUDENT",
+                    "NAME OF THE EXAM",
                     chartX + 220,
                     chartY + chartHeight + 85
                 );
@@ -6753,6 +7140,7 @@ module.exports = {
 
         }
     },
+
 
 
     getGradeListPrint: async (req, res) => {
