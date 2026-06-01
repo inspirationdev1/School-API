@@ -14,6 +14,7 @@ const sectionRouter = require("./router/section.router")
 const departmentRouter = require("./router/department.router")
 const feestypeRouter = require("./router/feestype.router");
 const gradeRouter = require("./router/grade.router");
+const taxrateRouter = require("./router/taxrate.router");
 const workindaysRouter = require("./router/workingdays.router");
 const classsubjectRouter = require("./router/classsubject.router");
 
@@ -61,6 +62,7 @@ const paymentRouter = require("./router/payment.router");
 
 
 const schoolreportsRouter = require("./router/schoolreports.router");
+const printreportsRouter = require("./router/printreports.router");
 
 const authMiddleware = require("./auth/auth");
 const { authCheck } = require("./controller/auth.controller");
@@ -116,6 +118,8 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/whatsapp", whatsappRouter);
 
 app.use("/api/grade", gradeRouter);
+app.use("/api/taxrate", taxrateRouter);
+
 app.use("/api/workingdays", workindaysRouter);
 app.use("/api/classsubject",classsubjectRouter);
 
@@ -143,6 +147,8 @@ app.use('/api/expensetype', expensetypeRouter);
 app.use('/api/expense', expenseRouter);
 app.use('/api/payment', paymentRouter);
 app.use('/api/schoolreports', schoolreportsRouter);
+app.use('/api/printreports', printreportsRouter);
+
 
 app.get('/api/auth/check',authCheck)
 

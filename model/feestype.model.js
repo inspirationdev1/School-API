@@ -10,6 +10,15 @@ const feestypeSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    taxrate:{type:mongoose.Schema.ObjectId, ref:'Taxrate'},
+    tax_percent: {
+        type: Number,
+        default: 0
+    },
+    taxtype: {
+        type: String,
+        default: "inclusive"
+    },
     createdAt:{type:Date, default:new Date()}
 
 })

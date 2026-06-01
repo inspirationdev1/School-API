@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const Salesinvoice = require("../model/salesinvoice.model");
 const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
 const Student = require("../model/student.model");
+const Taxrate = require("../model/taxrate.model");
 
 const ReceiptdetailModel = require("../model/receiptdetail.model");
 const { getNumberseqWithScreenId, updateNumberseqWithScreenId } = require("../controller/numberseq.controller");
@@ -36,9 +37,13 @@ module.exports = {
                 code = numberseqData.code || "";
             }
 
+            
+
             // 1️⃣ Save sales invoice
             const formattedinvoiceDate = dayjs(req?.body?.invoiceDate).format("YYYY-MM-DD");
             const [dd, mm, yyyy] = formattedinvoiceDate.split("-").map(Number);
+
+            
             const newSalesinvoice = new Salesinvoice({
                 ...req.body,
                 siCode: code,
@@ -51,11 +56,17 @@ module.exports = {
             // 2️⃣ Map invoice details
             const siDetail = req.body.invoiceDetails || [];
             const siId = savedData._id || null;
+
+
+            
+
             const salesInvoiceDetails = siDetail.map((item) => ({
                 ...item,
                 school: schoolId,
                 siId: siId,
             }));
+
+
 
             // 3️⃣ Save invoice details
             if (salesInvoiceDetails.length > 0) {
@@ -131,10 +142,11 @@ module.exports = {
         // Not providing the  schoolId as salesinvoice Id will be unique.
         try {
             const schoolId = req.user.schoolId;
-
             let id = req.params.id;
             console.log(req.body)
             await Salesinvoice.findOneAndUpdate({ _id: id }, { $set: { ...req.body } });
+
+            
 
             // 2️⃣ Map invoice details
             const siDetail = req.body.invoiceDetails || [];
@@ -144,6 +156,8 @@ module.exports = {
                 school: schoolId,
                 siId: siId,
             }));
+
+
             // 3️⃣ Save invoice details
             if (salesInvoiceDetails.length > 0) {
                 await Salesinvoicedetail.deleteMany({
@@ -472,12 +486,17 @@ module.exports = {
             const sectionId = req.body?.section;
             const feestructure = req.body?.feestructure;
             const feestructure_name = req.body?.feestructure_name;
+            const feestype = req.body?.feestype;
             const feeFrequency = req.body?.feeFrequency;
             const feeAmount = req.body?.feeAmount;
-
+            const taxrate = req.body?.taxrate || null;
+            const tax_percent = req.body?.tax_percent || 0;
 
             const year = req.body?.year;
             const month = req.body?.month;
+            const monthname = new Date(year, month - 1).toLocaleString("default", {
+                    month: "long",
+                });
             const invoiceDate = req.body?.invoiceDate;
             const remarks = req.body?.remarks;
 
@@ -495,12 +514,10 @@ module.exports = {
             }).lean();
             console.log(invoiceExistData);
             if (invoiceExistData.length > 0) {
-                const monthName = new Date(year, mm - 1).toLocaleString("default", {
-                    month: "long",
-                });
+                
                 res.status(500).json({
                     success: false,
-                    message: "Failed Creation of Salesinvoice. Invoices already created for the month = " + monthName,
+                    message: "Failed Creation of Salesinvoice. Invoices already created for the month = " + monthname,
                 });
                 return;
             }
@@ -515,7 +532,6 @@ module.exports = {
             filterQuery.status = "active";
             const studentsData = await Student.find(filterQuery).lean();
             console.log(studentsData);
-
 
 
             let invoiceCount = 0;
@@ -540,7 +556,8 @@ module.exports = {
                         student_name: student_name,
                         class: student_class,
                         section: section,
-                        month: mm,
+                        month: month,
+                        monthname:monthname,
                         year: year,
                         invoiceDate: formattedinvoiceDate,
                         invoiceTime: invoiceTime,
@@ -553,19 +570,32 @@ module.exports = {
 
                     const siId = savedData._id || null;
 
+                    //****Tax Calculation */
+                    const netAmount = feeAmount || 0;
+                    const taxable_amount = Number((netAmount / (1 + tax_percent / 100)).toFixed(0));
+                    const tax_amount = Number((netAmount - taxable_amount).toFixed(0));
+                    //******************* */
+
                     const newSalesinvoicedetail = new Salesinvoicedetail({
                         siId: siId,
                         student: studentId,
                         feestructure: feestructure,
+                        feestype: feestype,
                         feeFrequency: feeFrequency,
                         itemId: feestructure,
                         itemName: feestructure_name,
                         feeAmount: feeAmount,
-                        Quantity: 1,
+                        quantity: 1,
                         salesPrice: feeAmount,
                         grossAmount: feeAmount,
                         netAmount: feeAmount,
+                        taxrate:taxrate||null,
+                        tax_percent: tax_percent,
+                        tax_amount: tax_amount,
+                        taxable_amount: taxable_amount,
                         year: year,
+                        month: month,
+                        monthname: monthname,
                         school: schoolId,
                         remarks: remarks,
                     });
@@ -575,9 +605,7 @@ module.exports = {
                     invoiceCount++;
                 } catch (error) {
                     console.log(error.message);
-
                 }
-
 
             }
 

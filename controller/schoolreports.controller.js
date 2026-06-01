@@ -7488,32 +7488,7 @@ const transformMarksheetData = (data, subjectsData, examsData) => {
     };
 };
 
-const transformMarksheetData_Orig = (data) => {
 
-    const subjects = {};
-    const exams = new Set();
-
-    data.forEach(item => {
-        const subject = item.subject.subject_name || item.subject;
-        const exam = item.examination.examination_name || item.examination;
-
-        exams.add(exam);
-
-        if (!subjects[subject]) {
-            subjects[subject] = {};
-        }
-
-        subjects[subject][exam] = {
-            marks: item?.marks || 0,
-            marksLimit: item?.marksLimit || 0
-        };
-    });
-
-    return {
-        exams: Array.from(exams),
-        subjects
-    };
-};
 
 
 

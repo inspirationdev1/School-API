@@ -6,7 +6,7 @@ module.exports = {
     getAllExpensetypes: async(req,res)=>{
          try {
             const schoolId = req.user.schoolId;
-            const allExpensetype= await Expensetype.find({school:schoolId});
+            const allExpensetype= await Expensetype.find({school:schoolId}).populate("taxrate");
             res.status(200).json({success:true, message:"Success in fetching all  Expensetype", data:allExpensetype})
          } catch (error) {
             console.log("Error in getAllExpensetype", error);
@@ -29,7 +29,7 @@ module.exports = {
     getExpensetypeWithId: async(req, res)=>{
         const id = req.params.id;
         const schoolId = req.user.schoolId;
-        Expensetype.findOne({_id:id, school:schoolId}).then(resp=>{
+        Expensetype.findOne({_id:id, school:schoolId}).populate("taxrate").then(resp=>{
             if(resp){
                 res.status(200).json({success:true, data:resp})
             }else {
@@ -47,7 +47,7 @@ module.exports = {
             let id = req.params.id;
             console.log(req.body)
             await Expensetype.findOneAndUpdate({_id:id},{$set:{...req.body}});
-            const ExpensetypeAfterUpdate =await Expensetype.findOne({_id:id});
+            const ExpensetypeAfterUpdate =await Expensetype.findOne({_id:id}).populate("taxrate");
             res.status(200).json({success:true, message:"Expensetype Updated", data:ExpensetypeAfterUpdate})
         } catch (error) {
             

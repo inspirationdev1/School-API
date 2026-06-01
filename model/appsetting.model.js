@@ -12,6 +12,7 @@ const appsettingSchema = new mongoose.Schema({
     },
     udise_no: { type: String, default: null },
     discPerAllowed: { type: Number, default: 0 },
+    print_tax: { type: Boolean, default: false },
     report_image: {
         type: String,
         required: false,

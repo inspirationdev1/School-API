@@ -8,7 +8,7 @@ module.exports = {
     getAllFeestructures: async(req,res)=>{
          try {
             const schoolId = req.user.schoolId;
-            const allFeestructure= await Feestructure.find({school:schoolId}).populate('class').populate('feestype');
+            const allFeestructure= await Feestructure.find({school:schoolId}).populate('class').populate('feestype').populate('taxrate');
             res.status(200).json({success:true, message:"Success in fetching all  Feestructure", data:allFeestructure})
          } catch (error) {
             console.log("Error in getAllFeestructure", error);
@@ -31,7 +31,7 @@ module.exports = {
     getFeestructureWithId: async(req, res)=>{
         const id = req.params.id;
         const schoolId = req.user.schoolId;
-        Feestructure.findOne({_id:id, school:schoolId}).populate('class').populate('feestype').then(resp=>{
+        Feestructure.findOne({_id:id, school:schoolId}).populate('class').populate('feestype').populate('taxrate').then(resp=>{
             if(resp){
                 res.status(200).json({success:true, data:resp})
             }else {
@@ -56,7 +56,7 @@ module.exports = {
                 filterQuery['class'] = req.query.class
             }
         
-        Feestructure.find(filterQuery).populate('class').populate('feestype').then(resp=>{
+        Feestructure.find(filterQuery).populate('class').populate('feestype').populate('taxrate').then(resp=>{
             if(resp){
                 res.status(200).json({success:true, data:resp})
             }else {
@@ -75,7 +75,7 @@ module.exports = {
             let id = req.params.id;
             console.log(req.body)
             await Feestructure.findOneAndUpdate({_id:id},{$set:{...req.body}});
-            const FeestructureAfterUpdate =await Feestructure.findOne({_id:id}).populate('class').populate('feestype');
+            const FeestructureAfterUpdate =await Feestructure.findOne({_id:id}).populate('class').populate('feestype').populate('taxrate');
             res.status(200).json({success:true, message:"Feestructure Updated", data:FeestructureAfterUpdate})
         } catch (error) {
             

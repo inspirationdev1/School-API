@@ -10,6 +10,7 @@ const expensetypeSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    taxrate:{type:mongoose.Schema.ObjectId, ref:'Taxrate'},
     createdAt:{type:Date, default:new Date()}
 })
 
