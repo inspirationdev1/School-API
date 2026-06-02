@@ -8,7 +8,7 @@ const { getMarksheetPrint, getProgressCardPrint,getAttendanceSummaryPrint,genera
     , getIncomeExpenseDashboard, getAttendanceDashboard, getExamQuestionpaperPrint
     , getChartOfAccountPrint,getStudentListPrint,getParentListPrint
     ,getTeacherListPrint,getEmployeeListPrint,getStudentList_Marks_Subjectwise_Print,getStudent_Marks_Subjectwise_Print
-    ,getGradeListPrint
+    ,getGradeListPrint,generateSubjectGraphReport
  } = require("../controller/schoolreports.controller");
 
 
@@ -43,6 +43,7 @@ router.post("/progresscard-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 
 router.post("/attendance-summary-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getAttendanceSummaryPrint);
 router.post("/student-graph-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), generateGraphReport);
 router.post("/student-result-graph-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), generateResultGraphReport);
+router.post("/student-subject-graph-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), generateSubjectGraphReport);
 
 router.post("/grade-list-print", authMiddleware(['SCHOOL', 'USER', 'TEACHER', 'STUDENT', 'PARENT']), getGradeListPrint);
 
