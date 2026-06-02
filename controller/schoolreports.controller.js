@@ -3873,7 +3873,7 @@ module.exports = {
                     // =====================================
                     // TOTAL ROW
                     // =====================================
-                    const percentage = ((totalMarks / totalLimit) * 100).toFixed(2);
+                    const percentage = ((totalMarks / totalLimit) * 100).toFixed(0);
 
                     doc
                         .rect(tableX, y, tableWidth, 35)
@@ -6229,7 +6229,7 @@ module.exports = {
                     startY,
                     percentWidth,
                     rowHeight,
-                    row.percentage.toFixed(2)
+                    row.percentage.toFixed(0)
                 );
 
                 startY += rowHeight;
@@ -6939,7 +6939,7 @@ module.exports = {
                     startY,
                     percentWidth,
                     rowHeight,
-                    row.percentage.toFixed(2)
+                    row.percentage.toFixed(0)
                 );
 
                 startY += rowHeight;
@@ -7678,7 +7678,7 @@ module.exports = {
                     startY,
                     percentWidth,
                     rowHeight,
-                    row.percentage.toFixed(2)
+                    row.percentage.toFixed(0)
                 );
 
                 startY += rowHeight;
