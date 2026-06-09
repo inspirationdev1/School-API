@@ -13,6 +13,7 @@ const accountlevelSchema = new mongoose.Schema({
     seq: { type: Number, default: 0 },
     groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Accountlevel', default: null },
     level: { type: Number, default: 0 },
+    account_type: { type: String, default: '' },
     status: { type: String, default: 'valid' },
     createdAt: { type: Date, default: new Date() }
 

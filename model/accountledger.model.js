@@ -10,9 +10,10 @@ const accountledgerSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-     groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Accountlevel', required: true },
-     seq: { type: Number, default: 0 },
-     level: { type: Number, default: 0 },
+    groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Accountlevel', required: true },
+    seq: { type: Number, default: 0 },
+    level: { type: Number, default: 0 },
+    account_type: { type: String, default: '' },
     status: { type: String, default: 'valid' },
     createdAt: { type: Date, default: new Date() }
 

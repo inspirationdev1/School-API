@@ -58,11 +58,13 @@ const noticeRoutes = require("./router/notice.router");
 const expensetypeRouter = require("./router/expensetype.router");
 const expenseRouter = require("./router/expense.router");
 const paymentRouter = require("./router/payment.router");
-
+const journalvoucherRouter = require("./router/journalvoucher.router");
 
 
 const schoolreportsRouter = require("./router/schoolreports.router");
 const printreportsRouter = require("./router/printreports.router");
+const financereportsRouter = require("./router/financereports.router");
+
 
 const authMiddleware = require("./auth/auth");
 const { authCheck } = require("./controller/auth.controller");
@@ -146,9 +148,11 @@ app.use('/api/notices', noticeRoutes)
 app.use('/api/expensetype', expensetypeRouter);
 app.use('/api/expense', expenseRouter);
 app.use('/api/payment', paymentRouter);
+app.use('/api/journalvoucher', journalvoucherRouter);
+
 app.use('/api/schoolreports', schoolreportsRouter);
 app.use('/api/printreports', printreportsRouter);
-
+app.use('/api/financereports', financereportsRouter);
 
 app.get('/api/auth/check',authCheck)
 
