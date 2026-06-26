@@ -453,7 +453,12 @@ module.exports = {
       // ==========================================
 
       const fromDate = new Date(req.query.fromDate);
+      fromDate.setHours(0, 0, 0, 0);
+
       const toDate = new Date(req.query.toDate);
+      toDate.setHours(23, 59, 59, 999);
+
+      
 
       const trialBalanceData = await Accounttransaction.aggregate([
         {
@@ -985,11 +990,590 @@ module.exports = {
             align: "center",
             lineBreak: false,
           });
-        // doc
-        //   .fontSize(8)
-        //   .text(`Page ${i + 1} of ${pages.count}`, 0, pageHeight - 20, {
-        //     align: "center",
-        //   });
+      }
+
+      doc.end();
+    } catch (err) {
+      console.error(err);
+
+      return res.status(500).json({
+        success: false,
+        message: err.message,
+      });
+    }
+  },
+  printTrialBalance_Four_Columns: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+
+      const schoolData = await School.findById(schoolId).lean();
+
+      let dateFilter = {};
+
+      if (req.query.fromDate) {
+        dateFilter.$gte = dayjs.utc(req.query.fromDate).startOf("day").toDate();
+      }
+
+      if (req.query.toDate) {
+        dateFilter.$lte = dayjs.utc(req.query.toDate).endOf("day").toDate();
+      }
+
+      const filterQuery = {};
+      if (Object.keys(dateFilter).length > 0) {
+        filterQuery.date = dateFilter;
+      }
+      console.log("FROM:", dateFilter.$gte.toISOString());
+      console.log("TO:", dateFilter.$lte.toISOString());
+
+      // ==========================================
+      // FETCH TRIAL BALANCE DATA
+      // ==========================================
+
+      const fromDate = new Date(req.query.fromDate);
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = new Date(req.query.toDate);
+      toDate.setHours(23, 59, 59, 999);
+
+      const data = await Accounttransaction.find({
+        doc_date: {
+          $gte: fromDate,
+          $lte: toDate,
+        },
+      });
+
+      console.log(data);
+
+      const trialBalanceData = await Accounttransaction.aggregate([
+        {
+          $match: {
+            school: new mongoose.Types.ObjectId(schoolId),
+            status: "valid",
+          },
+        },
+
+        {
+          $lookup: {
+            from: "accountledgers",
+            localField: "accountledger",
+            foreignField: "_id",
+            as: "accountInfo",
+          },
+        },
+
+        {
+          $unwind: "$accountInfo",
+        },
+
+        {
+          $group: {
+            _id: {
+              accountledger: "$accountledger",
+              account_code: "$accountInfo.accountledger_code",
+              account_name: "$accountInfo.accountledger_name",
+            },
+
+            // ===========================
+            // OPENING DEBIT
+            // ===========================
+            OP_Debit: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $lt: ["$doc_date", fromDate] },
+                      { $eq: ["$amount_type", "dr"] },
+                    ],
+                  },
+                  "$amount",
+                  0,
+                ],
+              },
+            },
+
+            // ===========================
+            // OPENING CREDIT
+            // ===========================
+            OP_Credit: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $lt: ["$doc_date", fromDate] },
+                      { $eq: ["$amount_type", "cr"] },
+                    ],
+                  },
+                  "$amount",
+                  0,
+                ],
+              },
+            },
+
+            // ===========================
+            // PERIOD DEBIT
+            // ===========================
+            Debit: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gte: ["$doc_date", fromDate] },
+                      { $lte: ["$doc_date", toDate] },
+                      { $eq: ["$amount_type", "dr"] },
+                    ],
+                  },
+                  "$amount",
+                  0,
+                ],
+              },
+            },
+
+            // ===========================
+            // PERIOD CREDIT
+            // ===========================
+            Credit: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gte: ["$doc_date", fromDate] },
+                      { $lte: ["$doc_date", toDate] },
+                      { $eq: ["$amount_type", "cr"] },
+                    ],
+                  },
+                  "$amount",
+                  0,
+                ],
+              },
+            },
+          },
+        },
+
+        {
+          $addFields: {
+            // Opening Balance
+            OpeningBalance: {
+              $subtract: ["$OP_Debit", "$OP_Credit"],
+            },
+
+            // Closing Balance
+            ClosingBalance: {
+              $subtract: [
+                {
+                  $add: ["$OP_Debit", "$Debit"],
+                },
+                {
+                  $add: ["$OP_Credit", "$Credit"],
+                },
+              ],
+            },
+          },
+        },
+
+        {
+          $addFields: {
+            CL_Debit: {
+              $cond: [{ $gt: ["$ClosingBalance", 0] }, "$ClosingBalance", 0],
+            },
+
+            CL_Credit: {
+              $cond: [
+                { $lt: ["$ClosingBalance", 0] },
+                { $abs: "$ClosingBalance" },
+                0,
+              ],
+            },
+          },
+        },
+
+        {
+          $project: {
+            _id: 0,
+
+            account_code: "$_id.account_code",
+            account_name: "$_id.account_name",
+
+            OP_Debit: 1,
+            OP_Credit: 1,
+
+            Debit: 1,
+            Credit: 1,
+
+            CL_Debit: 1,
+            CL_Credit: 1,
+          },
+        },
+
+        {
+          $sort: {
+            account_code: 1,
+          },
+        },
+      ]);
+
+      console.log(trialBalanceData);
+      const formatAmount = (amount) => {
+        return Number(amount || 0).toLocaleString("en-IN", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
+      };
+
+      // ==========================================
+      // PDF DOCUMENT
+      // ==========================================
+
+      const doc = new PDFDocument({
+        size: "A4",
+        layout: "landscape",
+        margin: 20,
+        bufferPages: true,
+      });
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        "inline; filename=trial-balance.pdf",
+      );
+
+      doc.pipe(res);
+
+      // ==========================================
+      // HEADER FUNCTION
+      // ==========================================
+
+      const drawHeader = async () => {
+        const logoX = 40;
+        const logoY = 25;
+        const logoWidth = 55;
+
+        const schoolInfo = schoolData || {};
+
+        if (schoolInfo?.school_image) {
+          try {
+            const img = await axios.get(schoolInfo.school_image, {
+              responseType: "arraybuffer",
+            });
+
+            doc.image(img.data, logoX, logoY, {
+              width: logoWidth,
+              height: 55,
+            });
+          } catch (err) {
+            console.log("School logo load failed");
+          }
+        }
+
+        doc
+          .fontSize(16)
+          .font("Helvetica-Bold")
+          .text(schoolInfo?.school_name || "", 120, 35);
+
+        doc
+          .fontSize(10)
+          .font("Helvetica")
+          .text(`${schoolInfo?.address || ""}`, 120, 55);
+
+        doc.text(
+          `${schoolInfo?.city || ""}, ${schoolInfo?.state || ""}, ${schoolInfo?.country || ""}`,
+          120,
+          70,
+        );
+
+        doc.moveDown(4);
+
+        doc.fontSize(14).font("Helvetica-Bold").text("TRIAL BALANCE", {
+          align: "center",
+        });
+
+        doc
+          .fontSize(10)
+          .font("Helvetica")
+          .text(
+            `As On ${moment(req.query.asondate || new Date()).format("DD-MMM-YYYY")}`,
+            {
+              align: "center",
+            },
+          );
+      };
+
+      await drawHeader();
+
+      // ==========================================
+      // TABLE HEADER FUNCTION
+      // ==========================================
+
+      const rowHeight = 22;
+
+      const colCode = 20; // 80 width
+      const colName = 85; // 185 width
+
+      const colOPDr = 270; // 75 width
+      const colOPCr = 345; // 75 width
+
+      const colDr = 420; // 75 width
+      const colCr = 495; // 75 width
+
+      const colCLDr = 570; // 75 width
+      const colCLCr = 645; // 75 width
+
+      const tableWidth = 705;
+
+      const drawTableHeader = (y) => {
+        doc.rect(colCode, y, tableWidth, rowHeight).stroke();
+
+        doc.font("Helvetica-Bold").fontSize(9);
+
+        doc.text("Code", colCode + 5, y + 6);
+        doc.text("Account Name", colName + 5, y + 6);
+
+        doc.text("OP Debit", colOPDr + 5, y + 6, {
+          width: 65,
+          align: "right",
+        });
+
+        doc.text("OP Credit", colOPCr + 5, y + 6, {
+          width: 65,
+          align: "right",
+        });
+
+        doc.text("Debit", colDr + 5, y + 6, {
+          width: 65,
+          align: "right",
+        });
+
+        doc.text("Credit", colCr + 5, y + 6, {
+          width: 65,
+          align: "right",
+        });
+
+        doc.text("CL Debit", colCLDr + 5, y + 6, {
+          width: 65,
+          align: "right",
+        });
+
+        doc.text("CL Credit", colCLCr + 5, y + 6, {
+          width: 65,
+          align: "right",
+        });
+
+        [colName, colOPDr, colOPCr, colDr, colCr, colCLDr, colCLCr].forEach(
+          (x) => {
+            doc
+              .moveTo(x, y)
+              .lineTo(x, y + rowHeight)
+              .stroke();
+          },
+        );
+      };
+
+      let tableTop = doc.y + 20;
+
+      drawTableHeader(tableTop);
+
+      let y = tableTop + rowHeight;
+
+      let totalOPDebit = 0;
+      let totalOPCredit = 0;
+
+      let totalDebit = 0;
+      let totalCredit = 0;
+
+      let totalCLDebit = 0;
+      let totalCLCredit = 0;
+
+      // ==========================================
+      // DATA ROWS
+      // ==========================================
+
+      for (const row of trialBalanceData) {
+        const bottomMargin = 40;
+
+        if (y + rowHeight > doc.page.height - bottomMargin) {
+          doc.addPage();
+
+          y = 40;
+
+          drawTableHeader(y);
+
+          y += rowHeight;
+        }
+
+        totalOPDebit += Number(row.OP_Debit || 0);
+        totalOPCredit += Number(row.OP_Credit || 0);
+
+        totalDebit += Number(row.Debit || 0);
+        totalCredit += Number(row.Credit || 0);
+
+        totalCLDebit += Number(row.CL_Debit || 0);
+        totalCLCredit += Number(row.CL_Credit || 0);
+
+        doc.rect(colCode, y, tableWidth, rowHeight).stroke();
+
+        doc.font("Helvetica").fontSize(9);
+
+        doc.text(row.account_code || "", colCode + 5, y + 6);
+
+        // doc.text(row.account_name || "", colName + 5, y + 6, { width: 240 });
+        doc.text(row.account_name || "", colName + 5, y + 6, {
+          width: 175,
+          ellipsis: true,
+        });
+
+        doc.text(
+          row.OP_Debit ? formatAmount(row.OP_Debit) : "",
+          colOPDr + 5,
+          y + 6,
+          {
+            width: 65,
+            align: "right",
+          },
+        );
+
+        doc.text(
+          row.OP_Credit ? formatAmount(row.OP_Credit) : "",
+          colOPCr + 5,
+          y + 6,
+          {
+            width: 65,
+            align: "right",
+          },
+        );
+
+        doc.text(row.Debit ? formatAmount(row.Debit) : "", colDr + 5, y + 6, {
+          width: 65,
+          align: "right",
+        });
+
+        doc.text(row.Credit ? formatAmount(row.Credit) : "", colCr + 5, y + 6, {
+          width: 65,
+          align: "right",
+        });
+
+        doc.text(
+          row.CL_Debit ? formatAmount(row.CL_Debit) : "",
+          colCLDr + 5,
+          y + 6,
+          {
+            width: 65,
+            align: "right",
+          },
+        );
+
+        doc.text(
+          row.CL_Credit ? formatAmount(row.CL_Credit) : "",
+          colCLCr + 5,
+          y + 6,
+          {
+            width: 65,
+            align: "right",
+          },
+        );
+
+        [colName, colOPDr, colOPCr, colDr, colCr, colCLDr, colCLCr].forEach(
+          (x) => {
+            doc
+              .moveTo(x, y)
+              .lineTo(x, y + rowHeight)
+              .stroke();
+          },
+        );
+
+        y += rowHeight;
+      }
+
+      if (y + rowHeight > doc.page.height - 40) {
+        doc.addPage();
+
+        y = 40;
+
+        drawTableHeader(y);
+
+        y += rowHeight;
+      }
+      // ==========================================
+      // TOTAL ROW
+      // ==========================================
+
+      doc.rect(colCode, y, tableWidth, rowHeight).stroke();
+
+      doc.font("Helvetica-Bold").text("TOTAL", colName + 5, y + 6);
+
+      doc.text(formatAmount(totalOPDebit), colOPDr + 5, y + 6, {
+        width: 65,
+        align: "right",
+      });
+
+      doc.text(formatAmount(totalOPCredit), colOPCr + 5, y + 6, {
+        width: 65,
+        align: "right",
+      });
+
+      doc.text(formatAmount(totalDebit), colDr + 5, y + 6, {
+        width: 65,
+        align: "right",
+      });
+
+      doc.text(formatAmount(totalCredit), colCr + 5, y + 6, {
+        width: 65,
+        align: "right",
+      });
+
+      doc.text(formatAmount(totalCLDebit), colCLDr + 5, y + 6, {
+        width: 65,
+        align: "right",
+      });
+
+      doc.text(formatAmount(totalCLCredit), colCLCr + 5, y + 6, {
+        width: 65,
+        align: "right",
+      });
+
+      doc
+        .moveTo(colOPDr, y)
+        .lineTo(colOPDr, y + rowHeight)
+        .stroke();
+
+      doc
+        .moveTo(colOPCr, y)
+        .lineTo(colOPCr, y + rowHeight)
+        .stroke();
+
+      doc
+        .moveTo(colDr, y)
+        .lineTo(colDr, y + rowHeight)
+        .stroke();
+
+      doc
+        .moveTo(colCr, y)
+        .lineTo(colCr, y + rowHeight)
+        .stroke();
+
+      doc
+        .moveTo(colCLDr, y)
+        .lineTo(colCLDr, y + rowHeight)
+        .stroke();
+
+      doc
+        .moveTo(colCLCr, y)
+        .lineTo(colCLCr, y + rowHeight)
+        .stroke();
+      // ==========================================
+      // PAGE NUMBERS
+      // ==========================================
+
+      const pages = doc.bufferedPageRange();
+
+      for (let i = 0; i < pages.count; i++) {
+        doc.switchToPage(i);
+        const pageHeight = doc.page.height;
+        doc
+          .fontSize(8)
+          .text(`Page ${i + 1} of ${pages.count}`, 20, pageHeight - 50, {
+            width: doc.page.width - 40,
+            align: "center",
+            lineBreak: false,
+          });
       }
 
       doc.end();

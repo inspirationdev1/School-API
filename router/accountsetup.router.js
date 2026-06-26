@@ -2,40 +2,44 @@ const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../auth/auth");
 const {
-  createNumberseq,
-  getAllNumberseqs,
-  getNumberseqWithId,
-  updateNumberseqWithId,
-  deleteNumberseqWithId,
-  getNumberseqWithScreenId,
-  getNumberseqWithQuery,
-} = require("../controller/numberseq.controller");
+  createAccountsetup,
+  getAllAccountsetups,
+  getAccountsetupWithId,
+  updateAccountsetupWithId,
+  deleteAccountsetupWithId,
+  getAccountsetupWithScreenId,
+  getAccountsetupWithQuery,
+} = require("../controller/accountsetup.controller");
 
-router.post("/create", authMiddleware(["SCHOOL", "USER"]), createNumberseq);
-router.get("/fetch-all", authMiddleware(["SCHOOL", "USER"]), getAllNumberseqs);
+router.post("/create", authMiddleware(["SCHOOL", "USER"]), createAccountsetup);
+router.get(
+  "/fetch-all",
+  authMiddleware(["SCHOOL", "USER"]),
+  getAllAccountsetups,
+);
 router.get(
   "/fetch-single/:id",
   authMiddleware(["SCHOOL", "USER"]),
-  getNumberseqWithId,
+  getAccountsetupWithId,
 );
 router.patch(
   "/update/:id",
   authMiddleware(["SCHOOL", "USER"]),
-  updateNumberseqWithId,
+  updateAccountsetupWithId,
 );
 router.delete(
   "/delete/:id",
   authMiddleware(["SCHOOL", "USER"]),
-  deleteNumberseqWithId,
+  deleteAccountsetupWithId,
 );
 router.get(
   "/fetch-sequence/:id",
   authMiddleware(["SCHOOL", "USER"]),
-  getNumberseqWithScreenId,
+  getAccountsetupWithScreenId,
 );
 router.get(
   "/fetch-with-query",
   authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
-  getNumberseqWithQuery,
+  getAccountsetupWithQuery,
 );
 module.exports = router;

@@ -14,6 +14,7 @@ const accounttransactionSchema = new mongoose.Schema({
   doc_id: { type: mongoose.Schema.Types.ObjectId, required: true },
   amount: { type: Number, default: 0 },
   amount_type: { type: String, default: "" },
+  mapping_type: { type: String, default: "" },
   seq: { type: Number, default: 0 },
   account_type: { type: String, default: "" },
   accountledger: {
