@@ -9,6 +9,7 @@ const accountsetupSchema = new mongoose.Schema({
   amount_type: { type: String, required: true },
   account_type: { type: String, default: "" },
   mapping_type: { type: String, default: "" },
+  paymentMethod: { type: String, default: "" },
   seq: { type: Number, default: 0 },
   createdAt: { type: Date, default: new Date() },
 });

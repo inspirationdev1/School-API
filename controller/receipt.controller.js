@@ -177,10 +177,12 @@ module.exports = {
       //****** */
 
       // 2️⃣ Map receiptDetails
+      const paymentMethod = req.body?.paymentMethod || "";
       const recDetail = req.body.receiptDetails || [];
       let receiptDetails = recDetail.map((item) => ({
         ...item,
         school: schoolId,
+        paymentMethod: paymentMethod,
       }));
       // *****Start Check Accounts Integration******
       const isDrCrEqual = await check_accounttransaction(receiptDetails);
@@ -209,7 +211,7 @@ module.exports = {
       // 2️⃣ Map receiptDetails
       //   const recDetail = req.body.receiptDetails || [];
       const recId = savedData._id || null;
-      receiptDetails = recDetail.map((item) => ({
+      receiptDetails = receiptDetails.map((item) => ({
         ...item,
         receiptId: recId,
       }));
@@ -262,12 +264,14 @@ module.exports = {
       console.log(req.body);
 
       // 2️⃣ Map receiptDetails
+      const paymentMethod = req.body?.paymentMethod || "";
       const recDetail = req.body.receiptDetails || [];
       const recId = id || null;
       const receiptDetails = recDetail.map((item) => ({
         ...item,
         school: schoolId,
         receiptId: recId,
+        paymentMethod: paymentMethod,
       }));
 
       // *****Start Check Accounts Integration******
@@ -654,21 +658,11 @@ const check_accounttransaction = async (transDetails) => {
       const accountsetupData = await Accountsetup.find({
         school: transDetails[0]?.school,
         screen: "receipt",
+        paymentMethod: transDetails[0]?.paymentMethod,
       })
         .populate("accountledger")
         .lean();
 
-      const dataTest = JSON.stringify(transDetails);
-      console.log(dataTest);
-      //   const totals = transDetails.reduce(
-      //     (acc, item) => {
-      //       acc.netAmount += item.paidAmount || 0;
-      //       return acc;
-      //     },
-      //     {
-      //       netAmount: 0,
-      //     },
-      //   );
       const studentTotals = Object.values(
         transDetails.reduce((acc, item) => {
           const studentId = item.student;

@@ -18,6 +18,8 @@ const expensedetailSchema = new mongoose.Schema({
     required: true,
   },
   expensetype_code: { type: String, default: "" },
+  quantity: { type: Number, default: 1 },
+  expensePrice: { type: Number, default: 0 },
   expenseAmount: { type: Number, default: 0 },
   remarks: { type: String, default: "" },
   status: { type: String, default: "valid" },

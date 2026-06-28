@@ -203,7 +203,7 @@ module.exports = {
           res.status(200).json({
             success: false,
             message: "Salesinvoice not Integrated",
-            data: savedData,
+            data: req?.body,
           });
         }
 
@@ -563,6 +563,7 @@ module.exports = {
       const feeAmount = req.body?.feeAmount;
       const taxrate = req.body?.taxrate || null;
       const tax_percent = req.body?.tax_percent || 0;
+      const taxtype = req.body?.taxtype || "inclusive";
 
       const year = req.body?.year;
       const month = req.body?.month;
@@ -646,11 +647,22 @@ module.exports = {
           const siId = savedData._id || null;
 
           //****Tax Calculation */
-          const netAmount = feeAmount || 0;
-          const taxable_amount = Number(
-            (netAmount / (1 + tax_percent / 100)).toFixed(0),
-          );
-          const tax_amount = Number((netAmount - taxable_amount).toFixed(0));
+          let netAmount = feeAmount || 0;
+          let taxable_amount = feeAmount || 0;
+          let tax_amount = 0;
+          if (taxtype === "inclusive") {
+            taxable_amount = Number(
+              (netAmount / (1 + tax_percent / 100)).toFixed(0),
+            );
+            tax_amount = Number((netAmount - taxable_amount).toFixed(0));
+          } else if (taxtype === "exclusive") {
+            taxable_amount = feeAmount || 0;
+            tax_amount = Number(
+              ((taxable_amount * tax_percent) / 100).toFixed(0),
+            );
+            netAmount = taxable_amount + tax_amount;
+          }
+
           //******************* */
 
           const newSalesinvoicedetail = new Salesinvoicedetail({
