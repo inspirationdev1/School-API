@@ -226,7 +226,7 @@ module.exports = {
       // 2️⃣ Map expenseDetails
       //   const expDetail = req.body.expenseDetails || [];
       const expId = savedData._id || null;
-      expenseDetails = expDetail.map((item) => ({
+      expenseDetails = expenseDetails.map((item) => ({
         ...item,
         school: schoolId,
         expenseId: expId,

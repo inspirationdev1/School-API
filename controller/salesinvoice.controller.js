@@ -132,7 +132,7 @@ module.exports = {
 
       const savedData = await newSalesinvoice.save();
       const siId = savedData._id || null;
-      salesInvoiceDetails = siDetail.map((item) => ({
+      salesInvoiceDetails = salesInvoiceDetails.map((item) => ({
         ...item,
         school: schoolId,
         siId: siId,
