@@ -14,7 +14,7 @@ const paymentSchema = new mongoose.Schema({
   status: { type: String, default: "valid" },
   remarks: { type: String, default: "" },
   year: { type: Number, default: new Date().getFullYear() },
-
+  acctrans: [],
   createdAt: { type: Date, default: new Date() },
 });
 

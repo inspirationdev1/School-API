@@ -190,7 +190,7 @@ module.exports = {
         res.status(200).json({
           success: false,
           message: "Receipt not Integrated",
-          data: savedData,
+          data: req?.body,
         });
       }
 
