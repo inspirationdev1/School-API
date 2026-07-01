@@ -888,7 +888,7 @@ module.exports = {
       })
         .populate("feestructure")
         .lean();
-      console.log(JSON.stringify(salesinvoiceDetails));
+      // console.log(JSON.stringify(salesinvoiceDetails));
 
       const feeNamesByStudent = salesinvoiceDetails.reduce((acc, item) => {
         if (!acc[item.student]) {
