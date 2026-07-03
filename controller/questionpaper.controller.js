@@ -66,13 +66,11 @@ module.exports = {
         });
 
         const savedData = await newQuestionpaper.save();
-        res
-          .status(200)
-          .json({
-            success: true,
-            data: savedData,
-            message: "Questionpaper is Added Successfully.",
-          });
+        res.status(200).json({
+          success: true,
+          data: savedData,
+          message: "Questionpaper is Added Successfully.",
+        });
       } catch (e) {
         console.log("Error in Questionpaper Adding:", e);
         res
@@ -94,20 +92,16 @@ module.exports = {
         .populate("teacher")
         .populate("subject")
         .populate("examination");
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Success in fetching User Applications.",
-          data: questionpaper,
-        });
+      res.status(200).json({
+        success: true,
+        message: "Success in fetching User Applications.",
+        data: questionpaper,
+      });
     } catch (error) {
-      res
-        .status(500)
-        .send({
-          success: false,
-          message: "Failure  in fetching user applications, try later.",
-        });
+      res.status(500).send({
+        success: false,
+        message: "Failure  in fetching user applications, try later.",
+      });
     }
   },
   getAllQuestionpapers: async (req, res) => {
@@ -120,20 +114,16 @@ module.exports = {
         .populate("teacher")
         .populate("subject")
         .populate("examination");
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Success in fetching User Applications.",
-          data: questionpapers,
-        });
+      res.status(200).json({
+        success: true,
+        message: "Success in fetching User Applications.",
+        data: questionpapers,
+      });
     } catch (error) {
-      res
-        .status(500)
-        .send({
-          success: false,
-          message: "Failure  in fetching user applications, try later.",
-        });
+      res.status(500).send({
+        success: false,
+        message: "Failure  in fetching user applications, try later.",
+      });
     }
   },
   getQuestionpaperById: async (req, res) => {
@@ -144,21 +134,18 @@ module.exports = {
         .populate("subject")
         .populate("teacher")
         .populate("subject")
-        .populate("examination");
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Success in Fetching Single Questionpaper.",
-          data: questionpaper,
-        });
+        .populate("examination")
+        .populate("questionpaper");
+      res.status(200).json({
+        success: true,
+        message: "Success in Fetching Single Questionpaper.",
+        data: questionpaper,
+      });
     } catch (error) {
-      res
-        .status(500)
-        .send({
-          success: false,
-          message: "Failure  in Fetching Single Questionpaper, try later.",
-        });
+      res.status(500).send({
+        success: false,
+        message: "Failure  in Fetching Single Questionpaper, try later.",
+      });
     }
   },
   deleteQuestionpaperById: async (req, res) => {
@@ -168,12 +155,10 @@ module.exports = {
         .status(200)
         .json({ success: true, message: "Success in Deleting Questionpaper." });
     } catch (error) {
-      res
-        .status(500)
-        .send({
-          success: false,
-          message: "Failure  in Deleting Questionpaper, try later.",
-        });
+      res.status(500).send({
+        success: false,
+        message: "Failure  in Deleting Questionpaper, try later.",
+      });
     }
   },
   updateQuestionpaperWithId: async (req, res) => {
@@ -231,13 +216,11 @@ module.exports = {
         }
 
         await questionpaper.save();
-        res
-          .status(200)
-          .json({
-            success: true,
-            message: "Questionpaper updated successfully",
-            data: questionpaper,
-          });
+        res.status(200).json({
+          success: true,
+          message: "Questionpaper updated successfully",
+          data: questionpaper,
+        });
       } catch (e) {
         console.log("Error updating Question:", e);
         res
@@ -277,12 +260,10 @@ module.exports = {
       res.status(200).json({ success: true, data: filteredQuestionpapers });
     } catch (error) {
       console.log("Error in fetching Employee with query", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Error  in fetching Examinations  with query.",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Error  in fetching Examinations  with query.",
+      });
     }
   },
 };
