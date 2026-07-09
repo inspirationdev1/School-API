@@ -3180,6 +3180,10 @@ module.exports = {
         requesttype = req.query?.requesttype;
       }
 
+      const gradeData = await Grade.find({ school: schoolId })
+        .sort({ marks_min: -1 })
+        .lean();
+
       const data = await await Marksheetdetail.find(filterQuery)
         .populate("school")
         .populate("class")
@@ -3450,7 +3454,7 @@ module.exports = {
               width: tableWidth * 0.18,
             },
             {
-              label: "Result",
+              label: "Grade",
               width: tableWidth * 0.19,
             },
           ];
@@ -3486,8 +3490,20 @@ module.exports = {
           let totalLimit = 0;
 
           item.subjects.forEach((sub, index) => {
-            const result = sub.marks >= 35 ? "PASS" : "FAIL";
+            // const result = sub.marks >= 35 ? "PASS" : "FAIL";
+            let marks = sub?.marks || 0;
+            let filtered_gradeData = gradeData.filter(
+              (item) =>
+                (item.marks_min <= marks &&
+                  item.marks_limit == sub?.marksLimit) ||
+                0,
+            );
 
+            let grade = "E";
+            if (filtered_gradeData.length > 0) {
+              grade = filtered_gradeData[0]?.grade_code || "E";
+              gpa = filtered_gradeData[0]?.gpa || "-";
+            }
             totalMarks += sub.marks;
             totalLimit += sub.marksLimit;
 
@@ -3500,7 +3516,7 @@ module.exports = {
               sub.subject,
               sub.marksLimit,
               sub.marks,
-              result,
+              grade,
             ];
 
             rowData.forEach((value, i) => {
