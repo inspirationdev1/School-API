@@ -526,3 +526,6 @@ module.exports = {
     }
   },
 };
+async function saveAdmissionAttachements(files){
+    
+}
