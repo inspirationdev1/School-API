@@ -303,14 +303,15 @@ module.exports = {
           });
           // break;
         }
-        student_code = item?.student_code;
+
         const student_name = item?.name.trim();
         const str = student_name;
         const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
         console.log(cleaned);
         const email = cleaned + "@mms.com";
         item.email = email;
-
+        student_code = item?.student_code || item.class_name + "-" + item.seq;
+        item.student_code = student_code;
         const classId = await CreateClass(item);
         item.student_class = classId;
 
@@ -387,6 +388,7 @@ module.exports = {
           console.log(item.student_code + +error);
         }
       }
+
       // 👉 save to  here
       //   await Student.insertMany(sheetData);
 
