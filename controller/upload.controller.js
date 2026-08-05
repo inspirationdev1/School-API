@@ -2,8 +2,8 @@ require("dotenv").config();
 
 const XLSX = require("xlsx");
 const fs = require("fs");
-const bcrypt = require("bcryptjs")
-const jwt = require('jsonwebtoken');
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const jwtSecret = process.env.JWTSECRET;
 
@@ -19,642 +19,688 @@ const Generalmaster = require("../model/generalmaster.model");
 const Employee = require("../model/employee.model");
 
 module.exports = {
-    upload_accountlevel: async (req, res) => {
-        try {
-            const schoolId = req.user.schoolId;
-            const filePath = req.file.path;
+  upload_accountlevel: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      const filePath = req.file.path;
 
-            // read excel file
-            const workbook = XLSX.readFile(filePath);
-            const sheetName = workbook.SheetNames[0];
-            const sheetData = XLSX.utils.sheet_to_json(
-                workbook.Sheets[sheetName]
-            );
+      // read excel file
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-            console.log(sheetData); // array of objects
+      console.log(sheetData); // array of objects
 
+      for (const item of sheetData) {
+        item.school = schoolId;
 
-
-
-            for (const item of sheetData) {
-                item.school = schoolId;
-
-                const checkData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.accountlevel_code });
-                console.log("checkData", checkData);
-                if (checkData.length > 0) {
-                    return res.status(500).json({ success: false, message: "Already exist accountlevel code :" + item?.accountlevel_code });
-                    // break;
-                }
-
-
-
-                const groupData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.group_code });
-                console.log("groupData", groupData);
-
-                if (groupData.length > 0) {
-                    item.groupId = groupData[0]?._id || null;
-                } else {
-                    item.groupId = null;
-                }
-            }
-
-            // 👉 save to  here
-            await Accountlevel.insertMany(sheetData);
-            console.log("Date saved", sheetData);
-            fs.unlinkSync(filePath);
-            res.status(200).json({ success: true, data: sheetData, message: "Accountlevel is Uploaded Successfully." })
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message })
+        const checkData = await Accountlevel.find({
+          school: schoolId,
+          accountlevel_code: item?.accountlevel_code,
+        });
+        console.log("checkData", checkData);
+        if (checkData.length > 0) {
+          return res.status(500).json({
+            success: false,
+            message:
+              "Already exist accountlevel code :" + item?.accountlevel_code,
+          });
+          // break;
         }
-    },
-    upload_accountledger: async (req, res) => {
-        try {
-            const schoolId = req.user.schoolId;
-            const filePath = req.file.path;
 
-            // read excel file
-            const workbook = XLSX.readFile(filePath);
-            const sheetName = workbook.SheetNames[0];
-            const sheetData = XLSX.utils.sheet_to_json(
-                workbook.Sheets[sheetName]
-            );
+        const groupData = await Accountlevel.find({
+          school: schoolId,
+          accountlevel_code: item?.group_code,
+        });
+        console.log("groupData", groupData);
 
-            console.log(sheetData); // array of objects
-
-
-
-
-            for (const item of sheetData) {
-                item.school = schoolId;
-
-                const checkData = await Accountledger.find({ school: schoolId, accountledger_code: item?.accountledger_code });
-                console.log("checkData", checkData);
-                if (checkData.length > 0) {
-                    return res.status(500).json({ success: false, message: "Already exist accountledger code :" + item?.accountledger_code });
-                    // break;
-                }
-
-
-
-                const groupData = await Accountlevel.find({ school: schoolId, accountlevel_code: item?.group_code });
-                console.log("groupData", groupData);
-
-                if (groupData.length == 0) {
-                    return res.status(500).json({ success: false, message: "Group code does not exist :" + item?.group_code });
-                } else {
-                    item.groupId = groupData[0]?._id;
-                }
-            }
-
-            // 👉 save to  here
-            await Accountledger.insertMany(sheetData);
-            console.log("Date saved", sheetData);
-            fs.unlinkSync(filePath);
-            res.status(200).json({ success: true, data: sheetData, message: "Accountledger is Uploaded Successfully." })
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message })
+        if (groupData.length > 0) {
+          item.groupId = groupData[0]?._id || null;
+        } else {
+          item.groupId = null;
         }
-    },
-    upload_teacher: async (req, res) => {
-        try {
-            const schoolId = req.user.schoolId;
-            const filePath = req.file.path;
+      }
 
-            // read excel file
-            const workbook = XLSX.readFile(filePath);
-            const sheetName = workbook.SheetNames[0];
-            const sheetData = XLSX.utils.sheet_to_json(
-                workbook.Sheets[sheetName]
-            );
+      // 👉 save to  here
+      await Accountlevel.insertMany(sheetData);
+      console.log("Date saved", sheetData);
+      fs.unlinkSync(filePath);
+      res.status(200).json({
+        success: true,
+        data: sheetData,
+        message: "Accountlevel is Uploaded Successfully.",
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  upload_accountledger: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      const filePath = req.file.path;
 
-            console.log(sheetData); // array of objects
+      // read excel file
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
+      console.log(sheetData); // array of objects
 
-            for (const item of sheetData) {
-                const checkData = await Teacher.find({ school: schoolId, teacher_code: item?.teacher_code });
-                console.log("checkData", checkData);
-                if (checkData.length > 0) {
-                    return res.status(500).json({ success: false, message: "Already exist Teacher Code :" + item?.teacher_code });
-                    // break;
-                }
+      for (const item of sheetData) {
+        item.school = schoolId;
 
-                
-                item.school = schoolId;
-                const password = "12345678";
-                const salt = bcrypt.genSaltSync(10);
-                const hashPassword = bcrypt.hashSync(password, salt);
-                item.password = hashPassword;
-                if (item.gender === 'male') {
-                    item.teacher_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg"
-                } else {
-                    item.teacher_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
-
-                }
-                let excelValue = item?.dOBDate;
-                let jsDate = excelDateToJSDate(excelValue);
-                console.log(jsDate);
-                let dOBDate = jsDate;
-                item.dOBDate = dOBDate;
-
-                excelValue = item?.joinDate;
-                jsDate = excelDateToJSDate(excelValue);
-                console.log(jsDate);
-                let joinDate = jsDate;
-                item.joinDate = joinDate;
-
-                item.generalmaster_type = "designation";
-                item.generalmaster_name = item.designation;
-                const designationId = await CreateGeneralMaster(item);
-                item.designation = designationId||null;
-
-                const employee_id = await CreateEmployee(item);
-                item.employee_id = employee_id||null;
-
-                const teacher_name = item?.name.trim();
-                const str = teacher_name;
-                const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-                console.log(cleaned);
-                const email = cleaned + "@mms.com";
-                item.email = email;
-            }
-
-            // 👉 save to  here
-            await Teacher.insertMany(sheetData);
-            // console.log("Date saved", sheetData);
-
-            fs.unlinkSync(filePath);
-            res.status(200).json({ success: true, data: sheetData, message: "Teacher is Uploaded Successfully." })
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message })
+        const checkData = await Accountledger.find({
+          school: schoolId,
+          accountledger_code: item?.accountledger_code,
+        });
+        console.log("checkData", checkData);
+        if (checkData.length > 0) {
+          return res.status(500).json({
+            success: false,
+            message:
+              "Already exist accountledger code :" + item?.accountledger_code,
+          });
+          // break;
         }
-    },
-    upload_parent: async (req, res) => {
-        try {
-            const schoolId = req.user.schoolId;
-            const filePath = req.file.path;
 
-            // read excel file
-            const workbook = XLSX.readFile(filePath);
-            const sheetName = workbook.SheetNames[0];
-            const sheetData = XLSX.utils.sheet_to_json(
-                workbook.Sheets[sheetName]
-            );
+        const groupData = await Accountlevel.find({
+          school: schoolId,
+          accountlevel_code: item?.group_code,
+        });
+        console.log("groupData", groupData);
 
-            console.log(sheetData); // array of objects
-
-
-            for (const item of sheetData) {
-                const checkData = await Parent.find({ school: schoolId, parent_code: item?.parent_code });
-                console.log("checkData", checkData);
-                if (checkData.length > 0) {
-                    return res.status(500).json({ success: false, message: "Already exist Parent Code :" + item?.parent_code });
-                    // break;
-                }
-                item.school = schoolId;
-                const password = "12345678";
-                const salt = bcrypt.genSaltSync(10);
-                const hashPassword = bcrypt.hashSync(password, salt);
-                item.password = hashPassword;
-                if (item.gender === 'male') {
-                    item.parent_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
-                } else {
-                    item.parent_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
-                }
-                let excelValue = item?.dOBDate;
-                let jsDate = excelDateToJSDate(excelValue);
-                console.log(jsDate);
-                let dOBDate = jsDate;
-                item.dOBDate = dOBDate;
-
-                excelValue = item?.joinDate;
-                jsDate = excelDateToJSDate(excelValue);
-                console.log(jsDate);
-                let joinDate = jsDate;
-                item.joinDate = joinDate;
-            }
-
-            // 👉 save to  here
-            await Parent.insertMany(sheetData);
-            console.log("Date saved", sheetData);
-
-            fs.unlinkSync(filePath);
-            res.status(200).json({ success: true, data: sheetData, message: "Parent is Uploaded Successfully." })
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message })
+        if (groupData.length == 0) {
+          return res.status(500).json({
+            success: false,
+            message: "Group code does not exist :" + item?.group_code,
+          });
+        } else {
+          item.groupId = groupData[0]?._id;
         }
-    },
-    upload_student: async (req, res) => {
-        let student_code = "";
-        try {
-            const schoolId = req.user.schoolId;
-            const filePath = req.file.path;
+      }
 
-            // read excel file
-            const workbook = XLSX.readFile(filePath);
-            const sheetName = workbook.SheetNames[0];
-            const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      // 👉 save to  here
+      await Accountledger.insertMany(sheetData);
+      console.log("Date saved", sheetData);
+      fs.unlinkSync(filePath);
+      res.status(200).json({
+        success: true,
+        data: sheetData,
+        message: "Accountledger is Uploaded Successfully.",
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  upload_teacher: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      const filePath = req.file.path;
 
-            console.log(sheetData); // array of objects
-            //Mapping Data and Checking Data
-            for (const item of sheetData) {
-                item.school = schoolId;
-                const checkData = await Student.find({
-                    school: schoolId,
-                    student_code: item?.student_code,
-                });
-                console.log("checkData", checkData);
-                if (checkData.length > 0) {
-                    return res.status(500).json({
-                        success: false,
-                        message: "Already exist Student Code :" + item?.student_code,
-                    });
-                    // break;
-                }
-                student_code = item?.student_code;
-                const student_name = item?.name.trim();
-                const str = student_name;
-                const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-                console.log(cleaned);
-                const email = cleaned + "@mms.com";
-                item.email = email;
+      // read excel file
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-                const classId = await CreateClass(item);
-                item.student_class = classId;
+      console.log(sheetData); // array of objects
 
-                const sectionId = await CreateSection(item);
-                item.section = sectionId;
-
-                const parentId = await CreateParent(item);
-                item.parent = parentId;
-
-                const password = "12345678";
-                const salt = bcrypt.genSaltSync(10);
-                const hashPassword = bcrypt.hashSync(password, salt);
-                item.password = hashPassword;
-
-                let gender = item?.gender.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-
-                if (gender === "b") {
-                    gender = "male";
-                    item.gender = gender;
-                    item.student_image =
-                        "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
-                } else {
-                    gender = "female";
-                    item.gender = gender;
-                    item.student_image =
-                        "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
-                }
-
-                let excelValue = item?.dOBDate;
-                let jsDate = excelDateToJSDate(excelValue);
-                console.log(jsDate);
-
-                let dOBDate = new Date();
-                if (item?.dOBDate) {
-                    if (jsDate == "Invalid Date") {
-                        const [dd, mm, yyyy] = item?.dOBDate.split("/").map(Number);
-                        dOBDate = new Date(Date.UTC(yyyy, mm - 1, dd));
-                    } else {
-                        dOBDate = jsDate;
-                    }
-                }
-
-                item.dOBDate = dOBDate;
-                if (item.dOBDate === "Invalid Date") {
-                    console.log("student_code", student_code);
-                }
-
-                // item.dOBDate = new Date();
-                excelValue = item?.joinDate;
-                jsDate = excelDateToJSDate(excelValue);
-                console.log(jsDate);
-
-                let joinDate = new Date();
-                if (item?.joinDate) {
-                    if (jsDate == "Invalid Date") {
-                        const [dd, mm, yyyy] = item?.joinDate.split("/").map(Number);
-                        joinDate = new Date(Date.UTC(yyyy, mm - 1, dd));
-                    } else {
-                        joinDate = jsDate;
-                    }
-                }
-
-                item.joinDate = joinDate;
-                const phoneno = item?.guardian_phone || "1234567890";
-                item.guardian_phone = phoneno;
-            }
-
-            //Saving Data
-            for (const item of sheetData) {
-                try {
-                    const newStudent = new Student(item);
-                    const savedData = await newStudent.save();
-                } catch (error) {
-                    console.log(item.student_code + + error);
-                }
-            }
-            // 👉 save to  here
-            //   await Student.insertMany(sheetData);
-
-            console.log("Date saved", sheetData);
-
-            fs.unlinkSync(filePath);
-            res.status(200).json({
-                success: true,
-                data: sheetData,
-                message: "Student is Uploaded Successfully.",
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                message: "student_code:" + student_code + "-" + error.message,
-            });
+      for (const item of sheetData) {
+        const checkData = await Teacher.find({
+          school: schoolId,
+          teacher_code: item?.teacher_code,
+        });
+        console.log("checkData", checkData);
+        if (checkData.length > 0) {
+          return res.status(500).json({
+            success: false,
+            message: "Already exist Teacher Code :" + item?.teacher_code,
+          });
+          // break;
         }
-    },
-    upload_class: async (req, res) => {
-        try {
-            const schoolId = req.user.schoolId;
-            const filePath = req.file.path;
 
-            // read excel file
-            const workbook = XLSX.readFile(filePath);
-            const sheetName = workbook.SheetNames[0];
-            const sheetData = XLSX.utils.sheet_to_json(
-                workbook.Sheets[sheetName]
-            );
-
-            console.log(sheetData); // array of objects
-
-
-            for (const item of sheetData) {
-                const checkData = await Class.find({ school: schoolId, class_code: item?.class_code });
-                console.log("checkData", checkData);
-                if (checkData.length > 0) {
-                    return res.status(500).json({ success: false, message: "Already exist Class Code :" + item?.class_code });
-                    // break;
-                }
-
-
-
-                item.school = schoolId;
-
-            }
-
-            // 👉 save to  here
-            await Class.insertMany(sheetData);
-            console.log("Date saved", sheetData);
-
-            fs.unlinkSync(filePath);
-            res.status(200).json({ success: true, data: sheetData, message: "Class is Uploaded Successfully." })
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message })
+        item.school = schoolId;
+        const password = "12345678";
+        const salt = bcrypt.genSaltSync(10);
+        const hashPassword = bcrypt.hashSync(password, salt);
+        item.password = hashPassword;
+        if (item.gender === "male") {
+          item.teacher_image =
+            "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
+        } else {
+          item.teacher_image =
+            "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
         }
-    },
-    upload_section: async (req, res) => {
-        try {
-            const schoolId = req.user.schoolId;
-            const filePath = req.file.path;
+        let excelValue = item?.dOBDate;
+        let jsDate = excelDateToJSDate(excelValue);
+        console.log(jsDate);
+        let dOBDate = jsDate;
+        item.dOBDate = dOBDate;
 
-            // read excel file
-            const workbook = XLSX.readFile(filePath);
-            const sheetName = workbook.SheetNames[0];
-            const sheetData = XLSX.utils.sheet_to_json(
-                workbook.Sheets[sheetName]
-            );
+        excelValue = item?.joinDate;
+        jsDate = excelDateToJSDate(excelValue);
+        console.log(jsDate);
+        let joinDate = jsDate;
+        item.joinDate = joinDate;
 
-            console.log(sheetData); // array of objects
+        item.generalmaster_type = "designation";
+        item.generalmaster_name = item.designation;
+        const designationId = await CreateGeneralMaster(item);
+        item.designation = designationId || null;
 
+        const employee_id = await CreateEmployee(item);
+        item.employee_id = employee_id || null;
 
-            for (const item of sheetData) {
-                const checkData = await Section.find({ school: schoolId, section_code: item?.section_code });
-                console.log("checkData", checkData);
-                if (checkData.length > 0) {
-                    return res.status(500).json({ success: false, message: "Already exist Section Code :" + item?.section_code });
-                    // break;
-                }
+        const teacher_name = item?.name.trim();
+        const str = teacher_name;
+        const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+        console.log(cleaned);
+        const email = cleaned + "@mms.com";
+        item.email = email;
+      }
 
+      // 👉 save to  here
+      await Teacher.insertMany(sheetData);
+      // console.log("Date saved", sheetData);
 
+      fs.unlinkSync(filePath);
+      res.status(200).json({
+        success: true,
+        data: sheetData,
+        message: "Teacher is Uploaded Successfully.",
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  upload_parent: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      const filePath = req.file.path;
 
-                item.school = schoolId;
+      // read excel file
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-            }
+      console.log(sheetData); // array of objects
 
-            // 👉 save to  here
-            await Section.insertMany(sheetData);
-            console.log("Date saved", sheetData);
-
-            fs.unlinkSync(filePath);
-            res.status(200).json({ success: true, data: sheetData, message: "Section is Uploaded Successfully." })
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message })
+      for (const item of sheetData) {
+        const checkData = await Parent.find({
+          school: schoolId,
+          parent_code: item?.parent_code,
+        });
+        console.log("checkData", checkData);
+        if (checkData.length > 0) {
+          return res.status(500).json({
+            success: false,
+            message: "Already exist Parent Code :" + item?.parent_code,
+          });
+          // break;
         }
-    },
-}
+        item.school = schoolId;
+        const password = "12345678";
+        const salt = bcrypt.genSaltSync(10);
+        const hashPassword = bcrypt.hashSync(password, salt);
+        item.password = hashPassword;
+        if (item.gender === "male") {
+          item.parent_image =
+            "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
+        } else {
+          item.parent_image =
+            "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
+        }
+        let excelValue = item?.dOBDate;
+        let jsDate = excelDateToJSDate(excelValue);
+        console.log(jsDate);
+        let dOBDate = jsDate;
+        item.dOBDate = dOBDate;
+
+        excelValue = item?.joinDate;
+        jsDate = excelDateToJSDate(excelValue);
+        console.log(jsDate);
+        let joinDate = jsDate;
+        item.joinDate = joinDate;
+      }
+
+      // 👉 save to  here
+      await Parent.insertMany(sheetData);
+      console.log("Date saved", sheetData);
+
+      fs.unlinkSync(filePath);
+      res.status(200).json({
+        success: true,
+        data: sheetData,
+        message: "Parent is Uploaded Successfully.",
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  upload_student: async (req, res) => {
+    let student_code = "";
+    try {
+      const schoolId = req.user.schoolId;
+      const filePath = req.file.path;
+
+      // read excel file
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+      console.log(sheetData); // array of objects
+      //Mapping Data and Checking Data
+      for (const item of sheetData) {
+        item.school = schoolId;
+        const checkData = await Student.find({
+          school: schoolId,
+          student_code: item?.student_code,
+        });
+        console.log("checkData", checkData);
+        if (checkData.length > 0) {
+          return res.status(500).json({
+            success: false,
+            message: "Already exist Student Code :" + item?.student_code,
+          });
+          // break;
+        }
+        student_code = item?.student_code;
+        const student_name = item?.name.trim();
+        const str = student_name;
+        const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+        console.log(cleaned);
+        const email = cleaned + "@mms.com";
+        item.email = email;
+
+        const classId = await CreateClass(item);
+        item.student_class = classId;
+
+        const sectionId = await CreateSection(item);
+        item.section = sectionId;
+
+        const parentId = await CreateParent(item);
+        item.parent = parentId;
+
+        const password = "12345678";
+        const salt = bcrypt.genSaltSync(10);
+        const hashPassword = bcrypt.hashSync(password, salt);
+        item.password = hashPassword;
+
+        let gender = item?.gender.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+        if (gender === "b") {
+          gender = "male";
+          item.gender = gender;
+          item.student_image =
+            "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
+        } else {
+          gender = "female";
+          item.gender = gender;
+          item.student_image =
+            "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
+        }
+
+        let excelValue = item?.dOBDate;
+        let jsDate = excelDateToJSDate(excelValue);
+        console.log(jsDate);
+
+        let dOBDate = new Date();
+        if (item?.dOBDate) {
+          if (jsDate == "Invalid Date") {
+            const [dd, mm, yyyy] = item?.dOBDate.split("/").map(Number);
+            dOBDate = new Date(Date.UTC(yyyy, mm - 1, dd));
+          } else {
+            dOBDate = jsDate;
+          }
+        }
+
+        item.dOBDate = dOBDate;
+        if (item.dOBDate === "Invalid Date") {
+          console.log("student_code", student_code);
+        }
+
+        // item.dOBDate = new Date();
+        excelValue = item?.joinDate;
+        jsDate = excelDateToJSDate(excelValue);
+        console.log(jsDate);
+
+        let joinDate = new Date();
+        if (item?.joinDate) {
+          if (jsDate == "Invalid Date") {
+            const [dd, mm, yyyy] = item?.joinDate.split("/").map(Number);
+            joinDate = new Date(Date.UTC(yyyy, mm - 1, dd));
+          } else {
+            joinDate = jsDate;
+          }
+        }
+
+        item.joinDate = joinDate;
+        const phoneno = item?.guardian_phone || "1234567890";
+        item.guardian_phone = phoneno;
+      }
+
+      //Saving Data
+      for (const item of sheetData) {
+        try {
+          const newStudent = new Student(item);
+          const savedData = await newStudent.save();
+        } catch (error) {
+          console.log(item.student_code + +error);
+        }
+      }
+      // 👉 save to  here
+      //   await Student.insertMany(sheetData);
+
+      console.log("Date saved", sheetData);
+
+      fs.unlinkSync(filePath);
+      res.status(200).json({
+        success: true,
+        data: sheetData,
+        message: "Student is Uploaded Successfully.",
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "student_code:" + student_code + "-" + error.message,
+      });
+    }
+  },
+  upload_class: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      const filePath = req.file.path;
+
+      // read excel file
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+      console.log(sheetData); // array of objects
+
+      for (const item of sheetData) {
+        const checkData = await Class.find({
+          school: schoolId,
+          class_code: item?.class_code,
+        });
+        console.log("checkData", checkData);
+        if (checkData.length > 0) {
+          return res.status(500).json({
+            success: false,
+            message: "Already exist Class Code :" + item?.class_code,
+          });
+          // break;
+        }
+
+        item.school = schoolId;
+      }
+
+      // 👉 save to  here
+      await Class.insertMany(sheetData);
+      console.log("Date saved", sheetData);
+
+      fs.unlinkSync(filePath);
+      res.status(200).json({
+        success: true,
+        data: sheetData,
+        message: "Class is Uploaded Successfully.",
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  upload_section: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      const filePath = req.file.path;
+
+      // read excel file
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+      console.log(sheetData); // array of objects
+
+      for (const item of sheetData) {
+        const checkData = await Section.find({
+          school: schoolId,
+          section_code: item?.section_code,
+        });
+        console.log("checkData", checkData);
+        if (checkData.length > 0) {
+          return res.status(500).json({
+            success: false,
+            message: "Already exist Section Code :" + item?.section_code,
+          });
+          // break;
+        }
+
+        item.school = schoolId;
+      }
+
+      // 👉 save to  here
+      await Section.insertMany(sheetData);
+      console.log("Date saved", sheetData);
+
+      fs.unlinkSync(filePath);
+      res.status(200).json({
+        success: true,
+        data: sheetData,
+        message: "Section is Uploaded Successfully.",
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+};
 
 function excelDateToJSDate(serial) {
-    const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel base date
-    const days = Number(serial);
+  const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel base date
+  const days = Number(serial);
 
-    const result = new Date(excelEpoch.getTime() + days * 86400000);
-    return result;
+  const result = new Date(excelEpoch.getTime() + days * 86400000);
+  return result;
 }
 
 async function CreateParent(studentData) {
-    let parentId = "";
-    try {
+  let parentId = "";
+  try {
+    const parent_name = studentData?.parent_name || studentData?.name;
+    const mother_name = studentData?.mother_name || studentData?.name;
 
-        const parent_name = studentData?.parent_name || studentData?.name;
-
-        const existing = await Parent.find({ name: parent_name, school: studentData.school }).lean();
-        if (existing.length > 0) {
-            parentId = existing[0]?._id;
-            return parentId;
-        }
-
-
-        const salt = bcrypt.genSaltSync(10);
-        const hashPassword = bcrypt.hashSync("12345678", salt);
-        const str = parent_name;
-        const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-        console.log(cleaned);
-        const email = cleaned + "@mms.com";
-        const gender = "male";
-        const dOBDate = new Date("01/01/1990");
-        const joinDate = new Date("01/01/2000");
-        const year = joinDate.getFullYear();
-        const photoUrl = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
-        const phoneno = studentData?.guardian_phone || "1234567890";
-        const newParent = new Parent({
-            email: email,
-            name: parent_name,
-            parent_code: parent_name,
-            qualification: "",
-            age: "",
-            gender: gender,
-            dOBDate: dOBDate,
-            joinDate: joinDate,
-            year: year,
-            parent_image: photoUrl,
-            password: hashPassword,
-            school: studentData.school,
-            phoneno: phoneno
-        })
-
-        const savedData = await newParent.save();
-        parentId = savedData?._id;
-        console.log("parentId", parentId);
-        return parentId;
-
-    } catch (e) {
-        console.log("Error in Parent Register:", e);
-        return parentId;
+    const existing = await Parent.find({
+      name: parent_name,
+      school: studentData.school,
+    }).lean();
+    if (existing.length > 0) {
+      parentId = existing[0]?._id;
+      return parentId;
     }
+
+    const salt = bcrypt.genSaltSync(10);
+    const hashPassword = bcrypt.hashSync("12345678", salt);
+    const str = parent_name;
+    const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    console.log(cleaned);
+    const email = cleaned + "@mms.com";
+    const gender = "male";
+    const dOBDate = new Date("01/01/1990");
+    const joinDate = new Date("01/01/2000");
+    const year = joinDate.getFullYear();
+    const photoUrl =
+      "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
+    const phoneno = studentData?.guardian_phone || "1234567890";
+    const newParent = new Parent({
+      email: email,
+      name: parent_name,
+      father_name: parent_name,
+      mother_name: mother_name,
+      parent_code: parent_name,
+      qualification: "",
+      age: "",
+      gender: gender,
+      dOBDate: dOBDate,
+      joinDate: joinDate,
+      year: year,
+      parent_image: photoUrl,
+      password: hashPassword,
+      school: studentData.school,
+      phoneno: phoneno,
+    });
+
+    const savedData = await newParent.save();
+    parentId = savedData?._id;
+    console.log("parentId", parentId);
+    return parentId;
+  } catch (e) {
+    console.log("Error in Parent Register:", e);
+    return parentId;
+  }
 }
 
 async function CreateSection(studentData) {
-    let sectionId = "";
-    try {
-
-        const section_name = studentData.section_name
-        const existing = await Section.find({ section_name: section_name, school: studentData.school }).lean();
-        if (existing.length > 0) {
-            sectionId = existing[0]?._id;
-            return sectionId;
-        }
-
-
-
-        const newSection = new Section({
-            section_code: section_name,
-            section_name: section_name,
-            school: studentData.school,
-        })
-
-        const savedData = await newSection.save();
-        sectionId = savedData?._id;
-        console.log("sectionId", sectionId);
-        return sectionId;
-
-    } catch (e) {
-        console.log("Error in Section Register:", e);
-        return sectionId;
+  let sectionId = "";
+  try {
+    const section_name = studentData.section_name;
+    const existing = await Section.find({
+      section_name: section_name,
+      school: studentData.school,
+    }).lean();
+    if (existing.length > 0) {
+      sectionId = existing[0]?._id;
+      return sectionId;
     }
+
+    const newSection = new Section({
+      section_code: section_name,
+      section_name: section_name,
+      school: studentData.school,
+    });
+
+    const savedData = await newSection.save();
+    sectionId = savedData?._id;
+    console.log("sectionId", sectionId);
+    return sectionId;
+  } catch (e) {
+    console.log("Error in Section Register:", e);
+    return sectionId;
+  }
 }
 
 async function CreateClass(studentData) {
-    let classId = "";
-    try {
-
-        const class_name = studentData.class_name
-        const existing = await Class.find({ class_name: class_name, school: studentData.school }).lean();
-        if (existing.length > 0) {
-            classId = existing[0]?._id;
-            return classId;
-        }
-
-        const newClass = new Class({
-            class_code: class_name,
-            class_name: class_name,
-            school: studentData.school,
-        })
-
-        const savedData = await newClass.save();
-        classId = savedData?._id;
-        console.log("classId", classId);
-        return classId;
-
-    } catch (e) {
-        console.log("Error in Class Register:", e);
-        return classId;
+  let classId = "";
+  try {
+    const class_name = studentData.class_name;
+    const existing = await Class.find({
+      class_name: class_name,
+      school: studentData.school,
+    }).lean();
+    if (existing.length > 0) {
+      classId = existing[0]?._id;
+      return classId;
     }
+
+    const newClass = new Class({
+      class_code: class_name,
+      class_name: class_name,
+      school: studentData.school,
+    });
+
+    const savedData = await newClass.save();
+    classId = savedData?._id;
+    console.log("classId", classId);
+    return classId;
+  } catch (e) {
+    console.log("Error in Class Register:", e);
+    return classId;
+  }
 }
 
 async function CreateGeneralMaster(gmData) {
-    let generalmaster_id = "";
-    try {
-
-        const generalmaster_name = gmData?.generalmaster_name;
-        const existing = await Generalmaster.find({ generalmaster_name: generalmaster_name, school: gmData.school }).lean();
-        if (existing.length > 0) {
-            generalmaster_id = existing[0]?._id;
-            return generalmaster_id;
-        }
-
-        const newGeneralmaster = new Generalmaster({
-            generalmaster_code: generalmaster_name,
-            generalmaster_name: generalmaster_name,
-            generalmaster_type: gmData.generalmaster_type,
-            school: gmData.school,
-        })
-
-        const savedData = await newGeneralmaster.save();
-        generalmaster_id = savedData?._id;
-        console.log("generalmaster_id", generalmaster_id);
-        return generalmaster_id;
-
-    } catch (e) {
-        console.log("Error in Generalmaster Register:", e);
-        return generalmaster_id;
+  let generalmaster_id = "";
+  try {
+    const generalmaster_name = gmData?.generalmaster_name;
+    const existing = await Generalmaster.find({
+      generalmaster_name: generalmaster_name,
+      school: gmData.school,
+    }).lean();
+    if (existing.length > 0) {
+      generalmaster_id = existing[0]?._id;
+      return generalmaster_id;
     }
+
+    const newGeneralmaster = new Generalmaster({
+      generalmaster_code: generalmaster_name,
+      generalmaster_name: generalmaster_name,
+      generalmaster_type: gmData.generalmaster_type,
+      school: gmData.school,
+    });
+
+    const savedData = await newGeneralmaster.save();
+    generalmaster_id = savedData?._id;
+    console.log("generalmaster_id", generalmaster_id);
+    return generalmaster_id;
+  } catch (e) {
+    console.log("Error in Generalmaster Register:", e);
+    return generalmaster_id;
+  }
 }
 
 async function CreateEmployee(employeeData) {
-    let employee_id = "";
-    try {
+  let employee_id = "";
+  try {
+    const employee_name = employeeData?.name;
 
-        const employee_name = employeeData?.name;
-
-        const existing = await Employee.find({ employee_name: employee_name, school: employeeData.school }).lean();
-        if (existing.length > 0) {
-            employee_id = existing[0]?._id;
-            return employee_id;
-        }
-
-
-        const salt = bcrypt.genSaltSync(10);
-        const hashPassword = bcrypt.hashSync("12345678", salt);
-        const str = employee_name;
-        const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-        console.log(cleaned);
-        const email = cleaned + "@mms.com";
-        const gender = employeeData?.gender||"male";
-        const dOBDate = new Date("01/01/1990");
-        const joinDate = new Date("01/01/2000");
-        const year = joinDate.getFullYear();
-        if (employeeData.gender === 'male') {
-                    employeeData.employee_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg"
-                } else {
-                    employeeData.employee_image = "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
-
-                }
-        const phoneno = employeeData?.guardian_phone || "1234567890";
-        const newEmployee = new Employee({
-            email: email,
-            employee_name: employee_name,
-            employee_code: employee_name,
-            qualification: "",
-            age: "",
-            gender: gender,
-            dOBDate: dOBDate,
-            joinDate: joinDate,
-            year: year,
-            employee_image: employeeData.employee_image,
-            password: hashPassword,
-            school: employeeData.school,
-            phoneno: phoneno,
-            employeetype: employeeData?.employeetype,
-            qualification: employeeData?.qualification
-        })
-
-        const savedData = await newEmployee.save();
-        employee_id = savedData?._id;
-        console.log("employee_id", employee_id);
-        return employee_id;
-
-    } catch (e) {
-        console.log("Error in Employee Register:", e);
-        return employee_id;
+    const existing = await Employee.find({
+      employee_name: employee_name,
+      school: employeeData.school,
+    }).lean();
+    if (existing.length > 0) {
+      employee_id = existing[0]?._id;
+      return employee_id;
     }
-}
 
+    const salt = bcrypt.genSaltSync(10);
+    const hashPassword = bcrypt.hashSync("12345678", salt);
+    const str = employee_name;
+    const cleaned = str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    console.log(cleaned);
+    const email = cleaned + "@mms.com";
+    const gender = employeeData?.gender || "male";
+    const dOBDate = new Date("01/01/1990");
+    const joinDate = new Date("01/01/2000");
+    const year = joinDate.getFullYear();
+    if (employeeData.gender === "male") {
+      employeeData.employee_image =
+        "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155794/teachers/1776155793311_parent1.jfif.jpg";
+    } else {
+      employeeData.employee_image =
+        "https://res.cloudinary.com/da3dxqer8/image/upload/v1776155842/teachers/1776155841196_parent2.jfif.jpg";
+    }
+    const phoneno = employeeData?.guardian_phone || "1234567890";
+    const newEmployee = new Employee({
+      email: email,
+      employee_name: employee_name,
+      employee_code: employee_name,
+      qualification: "",
+      age: "",
+      gender: gender,
+      dOBDate: dOBDate,
+      joinDate: joinDate,
+      year: year,
+      employee_image: employeeData.employee_image,
+      password: hashPassword,
+      school: employeeData.school,
+      phoneno: phoneno,
+      employeetype: employeeData?.employeetype,
+      qualification: employeeData?.qualification,
+    });
+
+    const savedData = await newEmployee.save();
+    employee_id = savedData?._id;
+    console.log("employee_id", employee_id);
+    return employee_id;
+  } catch (e) {
+    console.log("Error in Employee Register:", e);
+    return employee_id;
+  }
+}

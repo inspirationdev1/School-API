@@ -99,6 +99,8 @@ module.exports = {
         const newParent = new Parent({
           email: fields.email[0],
           name: fields.name[0],
+          father_name: fields.name[0],
+          mother_name: fields.mother_name[0],
           qualification: fields.qualification[0],
           age: fields.age[0],
           gender: fields.gender[0],
