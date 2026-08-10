@@ -291,15 +291,16 @@ module.exports = {
       //Mapping Data and Checking Data
       for (const item of sheetData) {
         item.school = schoolId;
+        student_code = item?.student_code || item.class_name + "-" + item.seq;
         const checkData = await Student.find({
           school: schoolId,
-          student_code: item?.student_code,
+          student_code: student_code,
         });
         console.log("checkData", checkData);
         if (checkData.length > 0) {
           return res.status(500).json({
             success: false,
-            message: "Already exist Student Code :" + item?.student_code,
+            message: "Already exist Student Code :" + student_code,
           });
           // break;
         }
@@ -310,7 +311,7 @@ module.exports = {
         console.log(cleaned);
         const email = cleaned + "@mms.com";
         item.email = email;
-        student_code = item?.student_code || item.class_name + "-" + item.seq;
+        // student_code = item?.student_code || item.class_name + "-" + item.seq;
         item.student_code = student_code;
         const classId = await CreateClass(item);
         item.student_class = classId;
@@ -385,7 +386,7 @@ module.exports = {
           const newStudent = new Student(item);
           const savedData = await newStudent.save();
         } catch (error) {
-          console.log(item.student_code + +error);
+          console.log("student_code : " + item?.student_code + error);
         }
       }
 

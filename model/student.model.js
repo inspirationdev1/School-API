@@ -7,6 +7,7 @@ const studentSchema = new mongoose.Schema({
   student_code: { type: String, required: true },
   seq: { type: Number, default: 0 },
   student_class: { type: mongoose.Schema.ObjectId, ref: "Class" },
+  class_name: { type: String, default: null },
   section: { type: mongoose.Schema.ObjectId, ref: "Section", required: true },
   parent: { type: mongoose.Schema.ObjectId, ref: "Parent", required: true },
   dOBDate: { type: Date, required: true },

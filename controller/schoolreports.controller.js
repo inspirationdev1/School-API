@@ -1702,6 +1702,7 @@ module.exports = {
         .populate("section")
         .populate("parent")
         .populate("school")
+        .sort({ _id: 1 })
         .lean();
 
       if (requesttype === "PDF") {
@@ -1816,12 +1817,13 @@ module.exports = {
 
         const columns = [
           { label: "Student Name", key: "name", width: tableWidth * 0.15 },
+          { label: "Code", key: "student_code", width: tableWidth * 0.08 },
           { label: "Gender", key: "gender", width: tableWidth * 0.08 },
           { label: "Parent Name", key: "parent", width: tableWidth * 0.15 },
           { label: "DOB", key: "dOBDate", width: tableWidth * 0.12 },
           { label: "Adm Date", key: "joinDate", width: tableWidth * 0.12 },
-          { label: "Class", key: "class", width: tableWidth * 0.1 },
-          { label: "Section", key: "section", width: tableWidth * 0.08 },
+          { label: "Class", key: "class", width: tableWidth * 0.06 },
+          { label: "Section", key: "section", width: tableWidth * 0.06 },
           { label: "Pen", key: "pen", width: tableWidth * 0.1 },
           { label: "Aadhar", key: "aadhar", width: tableWidth * 0.1 },
         ];
@@ -1874,6 +1876,9 @@ module.exports = {
             switch (col.key) {
               case "name":
                 value = row.name;
+                break;
+              case "student_code":
+                value = row.student_code;
                 break;
               case "gender":
                 value = row.gender;

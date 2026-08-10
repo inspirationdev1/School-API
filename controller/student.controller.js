@@ -26,8 +26,14 @@ module.exports = {
       const schoolId = req.user.schoolId;
       console.log(schoolId, "schoolId");
       filterQuery["school"] = schoolId;
+      // if (req.query.hasOwnProperty("search")) {
+      //   filterQuery["name"] = { $regex: req.query.search, $options: "i" };
+      // }
       if (req.query.hasOwnProperty("search")) {
-        filterQuery["name"] = { $regex: req.query.search, $options: "i" };
+        filterQuery.$or = [
+          { name: { $regex: req.query.search, $options: "i" } },
+          { class_name: { $regex: req.query.search, $options: "i" } },
+        ];
       }
 
       if (req.query.hasOwnProperty("student_class")) {
@@ -55,8 +61,7 @@ module.exports = {
         .populate("religion")
         .populate("mothertongue")
         .populate("modeoftransport")
-        .populate("firstlanguage")
-        ;
+        .populate("firstlanguage");
       res.status(200).json({ success: true, data: filteredStudents });
     } catch (error) {
       console.log("Error in fetching Student with query", error);
@@ -246,9 +251,7 @@ module.exports = {
         .populate("religion")
         .populate("mothertongue")
         .populate("modeoftransport")
-        .populate("firstlanguage")
-        ;
-
+        .populate("firstlanguage");
       if (resp) {
         const admissionAttachments = await Admissionattachment.find({
           student_id: id, // ✅ probably should be student instead of _id
@@ -526,6 +529,4 @@ module.exports = {
     }
   },
 };
-async function saveAdmissionAttachements(files){
-    
-}
+async function saveAdmissionAttachements(files) {}
