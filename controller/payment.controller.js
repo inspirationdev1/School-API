@@ -16,7 +16,9 @@ module.exports = {
   getAllPayments: async (req, res) => {
     try {
       const schoolId = req.user.schoolId;
-      const allPayment = await Payment.find({ school: schoolId });
+      const allPayment = await Payment.find({ school: schoolId }).sort({
+        createdAt: -1,
+      });
       res.status(200).json({
         success: true,
         message: "Success in fetching all  Payment",
