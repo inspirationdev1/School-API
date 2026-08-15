@@ -21,16 +21,19 @@ module.exports = {
       const filterQuery = {};
       const schoolId = req.user.schoolId;
       filterQuery["school"] = schoolId;
+      
       if (req.query.hasOwnProperty("search")) {
-        filterQuery["name"] = { $regex: req.query.search, $options: "i" };
+        filterQuery.$or = [
+          { name: { $regex: req.query.search, $options: "i" } },
+          { teacher_code: { $regex: req.query.search, $options: "i" } },
+        ];
       }
 
       if (req.user?.role === "TEACHER") {
         filterQuery["_id"] = req.user.id;
       }
 
-      const filteredTeachers =
-        await Teacher.find(filterQuery);
+      const filteredTeachers = await Teacher.find(filterQuery);
       res.status(200).json({ success: true, data: filteredTeachers });
     } catch (error) {
       console.log("Error in fetching Teacher with query", error);
@@ -42,6 +45,7 @@ module.exports = {
   },
 
   registerTeacher: async (req, res) => {
+    let code = "";
     const form = new formidable.IncomingForm();
 
     form.parse(req, async (err, fields, files) => {
@@ -78,11 +82,14 @@ module.exports = {
         });
         console.log("numberseqData.data", numberseqData);
         let seq = 1;
-        let code = "";
-        if (numberseqData) {
-          seq = numberseqData.seq || 1;
-          code = numberseqData.code || "";
+        code = fields.teacher_code[0] || "";
+        if (code == "") {
+          if (numberseqData) {
+            seq = numberseqData.seq || 1;
+            code = numberseqData.code || "";
+          }
         }
+
         //******** */
         const newTeacher = new Teacher({
           email: fields.email[0],
@@ -119,9 +126,10 @@ module.exports = {
         });
       } catch (e) {
         console.log("Error in Register:", e);
-        res
-          .status(500)
-          .json({ success: false, message: "Failed Registration." });
+        res.status(500).json({
+          success: false,
+          message: "Failed Registration." + "code=" + code + e.message,
+        });
       }
     });
   },
