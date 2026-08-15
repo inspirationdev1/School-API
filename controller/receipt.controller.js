@@ -13,7 +13,9 @@ module.exports = {
   getAllReceipts: async (req, res) => {
     try {
       const schoolId = req.user.schoolId;
-      const allReceipt = await Receipt.find({ school: schoolId });
+      const allReceipt = await Receipt.find({ school: schoolId }).sort({
+        createdAt: -1,
+      });
       res.status(200).json({
         success: true,
         message: "Success in fetching all  Receipt",
