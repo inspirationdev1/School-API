@@ -732,7 +732,8 @@ module.exports = {
         .populate("student")
         .populate("class")
         .populate("section")
-        .populate("school");
+        .populate("school")
+        .sort({ _id: -1 });
       res.status(200).json({ success: true, data: filteredSalesinvoices });
     } catch (error) {
       console.log("Error in fetching Student with query", error);
