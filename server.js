@@ -1,9 +1,12 @@
 require("dotenv").config();
+const dns = require("dns");
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
+const { connectRedis } = require("./config/redis.js");
 
 // ROUTERS
 const schoolRouter = require("./router/school.router");
@@ -161,6 +164,16 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log("Server is running at port =>", PORT);
-  console.log("Test dev3-task-1");
-  console.log("Test dev1-task-1");
 });
+
+const startServer = async () => {
+  try {
+    // Try Redis once
+    await connectRedis();
+
+   
+  } catch (error) {
+    console.error("Server startup error:", error);
+  }
+};
+startServer();
