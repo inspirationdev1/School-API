@@ -180,10 +180,7 @@ module.exports = {
     },
     getAttendeeTeacher: async(req, res)=>{
         try {
-        //     let attendeeClass =await Class.find({attendee:req.user.id});
-        //    attendeeClass = attendeeClass.map(x=>{
-        //   return {class_code:x.class_code,class_name: x.class_name,classId: x._id}
-        // })
+        
         let attendeeClass =await Attendee.find({teacher:req.user.id}).populate("class");
             
            attendeeClass = attendeeClass.map(x=>{
