@@ -165,15 +165,16 @@ const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log("Server is running at port =>", PORT);
 });
+const redisEnabled = process.env.REDIS_ENABLED === "true";
 
 const startServer = async () => {
   try {
     // Try Redis once
     await connectRedis();
-
-   
   } catch (error) {
     console.error("Server startup error:", error);
   }
 };
-startServer();
+if (redisEnabled) {
+  startServer();
+}

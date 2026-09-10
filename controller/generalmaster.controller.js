@@ -1,4 +1,5 @@
 require("dotenv").config();
+const redisTTL = Number(process.env.REDIS_TTL) || 300;
 // import redisClient from "../config/redis.js";
 const { redisClient } = require("../config/redis.js");
 
@@ -31,7 +32,7 @@ module.exports = {
         // 3. Store result in Redis
         await redisClient.setEx(
           cacheKey,
-          300,
+          redisTTL,
           JSON.stringify(allGeneralmaster),
         );
       }
@@ -90,7 +91,7 @@ module.exports = {
         // 3. Store result in Redis
         await redisClient.setEx(
           cacheKey,
-          300,
+          redisTTL,
           JSON.stringify(filteredGeneralmasters),
         );
       }
