@@ -178,12 +178,7 @@ app.get("/health", (req, res) => {
     instance: INSTANCE,
   });
 });
-// app.listen(PORT, () => {
-//   console.log("Server is running at port =>", PORT);
-// });
-// app.listen(PORT, () => {
-//   console.log("Server is running at port =>", PORT);
-// });
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`${INSTANCE} running on port ${PORT}`);
 });
