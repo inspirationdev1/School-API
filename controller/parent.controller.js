@@ -39,7 +39,13 @@ module.exports = {
       const schoolId = req.user.schoolId;
       filterQuery["school"] = schoolId;
       if (req.query.hasOwnProperty("search")) {
-        filterQuery["name"] = { $regex: req.query.search, $options: "i" };
+        filterQuery["$or"] = [
+          { name: { $regex: req.query.search, $options: "i" } },
+          { father_name: { $regex: req.query.search, $options: "i" } },
+          { mother_name: { $regex: req.query.search, $options: "i" } },
+          { phoneno: { $regex: req.query.search, $options: "i" } },
+          { email: { $regex: req.query.search, $options: "i" } },
+        ];
       }
 
       const filteredParents = await Parent.find(filterQuery);

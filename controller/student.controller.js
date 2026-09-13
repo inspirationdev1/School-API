@@ -33,6 +33,11 @@ module.exports = {
         filterQuery.$or = [
           { name: { $regex: req.query.search, $options: "i" } },
           { class_name: { $regex: req.query.search, $options: "i" } },
+          { email: { $regex: req.query.search, $options: "i" } },
+          { student_code: { $regex: req.query.search, $options: "i" } },
+          { status: { $regex: req.query.search, $options: "i" } },
+          // { roll_no: { $regex: req.query.search, $options: "i" } },
+          { admission_no: { $regex: req.query.search, $options: "i" } },
         ];
       }
 
