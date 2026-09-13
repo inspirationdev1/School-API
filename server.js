@@ -157,13 +157,35 @@ app.use("/api/financereports", financereportsRouter);
 
 app.get("/api/auth/check", authCheck);
 
-app.get("/", (req, res) => {
-  res.send("School API is running 🚀");
-});
+// app.get("/", (req, res) => {
+//   res.send("School API is running 🚀");
+// });
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  console.log("Server is running at port =>", PORT);
+const INSTANCE = process.env.INSTANCE || "API-1";
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "School API is running",
+    instance: INSTANCE,
+    port: PORT,
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    status: "OK",
+    instance: INSTANCE,
+  });
+});
+// app.listen(PORT, () => {
+//   console.log("Server is running at port =>", PORT);
+// });
+// app.listen(PORT, () => {
+//   console.log("Server is running at port =>", PORT);
+// });
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`${INSTANCE} running on port ${PORT}`);
 });
 const redisEnabled = process.env.REDIS_ENABLED === "true";
 

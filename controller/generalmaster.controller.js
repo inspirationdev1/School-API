@@ -109,28 +109,7 @@ module.exports = {
       });
     }
   },
-  createGeneralmaster_Old: (req, res) => {
-    const schoolId = req.user.schoolId;
-    const newGeneralmaster = new Generalmaster({
-      ...req.body,
-      school: schoolId,
-    });
-    newGeneralmaster
-      .save()
-      .then((savedData) => {
-        console.log("Date saved", savedData);
-
-        res.status(200).json({
-          success: true,
-          data: savedData,
-          message: "Generalmaster is Created Successfully.",
-        });
-      })
-      .catch((e) => {
-        console.log("ERRORO in Register", e);
-        res.status(500).json({ success: false, message: e.message });
-      });
-  },
+  
   createGeneralmaster: async (req, res) => {
     try {
       const schoolId = req.user.schoolId;
