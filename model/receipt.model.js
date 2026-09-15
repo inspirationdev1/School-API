@@ -16,6 +16,8 @@ const receiptSchema = new mongoose.Schema({
   year: { type: Number, default: new Date().getFullYear() },
   month: { type: Number, default: new Date().getMonth() + 1 },
   academicyear: { type: String, default: "" },
+  student_name: { type: String, default: null },
+  paidAmount: { type: Number, default: 0 },
   acctrans: [],
   createdAt: { type: Date, default: new Date() },
 });

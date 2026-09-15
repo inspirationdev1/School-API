@@ -133,9 +133,7 @@ module.exports = {
         .populate("section")
         .populate("subject")
         .populate("teacher")
-        .populate("subject")
-        .populate("examination")
-        .populate("questionpaper");
+        .populate("examination");
       res.status(200).json({
         success: true,
         message: "Success in Fetching Single Questionpaper.",
@@ -255,8 +253,17 @@ module.exports = {
       if (req.query.hasOwnProperty("examination")) {
         filterQuery["examination"] = req.query.examination;
       }
+      if (req.query.hasOwnProperty("teacher")) {
+        filterQuery["teacher"] = req.query.teacher;
+      }
 
-      const filteredQuestionpapers = await Questionpaper.find(filterQuery);
+      const filteredQuestionpapers = await Questionpaper.find(filterQuery)
+        .populate("class")
+        .populate("section")
+        .populate("subject")
+        .populate("teacher")
+        .populate("examination");
+
       res.status(200).json({ success: true, data: filteredQuestionpapers });
     } catch (error) {
       console.log("Error in fetching Employee with query", error);

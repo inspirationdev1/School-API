@@ -30,15 +30,23 @@ module.exports = {
       //   filterQuery["name"] = { $regex: req.query.search, $options: "i" };
       // }
       if (req.query.hasOwnProperty("search")) {
+        const search = req.query.search.trim();
+
         filterQuery.$or = [
-          { name: { $regex: req.query.search, $options: "i" } },
-          { class_name: { $regex: req.query.search, $options: "i" } },
-          { email: { $regex: req.query.search, $options: "i" } },
-          { student_code: { $regex: req.query.search, $options: "i" } },
-          { status: { $regex: req.query.search, $options: "i" } },
-          // { roll_no: { $regex: req.query.search, $options: "i" } },
-          { admission_no: { $regex: req.query.search, $options: "i" } },
+          { name: { $regex: search, $options: "i" } },
+          { class_name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { student_code: { $regex: search, $options: "i" } },
+          { status: { $regex: search, $options: "i" } },
+          { admission_no: { $regex: search, $options: "i" } },
         ];
+
+        // Search roll_no if the search value is numeric
+        if (!isNaN(search) && search !== "") {
+          filterQuery.$or.push({
+            roll_no: Number(search),
+          });
+        }
       }
 
       if (req.query.hasOwnProperty("student_class")) {

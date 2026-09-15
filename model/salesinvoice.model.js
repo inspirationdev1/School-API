@@ -23,6 +23,17 @@ const salesinvoiceSchema = new mongoose.Schema({
   remarks: { type: String, default: "" },
   month: { type: Number, default: new Date().getMonth() + 1 },
   monthname: { type: String, default: "" },
+  grossAmount: { type: Number, default: 0 },
+  discountAmount: { type: Number, default: 0 },
+  netAmount: { type: Number, default: 0 },
+  tax_amount: {
+    type: Number,
+    default: 0,
+  },
+  taxable_amount: {
+    type: Number,
+    default: 0,
+  },
   year: { type: Number, default: new Date().getFullYear() },
   acctrans: [],
   createdAt: { type: Date, default: new Date() },
