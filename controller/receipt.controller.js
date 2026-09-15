@@ -196,6 +196,17 @@ module.exports = {
         });
       }
 
+      const totals = receiptDetails.reduce(
+        (acc, item) => {
+          acc.paidAmount += item.paidAmount || 0;
+
+          return acc;
+        },
+        {
+          paidAmount: 0,
+        },
+      );
+
       let acctrans = isDrCrEqual?.accountTransactions || [];
       // *****End Check Accounts Integration******
 
@@ -205,6 +216,7 @@ module.exports = {
         receiptCode: code,
         seq: seq,
         school: schoolId,
+        paidAmount: totals?.paidAmount,
         acctrans: acctrans,
       });
 
@@ -286,13 +298,30 @@ module.exports = {
         });
       }
 
+      const totals = receiptDetails.reduce(
+        (acc, item) => {
+          acc.paidAmount += item.paidAmount || 0;
+
+          return acc;
+        },
+        {
+          paidAmount: 0,
+        },
+      );
+
       let acctrans = isDrCrEqual?.accountTransactions || [];
       // *****End Check Accounts Integration******
 
       //   await Receipt.findOneAndUpdate({ _id: id }, { $set: { ...req.body, } });
       const savedData = await Receipt.findOneAndUpdate(
         { _id: id },
-        { $set: { ...req.body, acctrans: acctrans } },
+        {
+          $set: {
+            ...req.body,
+            paidAmount: totals?.paidAmount,
+            acctrans: acctrans,
+          },
+        },
         { new: true, runValidators: true },
       );
 

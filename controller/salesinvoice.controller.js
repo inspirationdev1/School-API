@@ -122,11 +122,36 @@ module.exports = {
       let acctrans = isDrCrEqual?.accountTransactions || [];
       // *****End Check Accounts Integration******
 
+      const totals = siDetail.reduce(
+        (acc, item) => {
+          acc.grossAmount += Number(item.grossAmount || 0);
+          acc.discountAmount += Number(item.discountAmount || 0);
+          acc.netAmount += Number(item.netAmount || 0);
+          acc.tax_amount += Number(item.tax_amount || 0);
+          acc.taxable_amount += Number(item.taxable_amount || 0);
+
+          return acc;
+        },
+        {
+          grossAmount: 0,
+          discountAmount: 0,
+          netAmount: 0,
+          tax_amount: 0,
+          taxable_amount: 0,
+        },
+      );
+
+      console.log(totals);
       const newSalesinvoice = new Salesinvoice({
         ...req.body,
         siCode: code,
         seq: seq,
         school: schoolId,
+        grossAmount: totals?.grossAmount,
+        discountAmount: totals?.discountAmount,
+        netAmount: totals?.netAmount,
+        tax_amount: totals?.tax_amount,
+        taxable_amount: totals?.taxable_amount,
         acctrans: acctrans,
       });
 
@@ -210,9 +235,40 @@ module.exports = {
         let acctrans = isDrCrEqual?.accountTransactions || [];
         // *****End Check Accounts Integration******
 
+        const totals = siDetail.reduce(
+          (acc, item) => {
+            acc.grossAmount += Number(item.grossAmount || 0);
+            acc.discountAmount += Number(item.discountAmount || 0);
+            acc.netAmount += Number(item.netAmount || 0);
+            acc.tax_amount += Number(item.tax_amount || 0);
+            acc.taxable_amount += Number(item.taxable_amount || 0);
+
+            return acc;
+          },
+          {
+            grossAmount: 0,
+            discountAmount: 0,
+            netAmount: 0,
+            tax_amount: 0,
+            taxable_amount: 0,
+          },
+        );
+
+        console.log(totals);
+
         const savedData = await Salesinvoice.findOneAndUpdate(
           { _id: id },
-          { $set: { ...req.body, acctrans: acctrans } },
+          {
+            $set: {
+              ...req.body,
+              grossAmount: totals?.grossAmount,
+              discountAmount: totals?.discountAmount,
+              netAmount: totals?.netAmount,
+              tax_amount: totals?.tax_amount,
+              taxable_amount: totals?.taxable_amount,
+              acctrans: acctrans,
+            },
+          },
           { new: true, runValidators: true },
         );
 
