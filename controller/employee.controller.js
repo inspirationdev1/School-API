@@ -32,12 +32,10 @@ module.exports = {
       res.status(200).json({ success: true, data: filteredEmployees });
     } catch (error) {
       console.log("Error in fetching Employee with query", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Error  in fetching Employee  with query.",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Error  in fetching Employee  with query.",
+      });
     }
   },
 
@@ -114,13 +112,11 @@ module.exports = {
         console.log("numberseqAfterUpdate", numberseqAfterUpdate);
         //************ */
 
-        res
-          .status(200)
-          .json({
-            success: true,
-            data: savedData,
-            message: "Employee is Registered Successfully.",
-          });
+        res.status(200).json({
+          success: true,
+          data: savedData,
+          message: "Employee is Registered Successfully.",
+        });
       } catch (e) {
         console.log("Error in Register:", e);
         res
@@ -148,18 +144,16 @@ module.exports = {
 
           res.header("Authorization", token);
           console.log("Success");
-          res
-            .status(200)
-            .json({
-              success: true,
-              message: "Success Login",
-              user: {
-                id: resp[0]._id,
-                username: resp[0].username,
-                image_url: resp[0].employee_image,
-                role: "Employee",
-              },
-            });
+          res.status(200).json({
+            success: true,
+            message: "Success Login",
+            user: {
+              id: resp[0]._id,
+              username: resp[0].username,
+              image_url: resp[0].employee_image,
+              role: "Employee",
+            },
+          });
         } else {
           res
             .status(401)
@@ -250,21 +244,17 @@ module.exports = {
         }
 
         await employee.save();
-        res
-          .status(200)
-          .json({
-            success: true,
-            message: "Employee updated successfully",
-            data: employee,
-          });
+        res.status(200).json({
+          success: true,
+          message: "Employee updated successfully",
+          data: employee,
+        });
       } catch (e) {
         console.log("Error updating employee:", e);
-        res
-          .status(500)
-          .json({
-            success: false,
-            message: "Error updating employee details.",
-          });
+        res.status(500).json({
+          success: false,
+          message: "Error updating employee details.",
+        });
       }
     });
   },
@@ -274,41 +264,33 @@ module.exports = {
       // console.log(req.body)
       await Employee.findOneAndDelete({ _id: id });
       const EmployeeAfterDelete = await Employee.findOne({ _id: id });
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Employee  deleted",
-          data: EmployeeAfterDelete,
-        });
+      res.status(200).json({
+        success: true,
+        message: "Employee  deleted",
+        data: EmployeeAfterDelete,
+      });
     } catch (error) {
       console.log("Error in updateEmployeeWithId", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Server Error in deleted Employee. Try later",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Server Error in deleted Employee. Try later",
+      });
     }
   },
   signOut: async (req, res) => {
     try {
       res.header("Authorization", "");
       ("Authorization");
-      res
-        .status(200)
-        .json({
-          success: true,
-          messsage: "Employee Signed Out  Successfully.",
-        });
+      res.status(200).json({
+        success: true,
+        messsage: "Employee Signed Out  Successfully.",
+      });
     } catch (error) {
       console.log("Error in Sign out", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Server Error in Signing Out. Try later",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Server Error in Signing Out. Try later",
+      });
     }
   },
   isEmployeeLoggedIn: async (req, res) => {
@@ -318,13 +300,11 @@ module.exports = {
         var decoded = jwt.verify(token, jwtSecret);
         console.log(decoded);
         if (decoded) {
-          res
-            .status(200)
-            .json({
-              success: true,
-              data: decoded,
-              message: "Employee is a logged in One",
-            });
+          res.status(200).json({
+            success: true,
+            data: decoded,
+            message: "Employee is a logged in One",
+          });
         } else {
           res
             .status(401)
@@ -337,12 +317,10 @@ module.exports = {
       }
     } catch (error) {
       console.log("Error in isEmployeeLoggedIn", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Server Error in Employee Logged in check. Try later",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Server Error in Employee Logged in check. Try later",
+      });
     }
   },
 };
