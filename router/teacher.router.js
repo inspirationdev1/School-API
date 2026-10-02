@@ -1,15 +1,49 @@
 const express = require("express");
-const { getTeacherWithQuery, loginTeacher,updateTeacherWithId,getTeacherWithId,signOut,isTeacherLoggedIn,  registerTeacher, deleteTeacherWithId ,getTeacherOwnDetails} = require("../controller/teacher.controller");
+const {
+  getTeacherWithQuery,
+  loginTeacher,
+  updateTeacherWithId,
+  getTeacherWithId,
+  signOut,
+  isTeacherLoggedIn,
+  registerTeacher,
+  deleteTeacherWithId,
+  getTeacherOwnDetails,
+  updateTeacherProfile,
+} = require("../controller/teacher.controller");
 const router = express.Router();
 const authMiddleware = require("../auth/auth");
 
-router.post('/register',authMiddleware(['SCHOOL','USER']), registerTeacher);
-router.get("/fetch-with-query",authMiddleware(['SCHOOL','USER','TEACHER','STUDENT','PARENT']),getTeacherWithQuery);
+router.post("/register", authMiddleware(["SCHOOL", "USER"]), registerTeacher);
+router.get(
+  "/fetch-with-query",
+  authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
+  getTeacherWithQuery,
+);
 router.post("/login", loginTeacher);
-router.patch("/update/:id", authMiddleware(['SCHOOL','USER']), updateTeacherWithId);
-router.get("/fetch-own", authMiddleware(['TEACHER']), getTeacherOwnDetails);
-router.get("/fetch-single/:id", authMiddleware(['TEACHER','SCHOOL','USER']), getTeacherWithId);
-router.delete("/delete/:id",authMiddleware(['SCHOOL','USER']),  deleteTeacherWithId)
+router.patch(
+  "/update/:id",
+  authMiddleware(["SCHOOL", "USER"]),
+  updateTeacherWithId,
+);
+router.get("/fetch-own", authMiddleware(["TEACHER"]), getTeacherOwnDetails);
+router.get(
+  "/fetch-single/:id",
+  authMiddleware(["TEACHER", "SCHOOL", "USER"]),
+  getTeacherWithId,
+);
+router.delete(
+  "/delete/:id",
+  authMiddleware(["SCHOOL", "USER"]),
+  deleteTeacherWithId,
+);
+
+router.patch(
+  "/updateprofile",
+  authMiddleware(["SCHOOL", "USER", "TEACHER"]),
+  updateTeacherProfile,
+);
+
 // router.get("/sign-out", signOut);
 // router.get("/is-login",  isTeacherLoggedIn)
 

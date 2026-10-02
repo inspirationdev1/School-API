@@ -21,7 +21,7 @@ module.exports = {
       const filterQuery = {};
       const schoolId = req.user.schoolId;
       filterQuery["school"] = schoolId;
-      
+
       if (req.query.hasOwnProperty("search")) {
         filterQuery.$or = [
           { name: { $regex: req.query.search, $options: "i" } },
@@ -233,6 +233,20 @@ module.exports = {
           teacher[field] = fields[field][0];
         });
 
+        const check_password = fields.password[0];
+
+        if (
+          typeof check_password === "string" &&
+          /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(check_password)
+        ) {
+          console.log("Password is bcrypt hashed");
+        } else {
+          console.log("Password appears to be plain text");
+          const salt = bcrypt.genSaltSync(10);
+          const hashPassword = bcrypt.hashSync(fields.password[0], salt);
+          teacher["password"] = hashPassword;
+        }
+
         // Handle image upload to Cloudinary
         if (files.image && files.image[0]) {
           // Optional: Delete old image from Cloudinary if needed
@@ -264,6 +278,8 @@ module.exports = {
       }
     });
   },
+
+
   deleteTeacherWithId: async (req, res) => {
     try {
       let id = req.params.id;
@@ -327,5 +343,73 @@ module.exports = {
         message: "Server Error in Teacher Logged in check. Try later",
       });
     }
+  },
+
+  updateTeacherProfile: async (req, res) => {
+    
+    const form = new formidable.IncomingForm();
+    form.parse(req, async (err, fields, files) => {
+      if (err)
+        return res
+          .status(400)
+          .json({ success: false, message: "Error parsing form data." });
+
+      try {
+        const id = req.user.id;
+        const teacher = await Teacher.findById(id);
+        if (!teacher)
+          return res
+            .status(404)
+            .json({ success: false, message: "Teacher not found." });
+
+        // Update text fields
+        Object.keys(fields).forEach((field) => {
+          teacher[field] = fields[field][0];
+        });
+
+        const check_password = fields.password[0];
+
+        if (
+          typeof check_password === "string" &&
+          /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(check_password)
+        ) {
+          console.log("Password is bcrypt hashed");
+        } else {
+          console.log("Password appears to be plain text");
+          const salt = bcrypt.genSaltSync(10);
+          const hashPassword = bcrypt.hashSync(fields.password[0], salt);
+          teacher["password"] = hashPassword;
+        }
+
+        // Handle image upload to Cloudinary
+        if (files.image && files.image[0]) {
+          // Optional: Delete old image from Cloudinary if needed
+          if (teacher.teacher_image && teacher.public_id) {
+            await cloudinary.uploader.destroy(teacher.public_id);
+          }
+
+          const photo = files.image[0];
+          const result = await cloudinary.uploader.upload(photo.filepath, {
+            folder: "teachers",
+            public_id:
+              Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
+          });
+          teacher.teacher_image = result.secure_url;
+          teacher.public_id = result.public_id;
+        }
+
+        await teacher.save();
+        res.status(200).json({
+          success: true,
+          message: "Password updated successfully",
+          data: teacher,
+        });
+      } catch (e) {
+        console.log("Error updating teacher:", e);
+        res
+          .status(500)
+          .json({ success: false, message: "Error updating teacher details." });
+      }
+    });
   },
 };

@@ -28,6 +28,16 @@ const appsettingSchema = new mongoose.Schema({
     required: false,
     default: null,
   },
+ upi_image: {
+    type: String,
+    required: false,
+    default: null,
+  },
+  upi_public_id: {
+    type: String,
+    required: false,
+    default: null,
+  },
 
   createdAt: { type: Date, default: new Date() },
 });

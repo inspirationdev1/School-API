@@ -93,5 +93,5 @@ const studentSchema = new mongoose.Schema({
 });
 
 // ✅ Compound unique index
-studentSchema.index({ school: 1, student_code: 1 }, { unique: true });
+studentSchema.index({ school: 1, email: 1 }, { unique: true });
 module.exports = mongoose.model("Student", studentSchema);
