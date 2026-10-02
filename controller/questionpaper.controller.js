@@ -19,6 +19,7 @@ module.exports = {
           .json({ success: false, message: "Error parsing form data." });
 
       try {
+        const schoolId = req.user.schoolId;
         let fileName = null;
         let fileType = "";
         let cleanName = "";
@@ -62,7 +63,7 @@ module.exports = {
           fileName: fileName,
           fileType: fileType,
           public_id: Date.now() + "_" + cleanName,
-          school: req.user.id,
+          school: schoolId,
         });
 
         const savedData = await newQuestionpaper.save();
