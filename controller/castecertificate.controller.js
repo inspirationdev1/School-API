@@ -16,21 +16,17 @@ module.exports = {
         .populate("castecategory")
         .populate("class")
         .populate("section");
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Success in fetching all  Castecertificate",
-          data: allCastecertificate,
-        });
+      res.status(200).json({
+        success: true,
+        message: "Success in fetching all  Castecertificate",
+        data: allCastecertificate,
+      });
     } catch (error) {
       console.log("Error in getAllCastecertificate", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Server Error in Getting All Castecertificate. Try later",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Server Error in Getting All Castecertificate. Try later",
+      });
     }
   },
   createCastecertificate: (req, res) => {
@@ -43,13 +39,11 @@ module.exports = {
       .save()
       .then((savedData) => {
         console.log("Date saved", savedData);
-        res
-          .status(200)
-          .json({
-            success: true,
-            data: savedData,
-            message: "Castecertificate is Created Successfully.",
-          });
+        res.status(200).json({
+          success: true,
+          data: savedData,
+          message: "Castecertificate is Created Successfully.",
+        });
       })
       .catch((e) => {
         console.log("ERRORO in Register", e);
@@ -68,22 +62,18 @@ module.exports = {
         if (resp) {
           res.status(200).json({ success: true, data: resp });
         } else {
-          res
-            .status(500)
-            .json({
-              success: false,
-              message: "Castecertificate data not Available",
-            });
+          res.status(500).json({
+            success: false,
+            message: "Castecertificate data not Available",
+          });
         }
       })
       .catch((e) => {
         console.log("Error in getCastecertificateWithId", e);
-        res
-          .status(500)
-          .json({
-            success: false,
-            message: "Error in getting  Castecertificate Data",
-          });
+        res.status(500).json({
+          success: false,
+          message: "Error in getting  Castecertificate Data",
+        });
       });
   },
 
@@ -103,21 +93,17 @@ module.exports = {
         .populate("section")
         .populate("student")
         .populate("castecategory");
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Castecertificate Updated",
-          data: CastecertificateAfterUpdate,
-        });
+      res.status(200).json({
+        success: true,
+        message: "Castecertificate Updated",
+        data: CastecertificateAfterUpdate,
+      });
     } catch (error) {
       console.log("Error in updateCastecertificateWithId", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Server Error in Update Castecertificate. Try later",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Server Error in Update Castecertificate. Try later",
+      });
     }
   },
   deleteCastecertificateWithId: async (req, res) => {
@@ -133,21 +119,17 @@ module.exports = {
         .populate("section")
         .populate("student")
         .populate("castecategory");
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Castecertificate Deleted.",
-          data: CastecertificateAfterDelete,
-        });
+      res.status(200).json({
+        success: true,
+        message: "Castecertificate Deleted.",
+        data: CastecertificateAfterDelete,
+      });
     } catch (error) {
       console.log("Error in updateCastecertificateWithId", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Server Error in Deleting Castecertificate. Try later",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Server Error in Deleting Castecertificate. Try later",
+      });
     }
   },
   getCastecertificatePrint: async (req, res) => {
@@ -205,6 +187,23 @@ module.exports = {
             preserveNullAndEmptyArrays: true,
           },
         },
+
+        // 🔹 Populate Caste category
+        {
+          $lookup: {
+            from: "generalmasters",
+            localField: "castecategory",
+            foreignField: "_id",
+            as: "castecategory",
+          },
+        },
+        {
+          $unwind: {
+            path: "$castecategory",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
         // 🔹 Populate Student
         {
           $lookup: {

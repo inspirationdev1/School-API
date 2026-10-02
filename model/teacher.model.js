@@ -41,5 +41,5 @@ const teacherSchema = new mongoose.Schema({
 });
 
 // ✅ Compound unique index
-teacherSchema.index({ school: 1, teacher_code: 1 }, { unique: true });
+teacherSchema.index({ school: 1, email: 1 }, { unique: true });
 module.exports = mongoose.model("Teacher", teacherSchema);
