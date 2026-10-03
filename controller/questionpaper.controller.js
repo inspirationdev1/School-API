@@ -233,6 +233,9 @@ module.exports = {
       const filterQuery = {};
       const schoolId = req.user.schoolId;
       filterQuery["school"] = schoolId;
+      if (req.user.role?.toString().toLowerCase() === "teacher") {
+        filterQuery["teacher"] = req.user.id;
+      }
 
       if (req.query.search) {
         filterQuery.$or = [
