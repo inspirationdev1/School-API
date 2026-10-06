@@ -9,6 +9,7 @@ const jwtSecret = process.env.JWTSECRET;
 
 const Student = require("../model/student.model");
 const Attendance = require("../model/attendance.model");
+const Attendee = require("../model/attendee.model");
 
 const Admissionattachment = require("../model/admissionattachment.model");
 
@@ -26,9 +27,7 @@ module.exports = {
       const schoolId = req.user.schoolId;
       console.log(schoolId, "schoolId");
       filterQuery["school"] = schoolId;
-      // if (req.query.hasOwnProperty("search")) {
-      //   filterQuery["name"] = { $regex: req.query.search, $options: "i" };
-      // }
+
       if (req.query.hasOwnProperty("search")) {
         const search = req.query.search.trim();
 
@@ -63,6 +62,40 @@ module.exports = {
 
       if (req.user?.role === "STUDENT") {
         filterQuery["_id"] = req.user.id;
+      }
+
+      if (req.user.role?.toString().toLowerCase() === "teacher") {
+        const filterAttendee = {
+          school: schoolId,
+          teacher: req.user.id,
+        };
+
+        const attendeeData = await Attendee.find(filterAttendee).lean();
+
+        console.log("attendeeData:", attendeeData);
+
+        // Get all class IDs
+        const classIds = attendeeData.map((item) => item.class).filter(Boolean);
+
+        // Get all section IDs
+        const sectionIds = attendeeData
+          .map((item) => item.section)
+          .filter(Boolean);
+
+        console.log("classIds:", classIds);
+        console.log("sectionIds:", sectionIds);
+
+        if (classIds.length > 0) {
+          filterQuery["student_class"] = {
+            $in: classIds,
+          };
+        }
+
+        if (sectionIds.length > 0) {
+          filterQuery["section"] = {
+            $in: sectionIds,
+          };
+        }
       }
 
       const filteredStudents = await Student.find(filterQuery)
@@ -341,8 +374,29 @@ module.exports = {
             .json({ success: false, message: "Student not found." });
 
         // Update text fields
+        // Object.keys(fields).forEach((field) => {
+        //   student[field] = fields[field][0];
+        // });
+
+        const objectIdFields = [
+          "bloodgroup",
+          "nationality",
+          "religion",
+          "mothertongue",
+          "modeoftransport",
+          "firstlanguage",
+        ];
+
         Object.keys(fields).forEach((field) => {
-          student[field] = fields[field][0];
+          let value = fields[field][0];
+
+          if (objectIdFields.includes(field)) {
+            if (value === "null" || value === "" || value === "undefined") {
+              value = null;
+            }
+          }
+
+          student[field] = value;
         });
 
         // Handle image upload to Cloudinary

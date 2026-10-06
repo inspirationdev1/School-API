@@ -28,7 +28,8 @@ module.exports = {
         };
       }
 
-      const filteredEmployees = await Employee.find(filterQuery);
+      const filteredEmployees =
+        await Employee.find(filterQuery).populate("designation");
       res.status(200).json({ success: true, data: filteredEmployees });
     } catch (error) {
       console.log("Error in fetching Employee with query", error);
@@ -98,6 +99,7 @@ module.exports = {
           phoneno: fields.phoneno[0],
           password: hashPassword,
           employee_code: code || "",
+          designation: fields.designation[0],
           seq: seq || 1,
           school: schoolId,
         });
@@ -188,6 +190,7 @@ module.exports = {
   getEmployeeWithId: async (req, res) => {
     const id = req.params.id;
     Employee.findById(id)
+      .populate("designation")
       .then((resp) => {
         if (resp) {
           res.status(200).json({ success: true, data: resp });
