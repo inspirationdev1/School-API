@@ -279,7 +279,6 @@ module.exports = {
     });
   },
 
-
   deleteTeacherWithId: async (req, res) => {
     try {
       let id = req.params.id;
@@ -346,7 +345,6 @@ module.exports = {
   },
 
   updateTeacherProfile: async (req, res) => {
-    
     const form = new formidable.IncomingForm();
     form.parse(req, async (err, fields, files) => {
       if (err)
@@ -366,19 +364,22 @@ module.exports = {
         Object.keys(fields).forEach((field) => {
           teacher[field] = fields[field][0];
         });
+        if (fields && Object.keys(fields).length > 0) {
+          const check_password = fields?.password?.[0];
 
-        const check_password = fields.password[0];
+          if (
+            typeof check_password === "string" &&
+            /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(check_password)
+          ) {
+            console.log("Password is bcrypt hashed");
+          } else if (check_password) {
+            console.log("Password appears to be plain text");
 
-        if (
-          typeof check_password === "string" &&
-          /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(check_password)
-        ) {
-          console.log("Password is bcrypt hashed");
-        } else {
-          console.log("Password appears to be plain text");
-          const salt = bcrypt.genSaltSync(10);
-          const hashPassword = bcrypt.hashSync(fields.password[0], salt);
-          teacher["password"] = hashPassword;
+            const salt = bcrypt.genSaltSync(10);
+            const hashPassword = bcrypt.hashSync(check_password, salt);
+
+            teacher["password"] = hashPassword;
+          }
         }
 
         // Handle image upload to Cloudinary
