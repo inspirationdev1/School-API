@@ -68,6 +68,29 @@ module.exports = {
           photoUrl = result.secure_url;
         }
 
+        let photoUrl_sign = null;
+        let sign_public_id = null;
+
+        if (files.sign_image && files.sign_image[0]) {
+          // Upload Sign image
+
+          const signPhoto = files.sign_image[0];
+
+          const signResult = await cloudinary.uploader.upload(
+            signPhoto.filepath,
+            {
+              folder: "employee",
+              public_id:
+                Date.now() +
+                "_" +
+                signPhoto.originalFilename.split(" ").join("_"),
+            },
+          );
+
+          photoUrl_sign = signResult.secure_url;
+          sign_public_id = signResult.public_id;
+        }
+
         const salt = bcrypt.genSaltSync(10);
         const hashPassword = bcrypt.hashSync(fields.password[0], salt);
 
@@ -101,6 +124,8 @@ module.exports = {
           employee_code: code || "",
           designation: fields.designation[0],
           seq: seq || 1,
+          sign_image: photoUrl_sign,
+          sign_public_id: sign_public_id,
           school: schoolId,
         });
 
@@ -225,8 +250,22 @@ module.exports = {
             .json({ success: false, message: "Employee not found." });
 
         // Update text fields
+        // Object.keys(fields).forEach((field) => {
+        //   employee[field] = fields[field][0];
+        // });
+        const objectIdFields = ["designation"];
+
         Object.keys(fields).forEach((field) => {
           employee[field] = fields[field][0];
+          let value = fields[field][0];
+
+          if (objectIdFields.includes(field)) {
+            if (value === "null" || value === "" || value === "undefined") {
+              value = null;
+            }
+          }
+
+          employee[field] = value;
         });
 
         // Handle image upload to Cloudinary
@@ -244,6 +283,33 @@ module.exports = {
           });
           employee.employee_image = result.secure_url;
           employee.public_id = result.public_id;
+        }
+
+        if (files.sign_image && files.sign_image[0]) {
+          // Upload Sign image
+          // Optional: Delete old image from Cloudinary if needed
+          if (
+            employee.sign_image &&
+            employee.sign_public_id &&
+            files.sign_image[0]
+          ) {
+            await cloudinary.uploader.destroy(employee.sign_public_id);
+          }
+          const signPhoto = files.sign_image[0];
+
+          const signResult = await cloudinary.uploader.upload(
+            signPhoto.filepath,
+            {
+              folder: "employee",
+              public_id:
+                Date.now() +
+                "_" +
+                signPhoto.originalFilename.split(" ").join("_"),
+            },
+          );
+
+          employee.sign_image = signResult.secure_url;
+          employee.sign_public_id = signResult.public_id;
         }
 
         await employee.save();

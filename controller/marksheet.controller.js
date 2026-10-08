@@ -46,7 +46,9 @@ module.exports = {
         ];
       }
 
-      const filteredMarkseets = await Marksheet.find(filterQuery);
+      const filteredMarkseets = await Marksheet.find(filterQuery).sort({
+        _id: -1,
+      });
       res.status(200).json({ success: true, data: filteredMarkseets });
     } catch (error) {
       console.log("Error in fetching Marksheet with query", error);

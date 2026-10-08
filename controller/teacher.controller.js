@@ -63,6 +63,7 @@ module.exports = {
             .json({ success: false, message: "Email Already Exist!" });
 
         let photoUrl = null;
+
         if (files.image && files.image[0]) {
           const photo = files.image[0];
           const result = await cloudinary.uploader.upload(photo.filepath, {
@@ -71,6 +72,28 @@ module.exports = {
               Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
           });
           photoUrl = result.secure_url;
+        }
+
+        let photoUrl_sign = null;
+        let sign_public_id = null;
+        if (files.sign_image && files.sign_image[0]) {
+          // Upload Sign image
+
+          const signPhoto = files.sign_image[0];
+
+          const signResult = await cloudinary.uploader.upload(
+            signPhoto.filepath,
+            {
+              folder: "employee",
+              public_id:
+                Date.now() +
+                "_" +
+                signPhoto.originalFilename.split(" ").join("_"),
+            },
+          );
+
+          photoUrl_sign = signResult.secure_url;
+          sign_public_id = signResult.public_id;
         }
 
         const salt = bcrypt.genSaltSync(10);
@@ -103,6 +126,8 @@ module.exports = {
           status: fields.status[0],
           phoneno: fields.phoneno[0],
           teacher_image: photoUrl,
+          sign_image: photoUrl_sign,
+          sign_public_id: sign_public_id,
           password: hashPassword,
           teacher_code: code || "",
           seq: seq || 1,
@@ -264,6 +289,32 @@ module.exports = {
           teacher.public_id = result.public_id;
         }
 
+        if (files.sign_image && files.sign_image[0]) {
+          // Upload Sign image
+          // Optional: Delete old image from Cloudinary if needed
+          if (
+            teacher.sign_image &&
+            teacher.sign_public_id &&
+            files.sign_image[0]
+          ) {
+            await cloudinary.uploader.destroy(teacher.sign_public_id);
+          }
+          const signPhoto = files.sign_image[0];
+
+          const signResult = await cloudinary.uploader.upload(
+            signPhoto.filepath,
+            {
+              folder: "employee",
+              public_id:
+                Date.now() +
+                "_" +
+                signPhoto.originalFilename.split(" ").join("_"),
+            },
+          );
+
+          teacher.sign_image = signResult.secure_url;
+          teacher.sign_public_id = signResult.public_id;
+        }
         await teacher.save();
         res.status(200).json({
           success: true,
