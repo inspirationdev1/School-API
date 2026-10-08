@@ -14,7 +14,11 @@ const {
 const router = express.Router();
 const authMiddleware = require("../auth/auth");
 
-router.post("/register", authMiddleware(["SCHOOL", "USER"]), registerParent);
+router.post(
+  "/register",
+  authMiddleware(["SCHOOL", "USER", "TEACHER"]),
+  registerParent,
+);
 router.get(
   "/fetch-with-query",
   authMiddleware(["SCHOOL", "USER", "PARENT", "TEACHER"]),

@@ -48,7 +48,7 @@ module.exports = {
         ];
       }
 
-      const filteredParents = await Parent.find(filterQuery);
+      const filteredParents = await Parent.find(filterQuery).sort({ _id: -1 });
       res.status(200).json({ success: true, data: filteredParents });
     } catch (error) {
       console.log("Error in fetching Parent with query", error);
@@ -118,7 +118,7 @@ module.exports = {
           password: hashPassword,
           parent_code: code || "",
           seq: seq || 1,
-          school: req.user.id,
+          school: req.user.schoolId,
         });
 
         const savedData = await newParent.save();
