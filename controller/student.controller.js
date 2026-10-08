@@ -85,17 +85,17 @@ module.exports = {
         console.log("classIds:", classIds);
         console.log("sectionIds:", sectionIds);
 
-        if (classIds.length > 0) {
-          filterQuery["student_class"] = {
-            $in: classIds,
-          };
-        }
+        // if (classIds.length > 0) {
+        //   filterQuery["student_class"] = {
+        //     $in: classIds,
+        //   };
+        // }
 
-        if (sectionIds.length > 0) {
-          filterQuery["section"] = {
-            $in: sectionIds,
-          };
-        }
+        // if (sectionIds.length > 0) {
+        //   filterQuery["section"] = {
+        //     $in: sectionIds,
+        //   };
+        // }
       }
 
       const filteredStudents = await Student.find(filterQuery)

@@ -36,6 +36,8 @@ const teacherSchema = new mongoose.Schema({
     required: false,
     default: null,
   },
+  sign_image: { type: String, default: "" },
+  sign_public_id: { type: String, default: "" },
   createdAt: { type: Date, default: new Date() },
   password: { type: String, required: true },
 });
