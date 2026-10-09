@@ -23,7 +23,8 @@ module.exports = {
         .populate("student")
         .populate("class")
         .populate("section")
-        .populate("school");
+        .populate("school")
+        .sort({ _id: -1 });
       res.status(200).json({
         success: true,
         message: "Success in fetching all  Salesinvoice",
@@ -34,6 +35,34 @@ module.exports = {
       res.status(500).json({
         success: false,
         message: "Server Error in Getting All Salesinvoice. Try later",
+      });
+    }
+  },
+  getSalesinvoiceWithQuery: async (req, res) => {
+    try {
+      const filterQuery = {};
+      const schoolId = req.user.schoolId;
+
+      filterQuery["school"] = schoolId;
+      if (req.query.search) {
+        filterQuery.$or = [
+          { siCode: { $regex: req.query.search, $options: "i" } },
+          { student_name: { $regex: req.query.search, $options: "i" } },
+        ];
+      }
+
+      const filteredSalesinvoices = await Salesinvoice.find(filterQuery)
+        .populate("student")
+        .populate("class")
+        .populate("section")
+        .populate("school")
+        .sort({ _id: -1 });
+      res.status(200).json({ success: true, data: filteredSalesinvoices });
+    } catch (error) {
+      console.log("Error in fetching Student with query", error);
+      res.status(500).json({
+        success: false,
+        message: "Error  in fetching Salesinvoice  with query.",
       });
     }
   },
@@ -683,25 +712,6 @@ module.exports = {
             code = numberseqData.code || "";
           }
 
-          const newSalesinvoice = new Salesinvoice({
-            student: studentId,
-            student_name: student_name,
-            class: student_class,
-            section: section,
-            month: month,
-            monthname: monthname,
-            year: year,
-            invoiceDate: formattedinvoiceDate,
-            invoiceTime: invoiceTime,
-            school: schoolId,
-            siCode: code,
-            seq: seq,
-            remarks: remarks,
-          });
-          const savedData = await newSalesinvoice.save();
-
-          const siId = savedData._id || null;
-
           //****Tax Calculation */
           let netAmount = feeAmount || 0;
           let taxable_amount = feeAmount || 0;
@@ -720,6 +730,33 @@ module.exports = {
           }
 
           //******************* */
+
+          const grossAmount = feeAmount;
+          const discountAmount = 0;
+
+          const newSalesinvoice = new Salesinvoice({
+            student: studentId,
+            student_name: student_name,
+            class: student_class,
+            section: section,
+            month: month,
+            monthname: monthname,
+            year: year,
+            invoiceDate: formattedinvoiceDate,
+            invoiceTime: invoiceTime,
+            school: schoolId,
+            siCode: code,
+            seq: seq,
+            remarks: remarks,
+            grossAmount: grossAmount,
+            discountAmount: discountAmount,
+            netAmount: netAmount,
+            tax_amount: tax_amount,
+            taxable_amount: taxable_amount,
+          });
+          const savedData = await newSalesinvoice.save();
+
+          const siId = savedData._id || null;
 
           const newSalesinvoicedetail = new Salesinvoicedetail({
             siId: siId,
@@ -768,34 +805,6 @@ module.exports = {
       res.status(500).json({
         success: false,
         message: "Failed Creation of Salesinvoice.",
-      });
-    }
-  },
-  getSalesinvoiceWithQuery: async (req, res) => {
-    try {
-      const filterQuery = {};
-      const schoolId = req.user.schoolId;
-
-      filterQuery["school"] = schoolId;
-      if (req.query.search) {
-        filterQuery.$or = [
-          { siCode: { $regex: req.query.search, $options: "i" } },
-          { student_name: { $regex: req.query.search, $options: "i" } },
-        ];
-      }
-
-      const filteredSalesinvoices = await Salesinvoice.find(filterQuery)
-        .populate("student")
-        .populate("class")
-        .populate("section")
-        .populate("school")
-        .sort({ _id: -1 });
-      res.status(200).json({ success: true, data: filteredSalesinvoices });
-    } catch (error) {
-      console.log("Error in fetching Student with query", error);
-      res.status(500).json({
-        success: false,
-        message: "Error  in fetching Salesinvoice  with query.",
       });
     }
   },

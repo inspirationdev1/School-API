@@ -878,7 +878,7 @@ module.exports = {
         .populate("student")
         .populate("parent")
         .lean();
-      // console.log(JSON.stringify(printReceiptdetail));
+      console.log(JSON.stringify(printReceiptdetail));
 
       const siIds = [...new Set(printReceiptdetail.map((item) => item.siId))];
       console.log(siIds);
@@ -1046,7 +1046,12 @@ module.exports = {
       // ROW 2
       drawField("Father Name :", printReceiptdetail[0].parent?.name, leftX, y);
 
-      drawField("Academic Year :", printReceipt?.academicyear, rightX, y);
+      drawField(
+        "Mother Name :",
+        printReceiptdetail[0].parent?.mother_name,
+        rightX,
+        y,
+      );
 
       y += rowGap;
 
@@ -1054,6 +1059,10 @@ module.exports = {
       drawField("Mode of Pay :", printReceipt?.paymentMethod, leftX, y);
 
       drawField("Status :", printReceipt.status, rightX, y);
+
+      y += rowGap;
+      // ROW 3
+      drawField("Academic Year :", printReceipt?.academicyear, leftX, y);
 
       y += 40;
 
