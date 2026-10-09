@@ -98,10 +98,23 @@ module.exports = {
         // }
       }
 
+      // const filteredStudents = await Student.find(filterQuery)
+      //   .populate("student_class")
+      //   .populate("section")
+      //   .populate("parent")
+      //   .populate("bloodgroup")
+      //   .populate("nationality")
+      //   .populate("religion")
+      //   .populate("mothertongue")
+      //   .populate("modeoftransport")
+      //   .populate("firstlanguage")
+      //   .sort({ _id: -1 });
       const filteredStudents = await Student.find(filterQuery)
         .populate("student_class")
         .populate("section")
-        .populate("parent")
+        .populate({
+          path: "parent",
+        })
         .populate("bloodgroup")
         .populate("nationality")
         .populate("religion")
