@@ -3989,15 +3989,15 @@ module.exports = {
       console.log(subjectLength); // 3
 
       const reportHeader = {
-        school_name: marksheetData[0].school.school_name,
-        address: marksheetData[0].school.address,
-        city: marksheetData[0].school.city,
-        state: marksheetData[0].school.state,
-        country: marksheetData[0].school.country,
-        class: marksheetData[0].class.class_name,
-        section: marksheetData[0].section.section_name,
-        student: marksheetData[0].student.name,
-        school_image: marksheetData[0].school.school_image,
+        school_name: marksheetData[0]?.school.school_name,
+        address: marksheetData[0]?.school.address,
+        city: marksheetData[0]?.school.city,
+        state: marksheetData[0]?.school.state,
+        country: marksheetData[0]?.school.country,
+        class: marksheetData[0]?.class.class_name,
+        section: marksheetData[0]?.section.section_name,
+        student: marksheetData[0]?.student.name,
+        school_image: marksheetData[0]?.school.school_image,
       };
 
       // ============================================
@@ -5043,15 +5043,15 @@ module.exports = {
         .lean();
 
       const reportHeader = {
-        school_name: marksheetData[0].school.school_name,
-        address: marksheetData[0].school.address,
-        city: marksheetData[0].school.city,
-        state: marksheetData[0].school.state,
-        country: marksheetData[0].school.country,
-        class: marksheetData[0].class.class_name,
-        section: marksheetData[0].section.section_name,
-        student: marksheetData[0].student.name,
-        school_image: marksheetData[0].school.school_image,
+        school_name: marksheetData[0]?.school.school_name,
+        address: marksheetData[0]?.school.address,
+        city: marksheetData[0]?.school.city,
+        state: marksheetData[0]?.school.state,
+        country: marksheetData[0]?.school.country,
+        class: marksheetData[0]?.class.class_name,
+        section: marksheetData[0]?.section.section_name,
+        student: marksheetData[0]?.student.name,
+        school_image: marksheetData[0]?.school.school_image,
       };
 
       let reportData = [];
@@ -5560,15 +5560,15 @@ module.exports = {
         .lean();
 
       const reportHeader = {
-        school_name: marksheetData[0].school.school_name,
-        address: marksheetData[0].school.address,
-        city: marksheetData[0].school.city,
-        state: marksheetData[0].school.state,
-        country: marksheetData[0].school.country,
-        class: marksheetData[0].class.class_name,
-        section: marksheetData[0].section.section_name,
-        student: marksheetData[0].student.name,
-        school_image: marksheetData[0].school.school_image,
+        school_name: marksheetData[0]?.school.school_name,
+        address: marksheetData[0]?.school.address,
+        city: marksheetData[0]?.school.city,
+        state: marksheetData[0]?.school.state,
+        country: marksheetData[0]?.school.country,
+        class: marksheetData[0]?.class.class_name,
+        section: marksheetData[0]?.section.section_name,
+        student: marksheetData[0]?.student.name,
+        school_image: marksheetData[0]?.school.school_image,
       };
 
       let reportData = [];
@@ -5966,7 +5966,6 @@ module.exports = {
       }
     } catch (err) {
       console.log(err);
-
       res.status(500).json({
         success: false,
         message: err.message,
@@ -6086,16 +6085,16 @@ module.exports = {
         .lean();
 
       const reportHeader = {
-        school_name: marksheetData[0].school.school_name,
-        address: marksheetData[0].school.address,
-        city: marksheetData[0].school.city,
-        state: marksheetData[0].school.state,
-        country: marksheetData[0].school.country,
-        class: marksheetData[0].class.class_name,
+        school_name: marksheetData[0]?.school.school_name,
+        address: marksheetData[0]?.school.address,
+        city: marksheetData[0]?.school.city,
+        state: marksheetData[0]?.school.state,
+        country: marksheetData[0]?.school.country,
+        class: marksheetData[0]?.class.class_name,
         examination: marksheetData[0]?.examination?.examination_name,
-        section: marksheetData[0].section.section_name,
-        student: marksheetData[0].student.name,
-        school_image: marksheetData[0].school.school_image,
+        section: marksheetData[0]?.section.section_name,
+        student: marksheetData[0]?.student.name,
+        school_image: marksheetData[0]?.school.school_image,
       };
 
       let reportData = [];
