@@ -98,20 +98,10 @@ module.exports = {
         // }
       }
 
-      // const filteredStudents = await Student.find(filterQuery)
-      //   .populate("student_class")
-      //   .populate("section")
-      //   .populate("parent")
-      //   .populate("bloodgroup")
-      //   .populate("nationality")
-      //   .populate("religion")
-      //   .populate("mothertongue")
-      //   .populate("modeoftransport")
-      //   .populate("firstlanguage")
-      //   .sort({ _id: -1 });
       const filteredStudents = await Student.find(filterQuery)
         .populate("student_class")
         .populate("section")
+        .populate("classsubject")
         .populate({
           path: "parent",
         })
@@ -182,6 +172,7 @@ module.exports = {
           "mothertongue",
           "modeoftransport",
           "firstlanguage",
+          "classsubject",
         ];
 
         // Convert empty ObjectId values to null
@@ -286,127 +277,7 @@ module.exports = {
       }
     });
   },
-  registerStudent_Old: async (req, res) => {
-    const form = new formidable.IncomingForm();
 
-    form.parse(req, async (err, fields, files) => {
-      if (err)
-        return res
-          .status(400)
-          .json({ success: false, message: "Error parsing form data." });
-
-      try {
-        const existing = await Student.find({ email: fields.email[0] });
-        if (existing.length > 0)
-          return res
-            .status(500)
-            .json({ success: false, message: "Email Already Exist!" });
-
-        let photoUrl = null;
-        if (files.image && files.image[0]) {
-          const photo = files.image[0];
-          const result = await cloudinary.uploader.upload(photo.filepath, {
-            folder: "students",
-            public_id:
-              Date.now() + "_" + photo.originalFilename.split(" ").join("_"),
-          });
-          photoUrl = result.secure_url;
-        }
-
-        const salt = bcrypt.genSaltSync(10);
-        const hashPassword = bcrypt.hashSync(fields.password[0], salt);
-
-        //*****Get Numberseq */
-        const numberseqData = await getNumberseqWithScreenId({
-          screen_id: "student",
-          schoolId: req.user.schoolId,
-        });
-        console.log("numberseqData.data", numberseqData);
-        let seq = 1;
-        let code = "";
-        if (numberseqData) {
-          seq = numberseqData.seq || 1;
-          code = numberseqData.code || "";
-        }
-        //******** */
-
-        const newStudent = new Student({
-          email: fields.email[0],
-          name: fields.name[0],
-          student_class: fields.student_class[0],
-          guardian: fields.guardian[0],
-          guardian_phone: fields.guardian_phone[0],
-          pen_no: fields.pen_no[0],
-          aadhar_no: fields.aadhar_no[0],
-          roll_no: fields?.roll_no[0],
-          admission_no: fields.admission_no[0],
-          age: fields.age[0],
-          dOBDate: fields.dOBDate[0],
-          joinDate: fields.joinDate[0],
-          year: fields.year[0],
-          vaccinated: fields.vaccinated[0],
-          gender: fields.gender[0],
-          parent: fields.parent[0],
-          section: fields.section[0],
-          status: fields.status[0],
-          bloodgroup: fields.bloodgroup[0],
-          nationality: fields.nationality[0],
-
-          religion: fields.religion[0],
-          mothertongue: fields.mothertongue[0],
-          modeoftransport: fields.modeoftransport[0],
-          firstlanguage: fields.firstlanguage[0],
-          identificationmark1: fields.identificationmark1[0],
-          identificationmark2: fields.identificationmark2[0],
-          permanentaddress: fields.permanentaddress[0],
-          permanentpincode: fields.permanentpincode[0],
-          presentaddress: fields.presentaddress[0],
-          presentpincode: fields.presentpincode[0],
-          nameofpreviousschool: fields.nameofpreviousschool[0],
-          classpassed: fields.classpassed[0],
-          yearofpassing: fields.yearofpassing[0],
-          reasonforleaving: fields.reasonforleaving[0],
-          studentexpelledleaving: fields.studentexpelledleaving[0],
-          mediumofinstructions: fields.mediumofinstructions[0],
-
-          siblingstudingname: fields.siblingstudingname[0],
-          siblingapplyingname: fields.siblingapplyingname[0],
-          siblingstudingclass: fields.siblingstudingclass[0],
-          siblingapplyingclass: fields.siblingapplyingclass[0],
-          previouslyapplied: fields.previouslyapplied[0],
-          admissionintoclass: fields.admissionintoclass[0],
-          dateofaddmission: fields.dateofaddmission[0],
-
-          student_image: photoUrl,
-          password: hashPassword,
-          student_code: code || "",
-          seq: seq || 1,
-          school: req.user.id,
-        });
-
-        const savedData = await newStudent.save();
-
-        //*****Update numberseq */
-        const numberseqAfterUpdate = await updateNumberseqWithScreenId({
-          screen_id: "student",
-          schoolId: req.user.schoolId,
-        });
-        console.log("numberseqAfterUpdate", numberseqAfterUpdate);
-        //************ */
-
-        res.status(200).json({
-          success: true,
-          data: savedData,
-          message: "Student is Registered Successfully.",
-        });
-      } catch (e) {
-        console.log("Error in Register:", e);
-        res
-          .status(500)
-          .json({ success: false, message: "Failed Registration." });
-      }
-    });
-  },
   loginStudent: async (req, res) => {
     Student.find({ email: req.body.email }).then((resp) => {
       if (resp.length > 0) {
@@ -548,6 +419,7 @@ module.exports = {
           "mothertongue",
           "modeoftransport",
           "firstlanguage",
+          "classsubject",
         ];
 
         Object.keys(fields).forEach((field) => {
