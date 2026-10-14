@@ -127,21 +127,90 @@ module.exports = {
       const schoolId = req.user.schoolId;
 
       // const result = await Marksheet.aggregate([
-      //     {
-      //         $match: {
-      //             _id: new mongoose.Types.ObjectId(id),
-      //             school: new mongoose.Types.ObjectId(schoolId),
-      //         },
+      //   {
+      //     $match: {
+      //       _id: new mongoose.Types.ObjectId(id),
+      //       school: new mongoose.Types.ObjectId(schoolId),
       //     },
+      //   },
 
-      //     {
-      //         $lookup: {
-      //             from: "marksheetdetails", // 👈 collection name (IMPORTANT)
-      //             localField: "_id",
-      //             foreignField: "msId",
-      //             as: "marksheetDetails",
-      //         },
+      //   // Populate Class
+      //   {
+      //     $lookup: {
+      //       from: "classes",
+      //       localField: "class",
+      //       foreignField: "_id",
+      //       as: "class",
       //     },
+      //   },
+      //   { $unwind: { path: "$class", preserveNullAndEmptyArrays: true } },
+
+      //   // Populate Section
+      //   {
+      //     $lookup: {
+      //       from: "sections",
+      //       localField: "section",
+      //       foreignField: "_id",
+      //       as: "section",
+      //     },
+      //   },
+      //   { $unwind: { path: "$section", preserveNullAndEmptyArrays: true } },
+
+      //   // Populate Teacher
+      //   {
+      //     $lookup: {
+      //       from: "teachers",
+      //       localField: "teacher",
+      //       foreignField: "_id",
+      //       as: "teacher",
+      //     },
+      //   },
+      //   { $unwind: { path: "$teacher", preserveNullAndEmptyArrays: true } },
+
+      //   // Populate Subject
+      //   {
+      //     $lookup: {
+      //       from: "subjects",
+      //       localField: "subject",
+      //       foreignField: "_id",
+      //       as: "subject",
+      //     },
+      //   },
+      //   { $unwind: { path: "$subject", preserveNullAndEmptyArrays: true } },
+
+      //   // Populate Examination
+      //   {
+      //     $lookup: {
+      //       from: "examinations",
+      //       localField: "examination",
+      //       foreignField: "_id",
+      //       as: "examination",
+      //     },
+      //   },
+      //   { $unwind: { path: "$examination", preserveNullAndEmptyArrays: true } },
+
+      //   // Populate Questionpaper
+      //   {
+      //     $lookup: {
+      //       from: "questionpapers",
+      //       localField: "questionpaper",
+      //       foreignField: "_id",
+      //       as: "questionpaper",
+      //     },
+      //   },
+      //   {
+      //     $unwind: { path: "$questionpaper", preserveNullAndEmptyArrays: true },
+      //   },
+
+      //   // Marksheet Details
+      //   {
+      //     $lookup: {
+      //       from: "marksheetdetails",
+      //       localField: "_id",
+      //       foreignField: "msId",
+      //       as: "marksheetDetails",
+      //     },
+      //   },
       // ]);
 
       const result = await Marksheet.aggregate([
@@ -220,17 +289,42 @@ module.exports = {
           $unwind: { path: "$questionpaper", preserveNullAndEmptyArrays: true },
         },
 
-        // Marksheet Details
+        // Populate Marksheet Details and Student
         {
           $lookup: {
             from: "marksheetdetails",
-            localField: "_id",
-            foreignField: "msId",
+            let: { marksheetId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$msId", "$$marksheetId"],
+                  },
+                },
+              },
+
+              // Populate Student inside Marksheet Details
+              {
+                $lookup: {
+                  from: "students",
+                  localField: "student",
+                  foreignField: "_id",
+                  as: "student",
+                },
+              },
+
+              // Convert student array into a single object
+              {
+                $unwind: {
+                  path: "$student",
+                  preserveNullAndEmptyArrays: true,
+                },
+              },
+            ],
             as: "marksheetDetails",
           },
         },
       ]);
-
       if (!result.length) {
         return res.status(404).json({
           success: false,
