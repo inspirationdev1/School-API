@@ -90,9 +90,11 @@ module.exports = {
       // 2️⃣ Map classsubject details
       const msDetail = req.body.classsubjectDetails || [];
       const csId = savedData._id || null;
+      const classId = req.body.class || null;
       const classSubjectDetails = msDetail.map((item) => ({
         ...item,
         school: schoolId,
+        class: classId,
         csId: csId,
       }));
 
@@ -192,9 +194,11 @@ module.exports = {
       // 2️⃣ Map classsubject details
       const msDetail = req.body.classsubjectDetails || [];
       const csId = id || null;
+      const classId = req.body.class || null;
       const classSubjectDetails = msDetail.map((item) => ({
         ...item,
         school: schoolId,
+        class: classId,
         csId: csId,
       }));
       // 3️⃣ Save Classsubject details
@@ -258,6 +262,31 @@ module.exports = {
       res.status(500).json({
         success: false,
         message: "Server Error in Deleting Classsubject. Try later",
+      });
+    }
+  },
+  getClasssubjectdetailWithQuery: async (req, res) => {
+    try {
+      const filterQuery = {};
+      const schoolId = req.user.schoolId;
+
+      filterQuery["school"] = schoolId;
+      if (req.query.class) {
+        filterQuery["class"] = req.query.class;
+      }
+
+      const filteredClasssubjects = await Classsubjectdetail.find(filterQuery)
+        .populate("class")
+        .populate("subject")
+        .sort({
+          _id: -1,
+        });
+      res.status(200).json({ success: true, data: filteredClasssubjects });
+    } catch (error) {
+      console.log("Error in fetching Classsubject with query", error);
+      res.status(500).json({
+        success: false,
+        message: "Error  in fetching Classsubject  with query.",
       });
     }
   },

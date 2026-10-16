@@ -2,7 +2,13 @@ const mongoose = require("mongoose");
 
 const classsubjectdetailSchema = new mongoose.Schema({
   school: { type: mongoose.Schema.ObjectId, ref: "School" },
-  csId: { type: mongoose.Schema.Types.ObjectId, ref: 'Classsubject', required: true },
+  csId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Classsubject",
+    required: true,
+  },
+  class: { type: mongoose.Schema.ObjectId, ref: "Class", required: true },
+  class_name: { type: String, default: "" },
   subject: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Subject",

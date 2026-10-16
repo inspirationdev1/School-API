@@ -1,12 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require('../auth/auth');
-const { createClasssubject, getAllClasssubjects,getClasssubjectWithQuery
+const { createClasssubject, getAllClasssubjects,getClasssubjectdetailWithQuery,getClasssubjectWithQuery
     , getClasssubjectWithId, updateClasssubjectWithId, deleteClasssubjectWithId,getClasssubjectPrint,getClasssubjectWithStudentId } = require("../controller/classsubject.controller");
 
 router.post("/create",authMiddleware(['SCHOOL','USER','TEACHER']), createClasssubject);
 router.get("/fetch-all",authMiddleware(['SCHOOL','USER','TEACHER']),getAllClasssubjects);
 router.get("/fetch-with-query",authMiddleware(['SCHOOL','USER','TEACHER','STUDENT','PARENT']),getClasssubjectWithQuery);
+router.get("/fetch-classsubjectdetail",authMiddleware(['SCHOOL','USER','TEACHER','STUDENT','PARENT']),getClasssubjectdetailWithQuery);
+
 router.get("/fetch-single/:id",authMiddleware(['SCHOOL','USER','TEACHER']),  getClasssubjectWithId);
 router.patch("/update/:id",authMiddleware(['SCHOOL','USER','TEACHER']), updateClasssubjectWithId);
 router.delete("/delete/:id",authMiddleware(['SCHOOL','USER','TEACHER']), deleteClasssubjectWithId);

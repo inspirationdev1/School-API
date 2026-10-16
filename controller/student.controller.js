@@ -336,7 +336,8 @@ module.exports = {
         .populate("religion")
         .populate("mothertongue")
         .populate("modeoftransport")
-        .populate("firstlanguage");
+        .populate("firstlanguage")
+        .populate("classsubject");
       if (resp) {
         const admissionAttachments = await Admissionattachment.find({
           student_id: id, // ✅ probably should be student instead of _id
