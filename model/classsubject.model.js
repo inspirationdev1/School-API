@@ -7,6 +7,7 @@ const classsubjectSchema = new mongoose.Schema({
   class: { type: mongoose.Schema.ObjectId, ref: "Class", required: true },
   class_name: { type: String, default: "" },
   seq: { type: Number, default: 0 },
+  status: { type: String, default: "valid" },
   createdAt: { type: Date, default: new Date() },
 });
 

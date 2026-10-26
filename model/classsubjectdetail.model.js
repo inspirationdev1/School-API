@@ -16,6 +16,7 @@ const classsubjectdetailSchema = new mongoose.Schema({
   },
   subject_name: { type: String, default: "" },
   seq: { type: Number, default: 0 },
+  status: { type: String, default: "valid" },
   createdAt: { type: Date, default: new Date() },
 });
 

@@ -235,6 +235,26 @@ module.exports = {
         await Period.find({ classsubject: id, school: schoolId })
       ).length;
       if (subExamCount === 0 && subPeriodCount === 0) {
+        // await Classsubject.findOneAndUpdate(
+        //   { _id: id },
+        //   { $set: { status: "cancel" } },
+        //   { new: true }, // optional: returns updated document
+        // );
+        // await Classsubjectdetail.updateMany(
+        //   { csId: id },
+        //   { $set: { status: "cancel" } },
+        //   { new: true }, // optional: returns updated document
+        // );
+        await Classsubject.findOneAndDelete({ _id: id, school: schoolId });
+        await Classsubjectdetail.deleteMany({ csId: id, school: schoolId });
+
+        const ClasssubjectAfterDelete = await Classsubject.findOne({ _id: id });
+        res.status(200).json({
+          success: true,
+          message: "Classsubject Deleted.",
+          data: ClasssubjectAfterDelete,
+        });
+      } else {
         await Classsubject.findOneAndUpdate(
           { _id: id },
           { $set: { status: "cancel" } },
@@ -245,17 +265,10 @@ module.exports = {
           { $set: { status: "cancel" } },
           { new: true }, // optional: returns updated document
         );
-        // await Classsubject.findOneAndDelete({ _id: id, school: schoolId });
-        const ClasssubjectAfterDelete = await Classsubject.findOne({ _id: id });
-        res.status(200).json({
-          success: true,
-          message: "Classsubject Deleted.",
-          data: ClasssubjectAfterDelete,
+        res.status(500).json({
+          success: false,
+          message: "This class Subject is already in use.So its just cancelled",
         });
-      } else {
-        res
-          .status(500)
-          .json({ success: false, message: "This class is already in use." });
       }
     } catch (error) {
       console.log("Error in updateClasssubjectWithId", error);
