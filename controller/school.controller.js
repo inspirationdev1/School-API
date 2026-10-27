@@ -170,7 +170,6 @@ module.exports = {
         const savedData = await newSchool.save();
 
         const schoolId = savedData._id.toString();
-       
 
         console.log("School Created Successfully:", schoolId);
 
@@ -378,6 +377,20 @@ module.exports = {
           school[field] = fields[field][0];
         });
 
+        const check_password = fields.password[0];
+
+        if (
+          typeof check_password === "string" &&
+          /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(check_password)
+        ) {
+          console.log("Password is bcrypt hashed");
+        } else {
+          console.log("Password appears to be plain text");
+          const salt = bcrypt.genSaltSync(10);
+          const hashPassword = bcrypt.hashSync(fields.password[0], salt);
+          school["password"] = hashPassword;
+        }
+
         // ------------------------------------------------------------
         // Upload new image
         // ------------------------------------------------------------
@@ -500,7 +513,7 @@ module.exports = {
 // DEFAULT SCHOOL DATA INITIALIZATION
 // ====================================================================
 
-const data_Insert = async (schoolId,school_name) => {
+const data_Insert = async (schoolId, school_name) => {
   try {
     console.log("Starting default data initialization for school:", schoolId);
 
