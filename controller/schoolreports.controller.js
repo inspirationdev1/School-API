@@ -2816,6 +2816,7 @@ module.exports = {
         requesttype = req.query?.requesttype;
       }
 
+      filterQuery.status = "active";
       const data = await await Marksheetdetail.find(filterQuery)
         .populate("school")
         .populate("class")
@@ -3189,6 +3190,7 @@ module.exports = {
         .sort({ marks_min: -1 })
         .lean();
 
+      filterQuery.status = "active";
       const data = await await Marksheetdetail.find(filterQuery)
         .populate("school")
         .populate("class")
@@ -3880,6 +3882,9 @@ module.exports = {
         requesttype = req.query?.requesttype;
       }
 
+      filterQuery.status = "active";
+
+      filterQuery.status = "active";
       const marksheetData = await Marksheetdetail.find(filterQuery)
         .populate("school")
         .populate("class")
@@ -5013,6 +5018,7 @@ module.exports = {
         filterQuery.student = new mongoose.Types.ObjectId(req.query?.student);
       }
 
+      filterQuery.status = "active";
       const marksheetData = await Marksheetdetail.find(filterQuery)
         .populate("school")
         .populate("class")
@@ -5540,6 +5546,7 @@ module.exports = {
         filterQuery.student = new mongoose.Types.ObjectId(req.query?.student);
       }
 
+      filterQuery.status = "active";
       const marksheetData = await Marksheetdetail.find(filterQuery)
         .populate("school")
         .populate("class")
@@ -6072,6 +6079,7 @@ module.exports = {
         filterQuery.student = new mongoose.Types.ObjectId(req.query?.student);
       }
 
+      filterQuery.status = "active";
       const marksheetData = await Marksheetdetail.find(filterQuery)
         .populate("school")
         .populate("class")
