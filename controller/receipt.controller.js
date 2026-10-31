@@ -1,9 +1,13 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
+
 const Accounttransaction = require("../model/accounttransaction.model");
 const Accountsetup = require("../model/accountsetup.model");
 const Receipt = require("../model/receipt.model");
 const Receiptdetail = require("../model/receiptdetail.model");
+const appsetting = require("../model/appsetting.model");
 
 const {
   getNumberseqWithScreenId,
@@ -209,6 +213,10 @@ module.exports = {
 
       let acctrans = isDrCrEqual?.accountTransactions || [];
       // *****End Check Accounts Integration******
+
+      //****Start Razor Integration */
+
+      //****End Razor Integration*/
 
       // 1️⃣ Save receipt
       const newReceipt = new Receipt({
@@ -677,6 +685,60 @@ module.exports = {
       res.status(500).json({
         success: false,
         message: "Error fetching getReceiptPrint",
+      });
+    }
+  },
+  razorOrder: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      const appsettingData = await appsetting.find({ school: schoolId }).lean();
+      let RAZORPAY_KEY_ID = "";
+      let RAZORPAY_SECRET = "";
+      if (appsettingData.length == 0) {
+        res.status(404).json({
+          success: false,
+          message: "Razor Key And Razor Secret not available",
+        });
+      } else {
+        RAZORPAY_KEY_ID = appsettingData[0]?.RAZORPAY_KEY_ID;
+        RAZORPAY_SECRET = appsettingData[0]?.RAZORPAY_SECRET;
+      }
+      if (RAZORPAY_KEY_ID == "" || RAZORPAY_SECRET == "") {
+        res.status(500).json({
+          success: false,
+          message: "Error in razorOrder",
+        });
+      }
+
+      const razorpay = new Razorpay({
+        key_id: RAZORPAY_KEY_ID,
+        key_secret: RAZORPAY_SECRET,
+      });
+
+      const currency = "INR";
+      const options = {
+        amount: req.body?.paidAmount ?? 0,
+        currency: currency,
+        receipt: req.body?.receiptNumber ?? "RCT-001",
+      };
+      const order = await razorpay.orders.create(options);
+
+      if (!order) {
+        res.status(404).json({
+          success: false,
+          message: "Error in razorOrder",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: order, // contains receipt + receiptDetails[]
+      });
+    } catch (e) {
+      console.error("Error in razorOrder", e);
+      res.status(500).json({
+        success: false,
+        message: "Error in razorOrder",
       });
     }
   },
