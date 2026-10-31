@@ -28,7 +28,7 @@ const appsettingSchema = new mongoose.Schema({
     required: false,
     default: null,
   },
- upi_image: {
+  upi_image: {
     type: String,
     required: false,
     default: null,
@@ -38,7 +38,16 @@ const appsettingSchema = new mongoose.Schema({
     required: false,
     default: null,
   },
-
+  RAZORPAY_KEY_ID: {
+    type: String,
+    required: false,
+    default: null,
+  },
+  RAZORPAY_SECRET: {
+    type: String,
+    required: false,
+    default: null,
+  },
   createdAt: { type: Date, default: new Date() },
 });
 
