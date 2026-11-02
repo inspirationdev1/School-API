@@ -33,6 +33,8 @@ const receiptdetailSchema = new mongoose.Schema({
   remarks: { type: String, default: "" },
   status: { type: String, default: "valid" },
   year: { type: Number, default: new Date().getFullYear() },
+  order_id: { type: String, default: null }, //Payment gateway Order Id
+  payment_id: { type: String, default: null }, //Payment gateway Payment Id
   createdAt: { type: Date, default: new Date() },
 });
 

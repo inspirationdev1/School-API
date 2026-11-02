@@ -189,6 +189,8 @@ module.exports = {
         ...item,
         school: schoolId,
         paymentMethod: paymentMethod,
+        order_id: req.body?.order_id ?? null,
+        payment_id: req.body?.payment_id ?? null,
       }));
       // *****Start Check Accounts Integration******
       const isDrCrEqual = await check_accounttransaction(receiptDetails);
@@ -694,6 +696,7 @@ module.exports = {
       const appsettingData = await appsetting.find({ school: schoolId }).lean();
       let RAZORPAY_KEY_ID = "";
       let RAZORPAY_SECRET = "";
+
       if (appsettingData.length == 0) {
         res.status(404).json({
           success: false,
@@ -703,6 +706,7 @@ module.exports = {
         RAZORPAY_KEY_ID = appsettingData[0]?.RAZORPAY_KEY_ID;
         RAZORPAY_SECRET = appsettingData[0]?.RAZORPAY_SECRET;
       }
+
       if (RAZORPAY_KEY_ID == "" || RAZORPAY_SECRET == "") {
         res.status(500).json({
           success: false,
@@ -730,9 +734,58 @@ module.exports = {
         });
       }
 
+      order.RAZORPAY_KEY_ID = RAZORPAY_KEY_ID;
       res.status(200).json({
         success: true,
         data: order, // contains receipt + receiptDetails[]
+      });
+    } catch (e) {
+      console.error("Error in razorOrder", e);
+      res.status(500).json({
+        success: false,
+        message: "Error in razorOrder",
+      });
+    }
+  },
+  razorValidate: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+
+      const appsettingData = await appsetting.find({ school: schoolId }).lean();
+      let RAZORPAY_KEY_ID = "";
+      let RAZORPAY_SECRET = "";
+
+      if (appsettingData.length == 0) {
+        res.status(404).json({
+          success: false,
+          message: "Razor Key And Razor Secret not available",
+        });
+      } else {
+        RAZORPAY_KEY_ID = appsettingData[0]?.RAZORPAY_KEY_ID;
+        RAZORPAY_SECRET = appsettingData[0]?.RAZORPAY_SECRET;
+      }
+
+      if (RAZORPAY_KEY_ID == "" || RAZORPAY_SECRET == "") {
+        res.status(500).json({
+          success: false,
+          message: "Error in razorOrder",
+        });
+      }
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+        req.body;
+
+      const sha = crypto.createHmac("sha256", RAZORPAY_SECRET);
+      //order_id + "|" + razorpay_payment_id
+      sha.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+      const digest = sha.digest("hex");
+      if (digest !== razorpay_signature) {
+        return res.status(400).json({ msg: "Transaction is not legit!" });
+      }
+
+      res.json({
+        msg: "success",
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
       });
     } catch (e) {
       console.error("Error in razorOrder", e);
