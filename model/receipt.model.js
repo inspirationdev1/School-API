@@ -19,6 +19,8 @@ const receiptSchema = new mongoose.Schema({
   student_name: { type: String, default: null },
   paidAmount: { type: Number, default: 0 },
   acctrans: [],
+  order_id: { type: String, default: null }, //Payment gateway Order Id
+  payment_id: { type: String, default: null }, //Payment gateway Payment Id
   createdAt: { type: Date, default: new Date() },
 });
 
