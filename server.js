@@ -66,6 +66,17 @@ const schoolreportsRouter = require("./router/schoolreports.router");
 const printreportsRouter = require("./router/printreports.router");
 const financereportsRouter = require("./router/financereports.router");
 
+//***Inventory Module */
+const itemtypeRouter = require("./router/itemtype.router.js");
+const itemgroupRouter = require("./router/itemgroup.router.js");
+const itemRouter = require("./router/item.router.js");
+const supplierRouter = require("./router/supplier.router.js");
+const purchaseinvoiceRouter = require("./router/purchaseinvoice.router.js");
+const openingstockRouter = require("./router/openingstock.router.js");
+const stockissueRouter = require("./router/stockissue.router.js");
+const geolocationRouter = require("./router/geolocation.router");
+//******* */
+
 const authMiddleware = require("./auth/auth");
 const { authCheck } = require("./controller/auth.controller");
 
@@ -154,6 +165,17 @@ app.use("/api/journalvoucher", journalvoucherRouter);
 app.use("/api/schoolreports", schoolreportsRouter);
 app.use("/api/printreports", printreportsRouter);
 app.use("/api/financereports", financereportsRouter);
+
+//****Inventory Module */
+app.use("/api/itemtype", itemtypeRouter);
+app.use("/api/itemgroup", itemgroupRouter);
+app.use("/api/item", itemRouter);
+app.use("/api/supplier", supplierRouter);
+app.use("/api/purchaseinvoice", purchaseinvoiceRouter);
+app.use("/api/openingstock", openingstockRouter);
+app.use("/api/stockissue", stockissueRouter);
+app.use("/api/geolocation", geolocationRouter);
+//******* */
 
 app.get("/api/auth/check", authCheck);
 
