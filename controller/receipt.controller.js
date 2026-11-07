@@ -693,60 +693,86 @@ module.exports = {
   razorOrder: async (req, res) => {
     try {
       const schoolId = req.user.schoolId;
-      const appsettingData = await appsetting.find({ school: schoolId }).lean();
-      let RAZORPAY_KEY_ID = "";
-      let RAZORPAY_SECRET = "";
 
-      if (appsettingData.length == 0) {
-        res.status(404).json({
-          success: false,
-          message: "Razor Key And Razor Secret not available",
-        });
-      } else {
-        RAZORPAY_KEY_ID = appsettingData[0]?.RAZORPAY_KEY_ID;
-        RAZORPAY_SECRET = appsettingData[0]?.RAZORPAY_SECRET;
-      }
+      // Get Razorpay credentials
+      const appsettingData = await appsetting
+        .findOne({ school: schoolId })
+        .lean();
 
-      if (RAZORPAY_KEY_ID == "" || RAZORPAY_SECRET == "") {
-        res.status(500).json({
+      if (!appsettingData) {
+        return res.status(404).json({
           success: false,
-          message: "Error in razorOrder",
+          message: "Razorpay credentials not available",
         });
       }
+
+      const RAZORPAY_KEY_ID = appsettingData.RAZORPAY_KEY_ID;
+
+      const RAZORPAY_SECRET = appsettingData.RAZORPAY_SECRET;
+
+      if (!RAZORPAY_KEY_ID || !RAZORPAY_SECRET) {
+        return res.status(500).json({
+          success: false,
+          message: "Razorpay Key ID or Secret is missing",
+        });
+      }
+
+      // Receive amount in RUPEES from React
+      const paidAmount = Number(req.body.paidAmount);
+      const method = req.body?.method ?? "upi";
+      if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid payment amount",
+        });
+      }
+
+      // Convert RUPEES into PAISE
+      const amountInPaise = Math.round(paidAmount * 100);
 
       const razorpay = new Razorpay({
         key_id: RAZORPAY_KEY_ID,
         key_secret: RAZORPAY_SECRET,
       });
 
-      const currency = "INR";
       const options = {
-        amount: req.body?.paidAmount ?? 0,
-        currency: currency,
-        receipt: req.body?.receiptNumber ?? "RCT-001",
+        amount: amountInPaise,
+        currency: "INR",
+        method: method,
+        receipt: req.body.receiptNumber || "RCT-001",
       };
+
       const order = await razorpay.orders.create(options);
 
-      if (!order) {
-        res.status(404).json({
-          success: false,
-          message: "Error in razorOrder",
-        });
-      }
-
-      order.RAZORPAY_KEY_ID = RAZORPAY_KEY_ID;
-      res.status(200).json({
+// image_url =
+// 'https://res.cloudinary.com/da3dxqer8/image/upload/v1783417044/school/1783417042805_Inspiration_Academy_logo.png.png'
+// owner_name =
+// 'Mohammed Maroof Irfan'
+// role =
+// 'SCHOOL'
+// school_name =
+// 'Inspiration Academy and IT Training'
+      return res.status(200).json({
         success: true,
-        data: order, // contains receipt + receiptDetails[]
+        data: {
+          ...order,
+          RAZORPAY_KEY_ID,
+          currency: "INR",
+          name: req.user.school_name, //your business name
+          description: "Fees Pay Transaction",
+          image: req.user.image_url,
+        },
       });
     } catch (e) {
-      console.error("Error in razorOrder", e);
-      res.status(500).json({
+      console.error("Error in razorOrder:", e);
+
+      return res.status(500).json({
         success: false,
-        message: "Error in razorOrder",
+        message: e.message || "Error creating Razorpay order",
       });
     }
   },
+
   razorValidate: async (req, res) => {
     try {
       const schoolId = req.user.schoolId;
