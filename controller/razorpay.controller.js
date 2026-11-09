@@ -1,0 +1,971 @@
+require("dotenv").config();
+const mongoose = require("mongoose");
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
+
+const Accounttransaction = require("../model/accounttransaction.model");
+const Accountsetup = require("../model/accountsetup.model");
+const Receipt = require("../model/receipt.model");
+const Receiptdetail = require("../model/receiptdetail.model");
+const appsetting = require("../model/appsetting.model");
+
+const {
+  getNumberseqWithScreenId,
+  updateNumberseqWithScreenId,
+} = require("../controller/numberseq.controller");
+module.exports = {
+  getAllReceipts: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      const allReceipt = await Receipt.find({ school: schoolId }).sort({
+        _id: -1,
+      });
+      res.status(200).json({
+        success: true,
+        message: "Success in fetching all  Receipt",
+        data: allReceipt,
+      });
+    } catch (error) {
+      console.log("Error in getAllReceipt", error);
+      res.status(500).json({
+        success: false,
+        message: "Server Error in Getting All Receipt. Try later",
+      });
+    }
+  },
+  getReceiptWithId: async (req, res) => {
+    try {
+      const id = req.params.id;
+      const schoolId = req.user.schoolId;
+
+      const result = await Receipt.aggregate([
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(id),
+            school: new mongoose.Types.ObjectId(schoolId),
+          },
+        },
+
+        {
+          $lookup: {
+            from: "receiptdetails", // 👈 collection name (IMPORTANT)
+            localField: "_id",
+            foreignField: "receiptId",
+            as: "receiptDetails",
+          },
+        },
+
+        {
+          $lookup: {
+            from: "salesinvoices",
+            localField: "receiptDetails.siId",
+            foreignField: "_id",
+            as: "salesInvoiceData",
+          },
+        },
+        {
+          $addFields: {
+            receiptDetails: {
+              $map: {
+                input: "$receiptDetails",
+                as: "detail",
+                in: {
+                  $mergeObjects: [
+                    "$$detail",
+                    {
+                      siId: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$salesInvoiceData",
+                              as: "fs",
+                              cond: {
+                                $eq: ["$$fs._id", "$$detail.siId"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            salesInvoiceData: 0, // cleanup
+          },
+        },
+        {
+          $lookup: {
+            from: "students",
+            localField: "receiptDetails.student",
+            foreignField: "_id",
+            as: "studentData",
+          },
+        },
+        {
+          $addFields: {
+            receiptDetails: {
+              $map: {
+                input: "$receiptDetails",
+                as: "detail",
+                in: {
+                  $mergeObjects: [
+                    "$$detail",
+                    {
+                      student: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$studentData",
+                              as: "fs",
+                              cond: {
+                                $eq: ["$$fs._id", "$$detail.student"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            studentData: 0, // cleanup
+          },
+        },
+      ]);
+
+      if (!result.length) {
+        return res.status(404).json({
+          success: false,
+          message: "Receipt not found",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: result[0], // contains receipt + receiptDetails[]
+      });
+    } catch (e) {
+      console.error("Error in getReceiptWithId", e);
+      res.status(500).json({
+        success: false,
+        message: "Error fetching Receipt",
+      });
+    }
+  },
+  createReceipt: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+
+      //***Number seq */
+      const numberseqData = await getNumberseqWithScreenId({
+        screen_id: "receipt",
+        schoolId: req.user.schoolId,
+      });
+      console.log("numberseqData.data", numberseqData);
+      let seq = 1;
+      let code = "";
+      if (numberseqData) {
+        seq = numberseqData.seq || 1;
+        code = numberseqData.code || "";
+      }
+      //****** */
+
+      // 2️⃣ Map receiptDetails
+      const paymentMethod = req.body?.paymentMethod || "";
+      const recDetail = req.body.receiptDetails || [];
+      let receiptDetails = recDetail.map((item) => ({
+        ...item,
+        school: schoolId,
+        paymentMethod: paymentMethod,
+        order_id: req.body?.order_id ?? null,
+        payment_id: req.body?.payment_id ?? null,
+      }));
+      // *****Start Check Accounts Integration******
+      const isDrCrEqual = await check_accounttransaction(receiptDetails);
+      if (!isDrCrEqual) {
+        res.status(200).json({
+          success: false,
+          message: "Receipt not Integrated",
+          data: req?.body,
+        });
+      }
+
+      const totals = receiptDetails.reduce(
+        (acc, item) => {
+          acc.paidAmount += item.paidAmount || 0;
+
+          return acc;
+        },
+        {
+          paidAmount: 0,
+        },
+      );
+
+      let acctrans = isDrCrEqual?.accountTransactions || [];
+      // *****End Check Accounts Integration******
+
+      //****Start Razor Integration */
+
+      //****End Razor Integration*/
+
+      // 1️⃣ Save receipt
+      const newReceipt = new Receipt({
+        ...req.body,
+        receiptCode: code,
+        seq: seq,
+        school: schoolId,
+        paidAmount: totals?.paidAmount,
+        acctrans: acctrans,
+      });
+
+      const savedData = await newReceipt.save();
+
+      // 2️⃣ Map receiptDetails
+      //   const recDetail = req.body.receiptDetails || [];
+      const recId = savedData._id || null;
+      receiptDetails = receiptDetails.map((item) => ({
+        ...item,
+        receiptId: recId,
+      }));
+
+      // 3️⃣ Save receiptDetails
+      if (receiptDetails.length > 0) {
+        await Receiptdetail.insertMany(receiptDetails);
+
+        // *****Start Insert Accounts Integration******
+        acctrans = isDrCrEqual?.accountTransactions.map((item) => ({
+          ...item,
+          doc_code: savedData?.receiptCode || "",
+          doc_name: "receipt",
+          doc_date: savedData?.receiptDate || "",
+          doc_id: recId || "",
+          school: savedData?.school || null,
+        }));
+        const isIntegrated = await integrate_accounttransaction(acctrans || []);
+        // *****End Insert Accounts Integration******
+      }
+
+      // ****Update Number Seq****
+      const numberseqAfterUpdate = await updateNumberseqWithScreenId({
+        screen_id: "receipt",
+        schoolId: req.user.schoolId,
+      });
+      console.log("numberseqAfterUpdate", numberseqAfterUpdate);
+      // *********************
+
+      // 4️⃣ Response
+      res.status(200).json({
+        success: true,
+        data: savedData,
+        message: "Receipt is Created Successfully.",
+      });
+    } catch (e) {
+      console.error("Error creating receipt:", e);
+      res.status(500).json({
+        success: false,
+        message: "Failed Creation of Receipt.",
+      });
+    }
+  },
+  updateReceiptWithId: async (req, res) => {
+    // Not providing the  schoolId as receipt Id will be unique.
+    try {
+      const schoolId = req.user.schoolId;
+
+      let id = req.params.id;
+      console.log(req.body);
+
+      // 2️⃣ Map receiptDetails
+      const paymentMethod = req.body?.paymentMethod || "";
+      const recDetail = req.body.receiptDetails || [];
+      const recId = id || null;
+      const receiptDetails = recDetail.map((item) => ({
+        ...item,
+        school: schoolId,
+        receiptId: recId,
+        paymentMethod: paymentMethod,
+      }));
+
+      // *****Start Check Accounts Integration******
+      const isDrCrEqual = await check_accounttransaction(receiptDetails);
+      if (!isDrCrEqual) {
+        res.status(200).json({
+          success: false,
+          message: "Receipt not Integrated",
+          data: savedData,
+        });
+      }
+
+      const totals = receiptDetails.reduce(
+        (acc, item) => {
+          acc.paidAmount += item.paidAmount || 0;
+
+          return acc;
+        },
+        {
+          paidAmount: 0,
+        },
+      );
+
+      let acctrans = isDrCrEqual?.accountTransactions || [];
+      // *****End Check Accounts Integration******
+
+      //   await Receipt.findOneAndUpdate({ _id: id }, { $set: { ...req.body, } });
+      const savedData = await Receipt.findOneAndUpdate(
+        { _id: id },
+        {
+          $set: {
+            ...req.body,
+            paidAmount: totals?.paidAmount,
+            acctrans: acctrans,
+          },
+        },
+        { new: true, runValidators: true },
+      );
+
+      // 3️⃣ Save receipt details
+      if (receiptDetails.length > 0) {
+        const deleteDetail = await Receiptdetail.deleteMany({
+          receiptId: recId,
+          school: schoolId,
+        });
+        console.log(deleteDetail);
+
+        await Receiptdetail.insertMany(receiptDetails);
+
+        // *****Start Insert Accounts Integration******
+        acctrans = isDrCrEqual?.accountTransactions.map((item) => ({
+          ...item,
+          doc_code: savedData?.receiptCode || "",
+          doc_name: "receipt",
+          doc_date: savedData?.receiptDate || "",
+          doc_id: recId || "",
+          school: savedData?.school || null,
+        }));
+        const isIntegrated = await integrate_accounttransaction(acctrans || []);
+        // *****End Insert Accounts Integration******
+      }
+      const ReceiptAfterUpdate = await Receipt.findOne({ _id: id });
+      res.status(200).json({
+        success: true,
+        message: "Receipt Updated",
+        data: ReceiptAfterUpdate,
+      });
+    } catch (error) {
+      console.log("Error in updateReceiptWithId", error);
+      res.status(500).json({
+        success: false,
+        message: "Server Error in Update Receipt. Try later",
+      });
+    }
+  },
+  deleteReceiptWithId: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+      let id = req.params.id;
+
+      await Receipt.findOneAndUpdate(
+        { _id: id },
+        { $set: { status: "cancel" } },
+        { new: true }, // optional: returns updated document
+      );
+      await Receiptdetail.updateMany(
+        { receiptId: id },
+        { $set: { status: "cancel" } },
+        { new: true }, // optional: returns updated document
+      );
+      // await Receipt.findOneAndDelete({ _id: id, school: schoolId });
+      const ReceiptAfterDelete = await Receipt.findOne({ _id: id });
+      res.status(200).json({
+        success: true,
+        message: "Receipt Deleted.",
+        data: ReceiptAfterDelete,
+      });
+    } catch (error) {
+      console.log("Error in updateReceiptWithId", error);
+      res.status(500).json({
+        success: false,
+        message: "Server Error in Deleting Receipt. Try later",
+      });
+    }
+  },
+  getReceiptPrint: async (req, res) => {
+    try {
+      const id = req.params.id;
+      const schoolId = req.user.schoolId;
+
+      const result = await Receipt.aggregate([
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(id),
+            school: new mongoose.Types.ObjectId(schoolId),
+          },
+        },
+        // 🔹 Populate school
+        {
+          $lookup: {
+            from: "schools", // collection name
+            localField: "school",
+            foreignField: "_id",
+            as: "school",
+          },
+        },
+        {
+          $unwind: "$school", // convert array → object
+        },
+        {
+          $lookup: {
+            from: "receiptdetails", // 👈 collection name (IMPORTANT)
+            localField: "_id",
+            foreignField: "receiptId",
+            as: "receiptDetails",
+          },
+        },
+        // 🔹 Populate Student
+        {
+          $lookup: {
+            from: "students",
+            localField: "receiptDetails.student",
+            foreignField: "_id",
+            as: "studentData",
+          },
+        },
+        {
+          $addFields: {
+            receiptDetails: {
+              $map: {
+                input: "$receiptDetails",
+                as: "detail",
+                in: {
+                  $mergeObjects: [
+                    "$$detail",
+                    {
+                      student: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$studentData",
+                              as: "fs",
+                              cond: {
+                                $eq: ["$$fs._id", "$$detail.student"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            studentData: 0, // cleanup
+          },
+        },
+        // 🔹 Populate Parent
+        {
+          $lookup: {
+            from: "parents",
+            localField: "receiptDetails.parent",
+            foreignField: "_id",
+            as: "parentData",
+          },
+        },
+        {
+          $addFields: {
+            receiptDetails: {
+              $map: {
+                input: "$receiptDetails",
+                as: "detail",
+                in: {
+                  $mergeObjects: [
+                    "$$detail",
+                    {
+                      parent: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$parentData",
+                              as: "fs",
+                              cond: {
+                                $eq: ["$$fs._id", "$$detail.parent"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            parentData: 0, // cleanup
+          },
+        },
+        // 🔹 Populate Class
+        {
+          $lookup: {
+            from: "classes",
+            localField: "receiptDetails.class",
+            foreignField: "_id",
+            as: "classData",
+          },
+        },
+        {
+          $addFields: {
+            receiptDetails: {
+              $map: {
+                input: "$receiptDetails",
+                as: "detail",
+                in: {
+                  $mergeObjects: [
+                    "$$detail",
+                    {
+                      class: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$classData",
+                              as: "fs",
+                              cond: {
+                                $eq: ["$$fs._id", "$$detail.class"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            classData: 0, // cleanup
+          },
+        },
+        // 🔹 Populate Section
+        {
+          $lookup: {
+            from: "sections",
+            localField: "receiptDetails.section",
+            foreignField: "_id",
+            as: "sectionData",
+          },
+        },
+        {
+          $addFields: {
+            receiptDetails: {
+              $map: {
+                input: "$receiptDetails",
+                as: "detail",
+                in: {
+                  $mergeObjects: [
+                    "$$detail",
+                    {
+                      section: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$sectionData",
+                              as: "fs",
+                              cond: {
+                                $eq: ["$$fs._id", "$$detail.section"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            sectionData: 0, // cleanup
+          },
+        },
+        // 🔹 Populate Sales Invoicedetail
+        {
+          $lookup: {
+            from: "salesinvoicedetails", // collection name
+            localField: "receiptDetails.siId",
+            foreignField: "siId",
+            as: "salesInvoiceData",
+          },
+        },
+        {
+          $addFields: {
+            receiptDetails: {
+              $map: {
+                input: "$receiptDetails",
+                as: "detail",
+                in: {
+                  $mergeObjects: [
+                    "$$detail",
+                    {
+                      siId: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$salesInvoiceData",
+                              as: "fs",
+                              cond: {
+                                $eq: ["$$fs.siId", "$$detail.siId"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            salesInvoiceData: 0, // cleanup
+          },
+        },
+        // 🔹 SUM grossAmount
+        {
+          $addFields: {
+            totalinvAmount: {
+              $sum: "$receiptDetails.invAmount",
+            },
+            totalpaidAmount: {
+              $sum: "$receiptDetails.paidAmount",
+            },
+          },
+        },
+      ]);
+
+      if (!result.length) {
+        return res.status(404).json({
+          success: false,
+          message: "Receipt not found",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: result[0], // contains receipt + receiptDetails[]
+      });
+    } catch (e) {
+      console.error("Error in getReceiptPrint", e);
+      res.status(500).json({
+        success: false,
+        message: "Error fetching getReceiptPrint",
+      });
+    }
+  },
+  razorOrder: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+
+      // Get Razorpay credentials
+      const appsettingData = await appsetting
+        .findOne({ school: schoolId })
+        .lean();
+
+      if (!appsettingData) {
+        return res.status(404).json({
+          success: false,
+          message: "Razorpay credentials not available",
+        });
+      }
+
+      const RAZORPAY_KEY_ID = appsettingData.RAZORPAY_KEY_ID;
+
+      const RAZORPAY_SECRET = appsettingData.RAZORPAY_SECRET;
+
+      if (!RAZORPAY_KEY_ID || !RAZORPAY_SECRET) {
+        return res.status(500).json({
+          success: false,
+          message: "Razorpay Key ID or Secret is missing",
+        });
+      }
+
+      // Receive amount in RUPEES from React
+      const paidAmount = Number(req.body.paidAmount);
+      const method = req.body?.method ?? "upi";
+      if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid payment amount",
+        });
+      }
+
+      // Convert RUPEES into PAISE
+      const amountInPaise = Math.round(paidAmount * 100);
+
+      const razorpay = new Razorpay({
+        key_id: RAZORPAY_KEY_ID,
+        key_secret: RAZORPAY_SECRET,
+      });
+
+      const options = {
+        amount: amountInPaise,
+        currency: "INR",
+        method: method,
+        receipt: req.body.receiptNumber || "RCT-001",
+      };
+
+      const order = await razorpay.orders.create(options);
+
+      // image_url =
+      // 'https://res.cloudinary.com/da3dxqer8/image/upload/v1783417044/school/1783417042805_Inspiration_Academy_logo.png.png'
+      // owner_name =
+      // 'Mohammed Maroof Irfan'
+      // role =
+      // 'SCHOOL'
+      // school_name =
+      // 'Inspiration Academy and IT Training'
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...order,
+          RAZORPAY_KEY_ID,
+          currency: "INR",
+          name: req.user.school_name, //your business name
+          description: "Fees Pay Transaction",
+          image: req.user.image_url,
+        },
+      });
+    } catch (e) {
+      console.error("Error in razorOrder:", e);
+
+      return res.status(500).json({
+        success: false,
+        message: e.message || "Error creating Razorpay order",
+      });
+    }
+  },
+
+  razorValidate: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+
+      const appsettingData = await appsetting.find({ school: schoolId }).lean();
+      let RAZORPAY_KEY_ID = "";
+      let RAZORPAY_SECRET = "";
+
+      if (appsettingData.length == 0) {
+        res.status(404).json({
+          success: false,
+          message: "Razor Key And Razor Secret not available",
+        });
+      } else {
+        RAZORPAY_KEY_ID = appsettingData[0]?.RAZORPAY_KEY_ID;
+        RAZORPAY_SECRET = appsettingData[0]?.RAZORPAY_SECRET;
+      }
+
+      if (RAZORPAY_KEY_ID == "" || RAZORPAY_SECRET == "") {
+        res.status(500).json({
+          success: false,
+          message: "Error in razorOrder",
+        });
+      }
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+        req.body;
+
+      const sha = crypto.createHmac("sha256", RAZORPAY_SECRET);
+      //order_id + "|" + razorpay_payment_id
+      sha.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+      const digest = sha.digest("hex");
+      if (digest !== razorpay_signature) {
+        return res.status(400).json({ msg: "Transaction is not legit!" });
+      }
+
+      res.json({
+        msg: "success",
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
+      });
+    } catch (e) {
+      console.error("Error in razorOrder", e);
+      res.status(500).json({
+        success: false,
+        message: "Error in razorOrder",
+      });
+    }
+  },
+  getAppsettingWithId: async (req, res) => {
+    // const id = req.params.id;
+    const schoolId = req.params.id;
+    appsetting.findOne({ school: schoolId })
+      .then((resp) => {
+        if (resp) {
+          res.status(200).json({ success: true, data: resp });
+        } else {
+          res
+            .status(500)
+            .json({ success: false, message: "Appsetting data not Available" });
+        }
+      })
+      .catch((e) => {
+        console.log("Error in getAppsettingWithId", e);
+        res.status(500).json({
+          success: false,
+          message: "Error in getting  Appsetting Data",
+        });
+      });
+  },
+};
+
+const check_accounttransaction = async (transDetails) => {
+  try {
+    // 3️⃣ Save Accounttransactions
+    if (transDetails.length > 0) {
+      const accountsetupData = await Accountsetup.find({
+        school: transDetails[0]?.school,
+        screen: "receipt",
+        paymentMethod: transDetails[0]?.paymentMethod,
+      })
+        .populate("accountledger")
+        .lean();
+
+      const studentTotals = Object.values(
+        transDetails.reduce((acc, item) => {
+          const studentId = item.student;
+
+          if (!acc[studentId]) {
+            acc[studentId] = {
+              student: studentId,
+              paidAmount: 0,
+            };
+          }
+
+          acc[studentId].paidAmount += item.paidAmount || 0;
+
+          return acc;
+        }, {}),
+      );
+
+      console.log(studentTotals);
+
+      const accountTransactions = [];
+
+      let seq = 0;
+      for (const stud of studentTotals) {
+        const studentId = stud?.student || null;
+        const paidAmount = stud?.paidAmount || 0;
+        for (const item of accountsetupData) {
+          if (item?.mapping_type === "net_amount" && paidAmount > 0) {
+            seq++;
+            accountTransactions.push({
+              amount: paidAmount || 0,
+              amount_type: item?.amount_type || "",
+              mapping_type: item?.mapping_type || "",
+              seq: seq,
+              student: studentId || null,
+              account_type: item?.accountledger?.account_type || "",
+              accountledger: item?.accountledger?._id || null,
+              accountledger_code: item?.accountledger?.accountledger_code || "",
+              accountledger_name: item?.accountledger?.accountledger_name || "",
+            });
+          }
+        }
+      }
+
+      const totals_DR_CR = accountTransactions.reduce(
+        (acc, item) => {
+          if (item.amount_type === "dr") {
+            acc.totalDebit += item.amount || 0;
+          }
+
+          if (item.amount_type === "cr") {
+            acc.totalCredit += item.amount || 0;
+          }
+
+          return acc;
+        },
+        {
+          totalDebit: 0,
+          totalCredit: 0,
+        },
+      );
+
+      console.log("Total Debit:", totals_DR_CR.totalDebit);
+      console.log("Total Credit:", totals_DR_CR.totalCredit);
+      if (totals_DR_CR.totalDebit === totals_DR_CR.totalCredit) {
+        return {
+          message: "Accounts Transaction saved Successfully",
+          totalDebit: totals_DR_CR.totalDebit,
+          totalCredit: totals_DR_CR.totalCredit,
+          accountTransactions: accountTransactions,
+          success: true,
+        };
+      } else {
+        return {
+          message:
+            "Accounts Transaction Not saved, check Total Debit = " +
+            totals_DR_CR.totalDebit +
+            " And Total Credit = " +
+            totals_DR_CR.totalCredit,
+          totalDebit: totals_DR_CR.totalDebit,
+          totalCredit: totals_DR_CR.totalCredit,
+          accountTransactions: accountTransactions,
+          success: false,
+        };
+      }
+    }
+  } catch (error) {
+    return {
+      message: error.message,
+      totalDebit: totals_DR_CR.totalDebit,
+      totalCredit: totals_DR_CR.totalCredit,
+      accountTransactions: [],
+      success: false,
+    };
+  }
+};
+
+const integrate_accounttransaction = async (accountTransactions) => {
+  try {
+    // 3️⃣ Save Accounttransactions
+    if (accountTransactions.length > 0) {
+      const deletData = await Accounttransaction.deleteMany({
+        doc_id: accountTransactions[0]?.doc_id,
+        school: accountTransactions[0]?.school,
+      });
+      console.log("deletData", deletData);
+
+      await Accounttransaction.insertMany(accountTransactions);
+      return { message: "Integration successfull", success: true };
+    }
+  } catch (error) {
+    return { message: error.message, success: false };
+  }
+};
