@@ -47,6 +47,7 @@ const feestructureRouter = require("./router/feestructure.router");
 const salesinvoiceRouter = require("./router/salesinvoice.router");
 const marksheetRouter = require("./router/marksheet.router");
 const receiptRouter = require("./router/receipt.router");
+const razorpayRouter = require("./router/razorpay.router");
 const teacherRouter = require("./router/teacher.router");
 const employeeRouter = require("./router/employee.router");
 const parentRouter = require("./router/parent.router");
@@ -150,6 +151,8 @@ app.use("/api/feestructure", feestructureRouter);
 app.use("/api/salesinvoice", salesinvoiceRouter);
 app.use("/api/marksheet", marksheetRouter);
 app.use("/api/receipt", receiptRouter);
+app.use("/api/razorpay", razorpayRouter);
+
 app.use("/api/examination", examRouter);
 app.use("/api/questionpaper", questionpaperRouter);
 
