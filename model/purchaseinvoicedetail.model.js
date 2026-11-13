@@ -12,6 +12,11 @@ const purchaseinvoicedetailSchema = new mongoose.Schema({
     ref: "Supplier",
     required: true,
   },
+  warehouse: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Warehouse",
+    required: true,
+  },
   item: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Item",

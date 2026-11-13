@@ -74,6 +74,7 @@ const supplierRouter = require("./router/supplier.router.js");
 const purchaseinvoiceRouter = require("./router/purchaseinvoice.router.js");
 const openingstockRouter = require("./router/openingstock.router.js");
 const stockissueRouter = require("./router/stockissue.router.js");
+const warehouseRouter = require("./router/warehouse.router.js");
 const geolocationRouter = require("./router/geolocation.router");
 //******* */
 
@@ -175,6 +176,7 @@ app.use("/api/purchaseinvoice", purchaseinvoiceRouter);
 app.use("/api/openingstock", openingstockRouter);
 app.use("/api/stockissue", stockissueRouter);
 app.use("/api/geolocation", geolocationRouter);
+app.use("/api/warehouse", warehouseRouter);
 //******* */
 
 app.get("/api/auth/check", authCheck);

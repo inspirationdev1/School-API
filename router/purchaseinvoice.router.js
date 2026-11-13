@@ -47,7 +47,6 @@ router.get(
   authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
   getPurchaseinvoiceWithSupplierId,
 );
-
 router.get(
   "/fetch-with-query",
   authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),

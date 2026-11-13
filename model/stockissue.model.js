@@ -29,6 +29,15 @@ const stockissueSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    warehouse: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Warehouse",
+      required: true,
+    },
+    warehouse_name: {
+      type: String,
+      default: "",
+    },
     remarks: {
       type: String,
       default: "",

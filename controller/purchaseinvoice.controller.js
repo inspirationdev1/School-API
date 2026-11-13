@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const Purchaseinvoice = require("../model/purchaseinvoice.model");
 const Purchaseinvoicedetail = require("../model/purchaseinvoicedetail.model");
 const Supplier = require("../model/supplier.model");
+const Warehouse = require("../model/warehouse.model");
 const Taxrate = require("../model/taxrate.model");
 const Accounttransaction = require("../model/accounttransaction.model");
 const Accountsetup = require("../model/accountsetup.model");
@@ -22,7 +23,9 @@ module.exports = {
       const allPurchaseinvoice = await Purchaseinvoice.find({
         school: schoolId,
       })
+        .sort({ _id: -1 })
         .populate("supplier")
+        .populate("warehouse")
         .populate("school");
       res.status(200).json({
         success: true,
@@ -160,6 +163,7 @@ module.exports = {
           doc_date: savedData.invoiceDate || "",
           doc_id: piId,
           supplier: savedData.supplier || null,
+          warehouse: savedData.warehouse || null,
           school: savedData.school || null,
         }));
 
@@ -201,6 +205,7 @@ module.exports = {
         school: schoolId,
         piId: piId,
         supplier: req.body?.supplier || null,
+        warehouse: req.body?.warehouse || null,
       }));
 
       // 3️⃣ Save invoice details
@@ -248,6 +253,7 @@ module.exports = {
           doc_date: savedData?.invoiceDate || "",
           doc_id: piId || "",
           supplier: savedData?.supplier || null,
+          warehouse: savedData?.warehouse || null,
           school: savedData?.school || null,
         }));
         const isIntegrated = await integrate_accounttransaction(acctrans || []);
@@ -369,6 +375,22 @@ module.exports = {
             path: "$supplier",
             preserveNullAndEmptyArrays: true,
           },
+
+          // 🔹 Populate Warehouse
+
+          $lookup: {
+            from: "warehouses",
+            localField: "warehouse",
+            foreignField: "_id",
+            as: "warehouse",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$warehouse",
+            preserveNullAndEmptyArrays: true,
+          },
         },
         {
           $lookup: {
@@ -469,6 +491,11 @@ module.exports = {
         const supplierId = req.query.supplier;
         filterQuery["supplier"] = new mongoose.Types.ObjectId(supplierId);
       }
+      if (req.query.hasOwnProperty("warehouse")) {
+        const warehouseId = req.query.warehouse;
+        filterQuery["warehouse"] = new mongoose.Types.ObjectId(warehouseId);
+      }
+
       filterQuery["status"] = "valid";
 
       var result = await Purchaseinvoice.aggregate([
@@ -564,11 +591,14 @@ module.exports = {
         filterQuery.$or = [
           { piCode: { $regex: req.query.search, $options: "i" } },
           { supplier_name: { $regex: req.query.search, $options: "i" } },
+          { warehouse_name: { $regex: req.query.search, $options: "i" } },
         ];
       }
 
       const filteredPurchaseinvoices = await Purchaseinvoice.find(filterQuery)
+        .sort({ _id: -1 })
         .populate("supplier")
+        .populate("warehouse")
         .populate("geolocation")
         .populate("school");
       res.status(200).json({ success: true, data: filteredPurchaseinvoices });

@@ -175,8 +175,15 @@ exports.createStockissue = async (req, res) => {
       return res.status(401).json({ message: "School not found" });
     }
 
-    const { issueDate, employee, employee_name, remarks, issueDetails } =
-      req.body;
+    const {
+      issueDate,
+      employee,
+      employee_name,
+      warehouse,
+      warehouse_name,
+      remarks,
+      issueDetails,
+    } = req.body;
 
     if (!validId(employee)) {
       return res.status(400).json({
@@ -184,6 +191,11 @@ exports.createStockissue = async (req, res) => {
       });
     }
 
+    if (!validId(warehouse)) {
+      return res.status(400).json({
+        message: "Please select a Warehouse",
+      });
+    }
     const details = normalizeDetails(issueDetails, schoolId);
 
     // await validateStock(schoolId, details);
@@ -203,6 +215,8 @@ exports.createStockissue = async (req, res) => {
       issueDate,
       employee,
       employee_name: employee_name || "",
+      warehouse,
+      warehouse_name: warehouse_name || "",
       remarks: remarks || "",
       status: "valid",
       month: new Date(issueDate).getMonth() + 1,
@@ -315,6 +329,7 @@ exports.getStockissueWithQuery = async (req, res) => {
       filter.$or = [
         { siCode: { $regex: search, $options: "i" } },
         { employee_name: { $regex: search, $options: "i" } },
+        { warehouse_name: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -351,12 +366,25 @@ exports.updateStockissueWithId = async (req, res) => {
       });
     }
 
-    const { issueDate, employee, employee_name, remarks, issueDetails } =
-      req.body;
+    const {
+      issueDate,
+      employee,
+      employee_name,
+      warehouse,
+      warehouse_name,
+      remarks,
+      issueDetails,
+    } = req.body;
 
     if (!validId(employee)) {
       return res.status(400).json({
         message: "Please select an employee",
+      });
+    }
+
+    if (!validId(warehouse)) {
+      return res.status(400).json({
+        message: "Please select a Warehouse",
       });
     }
 
@@ -369,6 +397,8 @@ exports.updateStockissueWithId = async (req, res) => {
     issue.issueDate = issueDate;
     issue.employee = employee;
     issue.employee_name = employee_name || "";
+    issue.warehouse = warehouse;
+    issue.warehouse_name = warehouse_name || "";
     issue.remarks = remarks || "";
     issue.month = new Date(issueDate).getMonth() + 1;
     issue.monthname = new Date(issueDate).toLocaleString("en", {
