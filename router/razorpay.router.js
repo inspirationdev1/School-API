@@ -11,6 +11,7 @@ const {
   razorOrder,
   razorValidate,
   getAppsettingWithId,
+  decryptData,
 } = require("../controller/razorpay.controller");
 
 router.post("/create", createReceipt);
@@ -22,5 +23,6 @@ router.get("/fetch-print/:id", getReceiptPrint);
 router.post("/razororder", razorOrder);
 router.post("/razorvalidate", razorValidate);
 router.get("/fetch-single/:id", getAppsettingWithId);
+router.post("/decryptdata", decryptData);
 
 module.exports = router;

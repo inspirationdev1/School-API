@@ -2,12 +2,16 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
+const zlib = require("zlib");
 
 const Accounttransaction = require("../model/accounttransaction.model");
 const Accountsetup = require("../model/accountsetup.model");
 const Receipt = require("../model/receipt.model");
 const Receiptdetail = require("../model/receiptdetail.model");
 const appsetting = require("../model/appsetting.model");
+
+const SECRET_KEY = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
+const algorithm = "aes-256-gcm";
 
 const {
   getNumberseqWithScreenId,
@@ -166,12 +170,12 @@ module.exports = {
   },
   createReceipt: async (req, res) => {
     try {
-      const schoolId = req.user.schoolId;
+      const schoolId = req.body.school;
 
       //***Number seq */
       const numberseqData = await getNumberseqWithScreenId({
         screen_id: "receipt",
-        schoolId: req.user.schoolId,
+        schoolId: schoolId,
       });
       console.log("numberseqData.data", numberseqData);
       let seq = 1;
@@ -260,7 +264,7 @@ module.exports = {
       // ****Update Number Seq****
       const numberseqAfterUpdate = await updateNumberseqWithScreenId({
         screen_id: "receipt",
-        schoolId: req.user.schoolId,
+        schoolId: schoolId,
       });
       console.log("numberseqAfterUpdate", numberseqAfterUpdate);
       // *********************
@@ -692,7 +696,21 @@ module.exports = {
   },
   razorOrder: async (req, res) => {
     try {
-      const schoolId = req.user.schoolId;
+      const recDetails = req.body.receiptDetails || [];
+      const schoolId = recDetails[0].school || "";
+
+      const receiptNumber = req.body.receiptNumber || "RCT-001";
+      const receiptData = await Receipt.find({
+        school: schoolId,
+        receiptNumber: receiptNumber,
+        status: "valid",
+      }).lean();
+      if (receiptData.length > 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Payment already Done, Cannot Duplicate",
+        });
+      }
 
       // Get Razorpay credentials
       const appsettingData = await appsetting
@@ -758,9 +776,9 @@ module.exports = {
           ...order,
           RAZORPAY_KEY_ID,
           currency: "INR",
-          name: req.user.school_name, //your business name
+          name: recDetails[0].school_name, //your business name
           description: "Fees Pay Transaction",
-          image: req.user.image_url,
+          image: recDetails[0].school_url,
         },
       });
     } catch (e) {
@@ -775,7 +793,7 @@ module.exports = {
 
   razorValidate: async (req, res) => {
     try {
-      const schoolId = req.user.schoolId;
+      const schoolId = req.body.school;
 
       const appsettingData = await appsetting.find({ school: schoolId }).lean();
       let RAZORPAY_KEY_ID = "";
@@ -821,10 +839,12 @@ module.exports = {
       });
     }
   },
+
   getAppsettingWithId: async (req, res) => {
     // const id = req.params.id;
     const schoolId = req.params.id;
-    appsetting.findOne({ school: schoolId })
+    appsetting
+      .findOne({ school: schoolId })
       .then((resp) => {
         if (resp) {
           res.status(200).json({ success: true, data: resp });
@@ -841,6 +861,43 @@ module.exports = {
           message: "Error in getting  Appsetting Data",
         });
       });
+  },
+  decryptData: async (req, res) => {
+    const encryptedData = req.body;
+    try {
+      // 1. Decode Base64URL
+      const buffer = Buffer.from(encryptedData.invoiceList, "base64url");
+
+      // 2. Extract IV, authentication tag and encrypted data
+      const iv = buffer.subarray(0, 12);
+      const authTag = buffer.subarray(12, 28);
+      const encrypted = buffer.subarray(28);
+
+      // 3. Decrypt
+      const decipher = crypto.createDecipheriv(algorithm, SECRET_KEY, iv);
+
+      decipher.setAuthTag(authTag);
+
+      const decrypted = Buffer.concat([
+        decipher.update(encrypted),
+        decipher.final(),
+      ]);
+
+      // 4. Decompress
+      const decompressed = zlib.inflateRawSync(decrypted);
+      await res.status(200).json({
+        success: true,
+        data: JSON.parse(decompressed.toString("utf8")),
+      });
+      // return JSON.parse(decompressed.toString("utf8"));
+    } catch (error) {
+      console.error("Decryption Error:", error.message);
+      // throw error;
+      res.status(500).json({
+        success: false,
+        message: "Decryption Error " + error.message,
+      });
+    }
   },
 };
 
