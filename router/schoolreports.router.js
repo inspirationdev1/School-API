@@ -28,6 +28,9 @@ const {
   getStudent_Marks_Subjectwise_Print,
   getGradeListPrint,
   generateSubjectGraphReport,
+  getWarehouseListPrint,
+  getPurchaseInvoiceListPrint,
+  getStockIssueListPrint,
 } = require("../controller/schoolreports.controller");
 
 router.get(
@@ -163,6 +166,24 @@ router.post(
   "/grade-list-print",
   authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
   getGradeListPrint,
+);
+
+router.post(
+  "/warehouse-list-print",
+  authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
+  getWarehouseListPrint,
+);
+
+router.post(
+  "/purchaseinvoice-list-print",
+  authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
+  getPurchaseInvoiceListPrint,
+);
+
+router.post(
+  "/stockissue-list-print",
+  authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
+  getStockIssueListPrint,
 );
 
 module.exports = router;

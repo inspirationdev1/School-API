@@ -223,6 +223,7 @@ exports.createStockissue = async (req, res) => {
       monthname: new Date(issueDate).toLocaleString("en", {
         month: "long",
       }),
+      netAmount: req.body.netAmount || 0,
       year: new Date(issueDate).getFullYear(),
     });
 
@@ -401,6 +402,7 @@ exports.updateStockissueWithId = async (req, res) => {
     issue.warehouse_name = warehouse_name || "";
     issue.remarks = remarks || "";
     issue.month = new Date(issueDate).getMonth() + 1;
+
     issue.monthname = new Date(issueDate).toLocaleString("en", {
       month: "long",
     });

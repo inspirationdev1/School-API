@@ -25,10 +25,12 @@ const purchaseinvoiceSchema = new mongoose.Schema({
     ref: "Warehouse",
     required: true,
   },
+
   paymentStatus: { type: String, default: "pending" },
   status: { type: String, default: "valid" },
   supplier_name: { type: String, default: "" },
   warehouse_name: { type: String, default: "" },
+  netAmount: { type: Number, default: 0 },
   remarks: { type: String, default: "" },
   month: { type: Number, default: new Date().getMonth() + 1 },
   monthname: { type: String, default: "" },
