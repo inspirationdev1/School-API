@@ -39,6 +39,10 @@ const Period = require("../model/period.model");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 
+const Warehouse = require("../model/warehouse.model");
+const PurchaseInvoice = require("../model/purchaseinvoice.model");
+const StockIssue = require("../model/stockissue.model");
+
 dayjs.extend(utc);
 
 module.exports = {
@@ -7202,6 +7206,797 @@ module.exports = {
       res.status(500).json({
         success: false,
         message: "Error generating Gradelist",
+      });
+    }
+  },
+
+  getWarehouseListPrint: async (req, res) => {
+    try {
+      const filterQuery = {};
+      const schoolId = req.user.schoolId;
+      console.log(schoolId, "schoolId");
+      filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+      let requesttype = "";
+      if (req.query.requesttype) {
+        requesttype = req.query?.requesttype;
+      }
+
+      //
+      const data = await Warehouse.find(filterQuery).populate("school").lean();
+
+      if (requesttype === "PDF") {
+        const doc = new PDFDocument({
+          size: "A4",
+          layout: "landscape", // ✅ IMPORTANT
+          margin: 30,
+        });
+
+        // ✅ SET HEADERS BEFORE PIPE
+        res.writeHead(200, {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "attachment; filename=teacherlist.pdf",
+        });
+
+        doc.pipe(res);
+
+        const schoolInfo = data[0]?.school || {};
+        // Logo (IMPORTANT)
+        // -----------------------------
+        // 🏫 HEADER LAYOUT
+        // -----------------------------
+
+        const logoX = 40;
+        const logoY = 30;
+        const logoWidth = 50;
+
+        const textStartX = logoX + logoWidth + 15; // 👉 right of logo
+        const textWidth = 400;
+
+        // Logo
+        if (schoolInfo?.school_image) {
+          try {
+            const img = await axios.get(schoolInfo.school_image, {
+              responseType: "arraybuffer",
+            });
+
+            doc.image(img.data, logoX, logoY, {
+              width: logoWidth,
+              height: 50,
+            });
+          } catch (err) {
+            console.log("Logo load failed");
+          }
+        }
+
+        if (data.length == 0) {
+          // No Data Found (bold)
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(14)
+            .text("No Data Found", textStartX, logoY, {
+              width: textWidth,
+              align: "center",
+            });
+          doc.end();
+          return;
+        }
+
+        // School Name (bold)
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text(schoolInfo.school_name || "School Name", textStartX, logoY, {
+            width: textWidth,
+            align: "left",
+          });
+
+        // Address
+        doc
+          .font("Helvetica")
+          .fontSize(10)
+          .text(
+            `${schoolInfo.address || ""}, ${schoolInfo.city || ""}, ${schoolInfo.state || ""}`,
+            textStartX,
+            logoY + 20,
+            {
+              width: textWidth,
+              align: "left",
+            },
+          );
+
+        // -----------------------------
+        // ➖ Divider Line
+        // -----------------------------
+        const dividerY = logoY + 60;
+
+        doc
+          .moveTo(40, dividerY)
+          .lineTo(doc.page.width - 40, dividerY)
+          .stroke();
+
+        // -----------------------------
+        // 📄 REPORT TITLE (with gap)
+        // -----------------------------
+        const titleY = dividerY + 15;
+
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Warehouse List Report", 0, titleY, {
+            align: "center",
+          });
+
+        let y = titleY + 25; // 👉 proper gap after title
+
+        // -----------------------------
+        // 📊 TABLE HEADER START
+        // -----------------------------
+
+        const tableWidth = doc.page.width - 80; // full width with margins
+
+        const columns = [
+          {
+            label: "Warehouse Name",
+            key: "warehouse_name",
+            width: tableWidth * 0.25,
+          },
+          {
+            label: "Warehouse Code",
+            key: "warehouse_code",
+            width: tableWidth * 0.2,
+          },
+        ];
+
+        const getTextHeight = (doc, text, width) => {
+          return doc.heightOfString(text || "-", {
+            width: width - 10,
+          });
+        };
+
+        const drawHeader = () => {
+          let x = 40;
+
+          doc.font("Helvetica-Bold").fontSize(9);
+
+          columns.forEach((col) => {
+            // ✅ Draw background FIRST
+            doc.rect(x, y, col.width, 25).fill("#f2f2f2");
+
+            // ✅ Draw border AFTER
+            doc.rect(x, y, col.width, 25).stroke();
+
+            // ✅ Reset text color (VERY IMPORTANT)
+            doc.fillColor("black");
+
+            // ✅ Draw text LAST
+            doc.text(col.label, x + 5, y + 7, {
+              width: col.width - 10,
+              align: "center",
+            });
+
+            x += col.width;
+          });
+
+          y += 25;
+        };
+
+        // doc.fontSize(9);
+        doc.fontSize(10);
+
+        const drawRow = (row, index) => {
+          let x = 40;
+
+          // 🔥 Calculate dynamic height
+          let maxHeight = 0;
+
+          const values = columns.map((col) => {
+            let value = "-";
+
+            switch (col.key) {
+              case "warehouse_name":
+                value = row.warehouse_name;
+                break;
+              case "warehouse_code":
+                value = row.warehouse_code;
+                break;
+            }
+
+            const height = getTextHeight(doc, value, col.width);
+            if (height > maxHeight) maxHeight = height;
+
+            return value;
+          });
+
+          const rowHeight = maxHeight + 10;
+
+          // 🔁 Page break
+          if (y + rowHeight > doc.page.height - 40) {
+            doc.addPage();
+            y = 50;
+            drawHeader();
+          }
+
+          // Zebra row (optional)
+          if (index % 2 === 0) {
+            doc
+              .rect(40, y, tableWidth, rowHeight)
+              .fill("#fafafa")
+              .fillColor("black");
+          }
+
+          // Draw cells
+          x = 40;
+
+          values.forEach((value, i) => {
+            const col = columns[i];
+            // Border
+            doc.rect(x, y, col.width, rowHeight).stroke();
+
+            // Text (WRAPPED)
+            doc.text(value || "-", x + 5, y + 5, {
+              width: col.width - 10,
+              align: "left",
+            });
+
+            x += col.width;
+          });
+
+          y += rowHeight;
+        };
+
+        drawHeader();
+
+        data.forEach((row, index) => {
+          drawRow(row, index);
+        });
+
+        doc.end();
+      } else {
+        res.status(200).json({
+          success: true,
+          data: data, // contains data
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      // res.status(500).send("Error generating PDF");
+      console.error("Error generating Teacherlist", err.message);
+      res.status(500).json({
+        success: false,
+        message: "Error generating Teacherlist",
+      });
+    }
+  },
+
+  getPurchaseInvoiceListPrint: async (req, res) => {
+    try {
+      const filterQuery = {};
+      const schoolId = req.user.schoolId;
+      console.log(schoolId, "schoolId");
+      filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+      let requesttype = "";
+      if (req.query.requesttype) {
+        requesttype = req.query?.requesttype;
+      }
+
+      //
+      const data = await PurchaseInvoice.find(filterQuery)
+        .populate("school")
+        .lean();
+
+      if (requesttype === "PDF") {
+        const doc = new PDFDocument({
+          size: "A4",
+          layout: "landscape", // ✅ IMPORTANT
+          margin: 30,
+        });
+
+        // ✅ SET HEADERS BEFORE PIPE
+        res.writeHead(200, {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "attachment; filename=purchaseinvoices.pdf",
+        });
+
+        doc.pipe(res);
+
+        const schoolInfo = data[0]?.school || {};
+        // Logo (IMPORTANT)
+        // -----------------------------
+        // 🏫 HEADER LAYOUT
+        // -----------------------------
+
+        const logoX = 40;
+        const logoY = 30;
+        const logoWidth = 50;
+
+        const textStartX = logoX + logoWidth + 15; // 👉 right of logo
+        const textWidth = 400;
+
+        // Logo
+        if (schoolInfo?.school_image) {
+          try {
+            const img = await axios.get(schoolInfo.school_image, {
+              responseType: "arraybuffer",
+            });
+
+            doc.image(img.data, logoX, logoY, {
+              width: logoWidth,
+              height: 50,
+            });
+          } catch (err) {
+            console.log("Logo load failed");
+          }
+        }
+
+        if (data.length == 0) {
+          // No Data Found (bold)
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(14)
+            .text("No Data Found", textStartX, logoY, {
+              width: textWidth,
+              align: "center",
+            });
+          doc.end();
+          return;
+        }
+
+        // School Name (bold)
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text(schoolInfo.school_name || "School Name", textStartX, logoY, {
+            width: textWidth,
+            align: "left",
+          });
+
+        // Address
+        doc
+          .font("Helvetica")
+          .fontSize(10)
+          .text(
+            `${schoolInfo.address || ""}, ${schoolInfo.city || ""}, ${schoolInfo.state || ""}`,
+            textStartX,
+            logoY + 20,
+            {
+              width: textWidth,
+              align: "left",
+            },
+          );
+
+        // -----------------------------
+        // ➖ Divider Line
+        // -----------------------------
+        const dividerY = logoY + 60;
+
+        doc
+          .moveTo(40, dividerY)
+          .lineTo(doc.page.width - 40, dividerY)
+          .stroke();
+
+        // -----------------------------
+        // 📄 REPORT TITLE (with gap)
+        // -----------------------------
+        const titleY = dividerY + 15;
+
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Purchase Invoice List Report", 0, titleY, {
+            align: "center",
+          });
+
+        let y = titleY + 25; // 👉 proper gap after title
+
+        // -----------------------------
+        // 📊 TABLE HEADER START
+        // -----------------------------
+
+        const tableWidth = doc.page.width - 80; // full width with margins
+
+        const columns = [
+          {
+            label: "Purchase Invoice Code",
+            key: "piCode",
+            width: tableWidth * 0.25,
+          },
+          {
+            label: "Purchase Invoice Date",
+            key: "invoiceDate",
+            width: tableWidth * 0.25,
+          },
+          {
+            label: "Net Amount",
+            key: "netAmount",
+            width: tableWidth * 0.25,
+          },
+        ];
+
+        const getTextHeight = (doc, text, width) => {
+          return doc.heightOfString(text || "-", {
+            width: width - 10,
+          });
+        };
+
+        const drawHeader = () => {
+          let x = 40;
+
+          doc.font("Helvetica-Bold").fontSize(9);
+
+          columns.forEach((col) => {
+            // ✅ Draw background FIRST
+            doc.rect(x, y, col.width, 25).fill("#f2f2f2");
+
+            // ✅ Draw border AFTER
+            doc.rect(x, y, col.width, 25).stroke();
+
+            // ✅ Reset text color (VERY IMPORTANT)
+            doc.fillColor("black");
+
+            // ✅ Draw text LAST
+            doc.text(col.label, x + 5, y + 7, {
+              width: col.width - 10,
+              align: "center",
+            });
+
+            x += col.width;
+          });
+
+          y += 25;
+        };
+
+        // doc.fontSize(9);
+        doc.fontSize(10);
+
+        const drawRow = (row, index) => {
+          let x = 40;
+
+          // 🔥 Calculate dynamic height
+          let maxHeight = 0;
+
+          const values = columns.map((col) => {
+            let value = "-";
+
+            switch (col.key) {
+              case "piCode":
+                value = row.piCode;
+                break;
+
+              case "invoiceDate":
+                value = row.invoiceDate
+                  ? new Date(row.invoiceDate)
+                      .toLocaleDateString("en-GB")
+                      .replace(/\//g, "-")
+                  : "";
+                break;
+              case "netAmount":
+                value = row?.netAmount;
+                break;
+            }
+
+            const height = getTextHeight(doc, value, col.width);
+            if (height > maxHeight) maxHeight = height;
+
+            return value;
+          });
+
+          const rowHeight = maxHeight + 10;
+
+          // 🔁 Page break
+          if (y + rowHeight > doc.page.height - 40) {
+            doc.addPage();
+            y = 50;
+            drawHeader();
+          }
+
+          // Zebra row (optional)
+          if (index % 2 === 0) {
+            doc
+              .rect(40, y, tableWidth, rowHeight)
+              .fill("#fafafa")
+              .fillColor("black");
+          }
+
+          // Draw cells
+          x = 40;
+
+          values.forEach((value, i) => {
+            const col = columns[i];
+            // Border
+            doc.rect(x, y, col.width, rowHeight).stroke();
+
+            // Text (WRAPPED)
+            doc.text(value || "-", x + 5, y + 5, {
+              width: col.width - 10,
+              align: "left",
+            });
+
+            x += col.width;
+          });
+
+          y += rowHeight;
+        };
+
+        drawHeader();
+
+        data.forEach((row, index) => {
+          drawRow(row, index);
+        });
+
+        doc.end();
+      } else {
+        res.status(200).json({
+          success: true,
+          data: data, // contains data
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      // res.status(500).send("Error generating PDF");
+      console.error("Error generating Teacherlist", err.message);
+      res.status(500).json({
+        success: false,
+        message: "Error generating Teacherlist",
+      });
+    }
+  },
+  getStockIssueListPrint: async (req, res) => {
+    try {
+      const filterQuery = {};
+      const schoolId = req.user.schoolId;
+      console.log(schoolId, "schoolId");
+      filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+      let requesttype = "";
+      if (req.query.requesttype) {
+        requesttype = req.query?.requesttype;
+      }
+
+      //
+      const data = await StockIssue.find(filterQuery).populate("school").lean();
+
+      if (requesttype === "PDF") {
+        const doc = new PDFDocument({
+          size: "A4",
+          layout: "landscape", // ✅ IMPORTANT
+          margin: 30,
+        });
+
+        // ✅ SET HEADERS BEFORE PIPE
+        res.writeHead(200, {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "attachment; filename=stockissuelist.pdf",
+        });
+
+        doc.pipe(res);
+
+        const schoolInfo = data[0]?.school || {};
+        // Logo (IMPORTANT)
+        // -----------------------------
+        // 🏫 HEADER LAYOUT
+        // -----------------------------
+
+        const logoX = 40;
+        const logoY = 30;
+        const logoWidth = 50;
+
+        const textStartX = logoX + logoWidth + 15; // 👉 right of logo
+        const textWidth = 400;
+
+        // Logo
+        if (schoolInfo?.school_image) {
+          try {
+            const img = await axios.get(schoolInfo.school_image, {
+              responseType: "arraybuffer",
+            });
+
+            doc.image(img.data, logoX, logoY, {
+              width: logoWidth,
+              height: 50,
+            });
+          } catch (err) {
+            console.log("Logo load failed");
+          }
+        }
+
+        if (data.length == 0) {
+          // No Data Found (bold)
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(14)
+            .text("No Data Found", textStartX, logoY, {
+              width: textWidth,
+              align: "center",
+            });
+          doc.end();
+          return;
+        }
+
+        // School Name (bold)
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text(schoolInfo.school_name || "School Name", textStartX, logoY, {
+            width: textWidth,
+            align: "left",
+          });
+
+        // Address
+        doc
+          .font("Helvetica")
+          .fontSize(10)
+          .text(
+            `${schoolInfo.address || ""}, ${schoolInfo.city || ""}, ${schoolInfo.state || ""}`,
+            textStartX,
+            logoY + 20,
+            {
+              width: textWidth,
+              align: "left",
+            },
+          );
+
+        // -----------------------------
+        // ➖ Divider Line
+        // -----------------------------
+        const dividerY = logoY + 60;
+
+        doc
+          .moveTo(40, dividerY)
+          .lineTo(doc.page.width - 40, dividerY)
+          .stroke();
+
+        // -----------------------------
+        // 📄 REPORT TITLE (with gap)
+        // -----------------------------
+        const titleY = dividerY + 15;
+
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Stock Issue List Report", 0, titleY, {
+            align: "center",
+          });
+
+        let y = titleY + 25; // 👉 proper gap after title
+
+        // -----------------------------
+        // 📊 TABLE HEADER START
+        // -----------------------------
+
+        const tableWidth = doc.page.width - 80; // full width with margins
+
+        const columns = [
+          {
+            label: "Stock Issue Code",
+            key: "siCode",
+            width: tableWidth * 0.25,
+          },
+          {
+            label: "Stock Issue Date",
+            key: "issueDate",
+            width: tableWidth * 0.2,
+          },
+        ];
+
+        const getTextHeight = (doc, text, width) => {
+          return doc.heightOfString(text || "-", {
+            width: width - 10,
+          });
+        };
+
+        const drawHeader = () => {
+          let x = 40;
+
+          doc.font("Helvetica-Bold").fontSize(9);
+
+          columns.forEach((col) => {
+            // ✅ Draw background FIRST
+            doc.rect(x, y, col.width, 25).fill("#f2f2f2");
+
+            // ✅ Draw border AFTER
+            doc.rect(x, y, col.width, 25).stroke();
+
+            // ✅ Reset text color (VERY IMPORTANT)
+            doc.fillColor("black");
+
+            // ✅ Draw text LAST
+            doc.text(col.label, x + 5, y + 7, {
+              width: col.width - 10,
+              align: "center",
+            });
+
+            x += col.width;
+          });
+
+          y += 25;
+        };
+
+        // doc.fontSize(9);
+        doc.fontSize(10);
+
+        const drawRow = (row, index) => {
+          let x = 40;
+
+          // 🔥 Calculate dynamic height
+          let maxHeight = 0;
+
+          const values = columns.map((col) => {
+            let value = "-";
+
+            switch (col.key) {
+              case "siCode":
+                value = row.siCode;
+                break;
+              case "issueDate":
+                value = row.issueDate;
+                break;
+            }
+
+            const height = getTextHeight(doc, value, col.width);
+            if (height > maxHeight) maxHeight = height;
+
+            return value;
+          });
+
+          const rowHeight = maxHeight + 10;
+
+          // 🔁 Page break
+          if (y + rowHeight > doc.page.height - 40) {
+            doc.addPage();
+            y = 50;
+            drawHeader();
+          }
+
+          // Zebra row (optional)
+          if (index % 2 === 0) {
+            doc
+              .rect(40, y, tableWidth, rowHeight)
+              .fill("#fafafa")
+              .fillColor("black");
+          }
+
+          // Draw cells
+          x = 40;
+
+          values.forEach((value, i) => {
+            const col = columns[i];
+            // Border
+            doc.rect(x, y, col.width, rowHeight).stroke();
+
+            // Text (WRAPPED)
+            doc.text(value || "-", x + 5, y + 5, {
+              width: col.width - 10,
+              align: "left",
+            });
+
+            x += col.width;
+          });
+
+          y += rowHeight;
+        };
+
+        drawHeader();
+
+        data.forEach((row, index) => {
+          drawRow(row, index);
+        });
+
+        doc.end();
+      } else {
+        res.status(200).json({
+          success: true,
+          data: data, // contains data
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      // res.status(500).send("Error generating PDF");
+      console.error("Error generating StockIssuelist", err.message);
+      res.status(500).json({
+        success: false,
+        message: "Error generating StockIssuelist",
       });
     }
   },

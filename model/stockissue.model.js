@@ -38,6 +38,7 @@ const stockissueSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    netAmount: { type: Number, default: 0 },
     remarks: {
       type: String,
       default: "",
