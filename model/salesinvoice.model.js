@@ -17,6 +17,12 @@ const salesinvoiceSchema = new mongoose.Schema({
     ref: "Student",
     required: true,
   },
+  parent: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Parent",
+    required: false,
+    default: null,
+  },
   paymentStatus: { type: String, default: "pending" },
   status: { type: String, default: "valid" },
   student_name: { type: String, default: "" },

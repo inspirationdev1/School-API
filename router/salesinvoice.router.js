@@ -1,18 +1,65 @@
 const express = require("express");
 const router = express.Router();
-const authMiddleware = require('../auth/auth');
-const { createSalesinvoice, getAllSalesinvoices, getSalesinvoiceWithId, updateSalesinvoiceWithId
-    , deleteSalesinvoiceWithId,getSalesinvoicePrint,getSalesinvoiceWithStudentId
-,createMultipleInvoice,getSalesinvoiceWithQuery } = require("../controller/salesinvoice.controller");
+const authMiddleware = require("../auth/auth");
+const {
+  createSalesinvoice,
+  getAllSalesinvoices,
+  getSalesinvoiceWithId,
+  updateSalesinvoiceWithId,
+  deleteSalesinvoiceWithId,
+  getSalesinvoicePrint,
+  getSalesinvoiceWithStudentId,
+  getSalesinvoiceWithMultipleStudentIds,
+  createMultipleInvoice,
+  getSalesinvoiceWithQuery,
+} = require("../controller/salesinvoice.controller");
 
-router.post("/create",authMiddleware(['SCHOOL','USER']), createSalesinvoice);
-router.get("/fetch-all",authMiddleware(['SCHOOL','USER']),getAllSalesinvoices);
-router.get("/fetch-single/:id",authMiddleware(['SCHOOL','USER']),  getSalesinvoiceWithId);
-router.patch("/update/:id",authMiddleware(['SCHOOL','USER']), updateSalesinvoiceWithId);
-router.delete("/delete/:id",authMiddleware(['SCHOOL','USER']), deleteSalesinvoiceWithId);
-router.get("/fetch-print/:id",authMiddleware(['SCHOOL','USER']),  getSalesinvoicePrint);
-router.get("/fetch-student-invoice",authMiddleware(['SCHOOL','USER']),  getSalesinvoiceWithStudentId);
-router.post("/create-multiple-invoice",authMiddleware(['SCHOOL','USER']),  createMultipleInvoice);
-router.get("/fetch-with-query",authMiddleware(['SCHOOL','USER','TEACHER','STUDENT','PARENT']),getSalesinvoiceWithQuery);
-// 
+router.post("/create", authMiddleware(["SCHOOL", "USER"]), createSalesinvoice);
+router.get(
+  "/fetch-all",
+  authMiddleware(["SCHOOL", "USER"]),
+  getAllSalesinvoices,
+);
+router.get(
+  "/fetch-single/:id",
+  authMiddleware(["SCHOOL", "USER"]),
+  getSalesinvoiceWithId,
+);
+router.patch(
+  "/update/:id",
+  authMiddleware(["SCHOOL", "USER"]),
+  updateSalesinvoiceWithId,
+);
+router.delete(
+  "/delete/:id",
+  authMiddleware(["SCHOOL", "USER"]),
+  deleteSalesinvoiceWithId,
+);
+router.get(
+  "/fetch-print/:id",
+  authMiddleware(["SCHOOL", "USER"]),
+  getSalesinvoicePrint,
+);
+router.get(
+  "/fetch-student-invoice",
+  authMiddleware(["SCHOOL", "USER"]),
+  getSalesinvoiceWithStudentId,
+);
+router.get(
+  "/fetch-multiple-student-invoice",
+  authMiddleware(["SCHOOL", "USER"]),
+  getSalesinvoiceWithMultipleStudentIds,
+);
+
+router.post(
+  "/create-multiple-invoice",
+  authMiddleware(["SCHOOL", "USER"]),
+  createMultipleInvoice,
+);
+router.get(
+  "/fetch-with-query",
+  authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
+  getSalesinvoiceWithQuery,
+);
+//
 module.exports = router;

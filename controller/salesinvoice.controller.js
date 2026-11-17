@@ -1,10 +1,12 @@
 require("dotenv").config();
 const dayjs = require("dayjs");
 const mongoose = require("mongoose");
-
+const crypto = require("crypto");
+const zlib = require("zlib");
 const Salesinvoice = require("../model/salesinvoice.model");
 const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
 const Student = require("../model/student.model");
+const Parent = require("../model/parent.model");
 const Taxrate = require("../model/taxrate.model");
 const Accounttransaction = require("../model/accounttransaction.model");
 const Accountsetup = require("../model/accountsetup.model");
@@ -14,6 +16,11 @@ const {
   getNumberseqWithScreenId,
   updateNumberseqWithScreenId,
 } = require("../controller/numberseq.controller");
+
+// Keep this key in your backend .env file.
+// Generate a 32-byte (64 hex character) key.
+const SECRET_KEY = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
+const algorithm = "aes-256-gcm";
 
 module.exports = {
   getAllSalesinvoices: async (req, res) => {
@@ -633,6 +640,196 @@ module.exports = {
       });
     }
   },
+  getSalesinvoiceWithMultipleStudentIds: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+
+      const filterQuery = {};
+      filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+      let paymentMethod = "upi";
+      if (req.query.hasOwnProperty("student")) {
+        paymentMethod = req.query.paymentMethod;
+      }
+
+      if (req.query.hasOwnProperty("student")) {
+        const student = req.query.student;
+
+        const studentList = Array.isArray(student) ? student : [student];
+        console.log(studentList);
+        // const studentId = req.query.student;
+        // filterQuery["student"] = new mongoose.Types.ObjectId(studentId);
+
+        // if (studentList && studentList.length > 0) {
+        //   filterQuery["student"] = { $in: studentList };
+        // }
+
+        const studentObjectIds = studentList
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
+
+        if (studentObjectIds.length > 0) {
+          filterQuery.student = {
+            $in: studentObjectIds,
+          };
+        }
+      }
+      filterQuery["status"] = "valid";
+
+      var result = await Salesinvoice.aggregate([
+        {
+          $match: filterQuery,
+        },
+
+        {
+          $lookup: {
+            from: "salesinvoicedetails", // 👈 collection name (IMPORTANT)
+            localField: "_id",
+            foreignField: "siId",
+            as: "invoiceDetails",
+          },
+        },
+        // 🔹 SUM grossAmount
+        {
+          $addFields: {
+            totalGrossAmount: {
+              $sum: "$invoiceDetails.grossAmount",
+            },
+            totalDiscountAmount: {
+              $sum: "$invoiceDetails.discountAmount",
+            },
+            totalNetAmount: {
+              $sum: "$invoiceDetails.netAmount",
+            },
+          },
+        },
+      ]);
+
+      if (!result.length) {
+        return res.status(404).json({
+          success: false,
+          message: "Salesinvoice not found",
+        });
+      }
+
+      if (result.length > 0) {
+        // const receiptDetails = await ReceiptdetailModel.find(filterQuery).lean();
+        const receiptDetails = await ReceiptdetailModel.aggregate([
+          { $match: filterQuery },
+          {
+            $group: {
+              _id: "$siId",
+              siCode: { $first: "$siCode" },
+              totalPaidAmount: { $sum: "$paidAmount" },
+              receiptDetails: { $push: "$$ROOT" },
+            },
+          },
+        ]);
+        if (receiptDetails.length > 0) {
+          console.log("receiptDetails:", receiptDetails);
+          for (const item of result) {
+            console.log("SI ID:", item._id);
+            console.log("Invoice Code:", item.siCode);
+            const siId = item._id;
+            const filtered = receiptDetails.filter(
+              (row) => row._id.toString() === siId.toString(),
+            );
+            console.log("filtered:", filtered);
+            if (filtered.length > 0) {
+              item.totalPaidAmount = filtered[0].totalPaidAmount || 0;
+            } else {
+              item.totalPaidAmount = 0;
+            }
+            item.balanceAmount = item.totalNetAmount - item.totalPaidAmount;
+          }
+          result = result.filter((row) => row.balanceAmount > 0);
+          console.log("result:", result);
+        }
+      }
+
+      const uniqueId = "REC-" + Date.now();
+      console.log(uniqueId);
+
+      let parent_id = "";
+      let parent_name = "";
+      let parent_phoneno = "";
+      let parent_email = "";
+      let parent_address = "";
+      if (req.query.hasOwnProperty("parent")) {
+        parent_id = req.query.parent;
+      }
+      if (req.query.hasOwnProperty("parent_name")) {
+        parent_name = req.query.parent_name;
+      }
+      if (req.query.hasOwnProperty("parent_phoneno")) {
+        parent_phoneno = req.query.parent_phoneno;
+      }
+      if (req.query.hasOwnProperty("parent_email")) {
+        parent_email = req.query.parent_email;
+      }
+      if (req.query.hasOwnProperty("parent_address")) {
+        parent_address = req.query.parent_address;
+      }
+
+      const invoiceList = [];
+      // const schoolId = req.user.schoolId;
+      for (const item of result) {
+        const objInv = {
+          school: item?.school,
+          school_name: req.user?.school_name,
+          school_url: req.user?.image_url,
+          class: item?.class,
+          section: item?.section,
+          student: item?.student,
+          student_name: item?.student_name,
+          parent: parent_id,
+          parent_name: parent_name,
+          parent_phoneno: parent_phoneno,
+          parent_email: parent_email,
+          parent_address: parent_address,
+          siId: item?._id,
+          siCode: item?.siCode,
+          uniqueId: uniqueId,
+          paymentMethod: paymentMethod,
+          invAmount: item?.balanceAmount,
+          paidAmount: item?.balanceAmount,
+          remarks: "",
+          year: item?.year,
+          month: item?.month,
+          monthname: item?.monthname,
+        };
+
+        invoiceList.push({ ...objInv });
+      }
+
+      if (invoiceList.length == 0) {
+        res.status(200).json({
+          success: true,
+          data: "",
+          message: "Invoice not found",
+        });
+      } else {
+        //Encrption
+        const encryptedData = encryptData(invoiceList);
+        console.log(encryptedData.length); // 11
+
+        const decryptedData = decryptData(encryptedData);
+        console.log(decryptedData.length); // 11
+
+        res.status(200).json({
+          success: true,
+          data: encryptedData, // contains invoice + invoiceDetails[]
+          message: "Invoices Found",
+        });
+      }
+    } catch (e) {
+      console.error("Error in getSalesinvoiceWithStudentId", e);
+      res.status(500).json({
+        success: false,
+        message: "Error fetching Salesinvoice",
+      });
+    }
+  },
   createMultipleInvoice: async (req, res) => {
     try {
       const schoolId = req.user.schoolId;
@@ -965,5 +1162,110 @@ const integrate_accounttransaction = async (accountTransactions) => {
     }
   } catch (error) {
     return { message: error.message, success: false };
+  }
+};
+
+// const encryptData = (data) => {
+//   try {
+//     const iv = crypto.randomBytes(12);
+
+//     const cipher = crypto.createCipheriv(algorithm, SECRET_KEY, iv);
+
+//     let encrypted = cipher.update(JSON.stringify(data), "utf8", "hex");
+
+//     encrypted += cipher.final("hex");
+
+//     const authTag = cipher.getAuthTag();
+
+//     return [iv.toString("hex"), authTag.toString("hex"), encrypted].join(":");
+//   } catch (error) {
+//     console.log(error.message);
+//   }
+// };
+
+// const encryptData = (data) => {
+//   try {
+//     const iv = crypto.randomBytes(12);
+
+//     const cipher = crypto.createCipheriv(algorithm, SECRET_KEY, iv);
+
+//     let encrypted = cipher.update(JSON.stringify(data), "utf8", "base64");
+
+//     encrypted += cipher.final("base64");
+
+//     const authTag = cipher.getAuthTag();
+
+//     return [
+//       iv.toString("base64url"),
+//       authTag.toString("base64url"),
+//       encrypted,
+//     ].join(".");
+//   } catch (error) {
+//     console.log(error.message);
+//     throw error;
+//   }
+// };
+
+// const algorithm = "aes-256-gcm";
+
+// const SECRET_KEY = Buffer.from(process.env.ENCRYPTION_SECRET, "hex");
+
+const encryptData = (data) => {
+  try {
+    // 1. Convert JSON to Buffer
+    const jsonData = Buffer.from(JSON.stringify(data));
+
+    // 2. Compress JSON
+    const compressedData = zlib.deflateRawSync(jsonData);
+
+    // 3. Generate IV
+    const iv = crypto.randomBytes(12);
+
+    // 4. Encrypt compressed data
+    const cipher = crypto.createCipheriv(algorithm, SECRET_KEY, iv);
+
+    const encrypted = Buffer.concat([
+      cipher.update(compressedData),
+      cipher.final(),
+    ]);
+
+    // 5. Get authentication tag
+    const authTag = cipher.getAuthTag();
+
+    // 6. Combine everything into one Base64URL string
+    return Buffer.concat([iv, authTag, encrypted]).toString("base64url");
+  } catch (error) {
+    console.error("Encryption Error:", error.message);
+    throw error;
+  }
+};
+
+const decryptData = (encryptedData) => {
+  try {
+    // 1. Decode Base64URL
+    const buffer = Buffer.from(encryptedData, "base64url");
+
+    // 2. Extract IV, authentication tag and encrypted data
+    const iv = buffer.subarray(0, 12);
+    const authTag = buffer.subarray(12, 28);
+    const encrypted = buffer.subarray(28);
+
+    // 3. Decrypt
+    const decipher = crypto.createDecipheriv(algorithm, SECRET_KEY, iv);
+
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([
+      decipher.update(encrypted),
+      decipher.final(),
+    ]);
+
+    // 4. Decompress
+    const decompressed = zlib.inflateRawSync(decrypted);
+
+    return JSON.parse(decompressed.toString("utf8"));
+  } catch (error) {
+    console.error("Decryption Error:", error.message);
+    throw error;
   }
 };
