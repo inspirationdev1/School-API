@@ -31,6 +31,7 @@ const {
   getWarehouseListPrint,
   getPurchaseInvoiceListPrint,
   getStockIssueListPrint,
+  getInventoryBalanceListPrint,
 } = require("../controller/schoolreports.controller");
 
 router.get(
@@ -186,4 +187,9 @@ router.post(
   getStockIssueListPrint,
 );
 
+router.post(
+  "/inventorybalance-list-print",
+  authMiddleware(["SCHOOL", "USER", "TEACHER", "STUDENT", "PARENT"]),
+  getInventoryBalanceListPrint,
+);
 module.exports = router;

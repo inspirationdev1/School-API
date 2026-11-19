@@ -5,8 +5,8 @@ const Item = require("../model/item.model");
 module.exports = {
   getAllItems: async (req, res) => {
     try {
-      const companyId = req.user.companyId;
-      const allItem = await Item.find({ company: companyId })
+      const schoolId = req.user.schoolId;
+      const allItem = await Item.find({ school: schoolId })
         .populate("itemtype")
         .populate("taxrate");
       res.status(200).json({
@@ -23,8 +23,8 @@ module.exports = {
     }
   },
   createItem: (req, res) => {
-    const companyId = req.user.companyId;
-    const newItem = new Item({ ...req.body, company: companyId });
+    const schoolId = req.user.schoolId;
+    const newItem = new Item({ ...req.body, school: schoolId });
     newItem
       .save()
       .then((savedData) => {
@@ -42,8 +42,8 @@ module.exports = {
   },
   getItemWithId: async (req, res) => {
     const id = req.params.id;
-    const companyId = req.user.companyId;
-    Item.findOne({ _id: id, company: companyId })
+    const schoolId = req.user.schoolId;
+    Item.findOne({ _id: id, school: schoolId })
       .populate("itemtype")
       .populate("taxrate")
       .populate("itemgroup")
@@ -67,9 +67,9 @@ module.exports = {
   },
   getItemWithQuery: async (req, res) => {
     const filterQuery = {};
-    const companyId = req.user.companyId;
-    console.log(companyId, "companyId");
-    filterQuery["company"] = companyId;
+    const schoolId = req.user.schoolId;
+    console.log(schoolId, "schoolId");
+    filterQuery["school"] = schoolId;
 
     if (req.query.hasOwnProperty("itemtype")) {
       filterQuery["itemtype"] = req.query.itemtype;
@@ -98,7 +98,7 @@ module.exports = {
   },
 
   updateItemWithId: async (req, res) => {
-    // Not providing the  companyId as item Id will be unique.
+    // Not providing the  schoolId as item Id will be unique.
     try {
       let id = req.params.id;
       console.log(req.body);
@@ -121,10 +121,10 @@ module.exports = {
   },
   deleteItemWithId: async (req, res) => {
     try {
-      const companyId = req.user.companyId;
+      const schoolId = req.user.schoolId;
       let id = req.params.id;
 
-      await Item.findOneAndDelete({ _id: id, company: companyId });
+      await Item.findOneAndDelete({ _id: id, school: schoolId });
       const ItemAfterDelete = await Item.findOne({ _id: id });
       res.status(200).json({
         success: true,

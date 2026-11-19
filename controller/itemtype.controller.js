@@ -6,8 +6,8 @@ const Period = require("../model/period.model");
 module.exports = {
   getAllItemtypes: async (req, res) => {
     try {
-      const companyId = req.user.companyId;
-      const allItemtype = await Itemtype.find({ company: companyId }).populate(
+      const schoolId = req.user.schoolId;
+      const allItemtype = await Itemtype.find({ school: schoolId }).populate(
         "taxrate",
       );
       res.status(200).json({
@@ -24,8 +24,8 @@ module.exports = {
     }
   },
   createItemtype: (req, res) => {
-    const companyId = req.user.companyId;
-    const newItemtype = new Itemtype({ ...req.body, company: companyId });
+    const schoolId = req.user.schoolId;
+    const newItemtype = new Itemtype({ ...req.body, school: schoolId });
     newItemtype
       .save()
       .then((savedData) => {
@@ -43,8 +43,8 @@ module.exports = {
   },
   getItemtypeWithId: async (req, res) => {
     const id = req.params.id;
-    const companyId = req.user.companyId;
-    Itemtype.findOne({ _id: id, company: companyId })
+    const schoolId = req.user.schoolId;
+    Itemtype.findOne({ _id: id, school: schoolId })
       .populate("taxrate")
       .then((resp) => {
         if (resp) {
@@ -64,7 +64,7 @@ module.exports = {
   },
 
   updateItemtypeWithId: async (req, res) => {
-    // Not providing the  companyId as itemtype Id will be unique.
+    // Not providing the  schoolId as itemtype Id will be unique.
     try {
       let id = req.params.id;
       console.log(req.body);
@@ -87,10 +87,10 @@ module.exports = {
   },
   deleteItemtypeWithId: async (req, res) => {
     try {
-      const companyId = req.user.companyId;
+      const schoolId = req.user.schoolId;
       let id = req.params.id;
 
-      await Itemtype.findOneAndDelete({ _id: id, company: companyId });
+      await Itemtype.findOneAndDelete({ _id: id, school: schoolId });
       const ItemtypeAfterDelete = await Itemtype.findOne({ _id: id });
       res.status(200).json({
         success: true,

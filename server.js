@@ -77,6 +77,7 @@ const openingstockRouter = require("./router/openingstock.router.js");
 const stockissueRouter = require("./router/stockissue.router.js");
 const warehouseRouter = require("./router/warehouse.router.js");
 const geolocationRouter = require("./router/geolocation.router");
+
 //******* */
 
 const authMiddleware = require("./auth/auth");
@@ -209,6 +210,7 @@ app.get("/health", (req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`${INSTANCE} running on port ${PORT}`);
 });
+
 const redisEnabled = process.env.REDIS_ENABLED === "true";
 
 const startServer = async () => {
@@ -219,6 +221,7 @@ const startServer = async () => {
     console.error("Server startup error:", error);
   }
 };
+
 if (redisEnabled) {
   startServer();
 }
