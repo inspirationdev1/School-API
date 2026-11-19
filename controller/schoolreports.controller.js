@@ -42,6 +42,8 @@ const utc = require("dayjs/plugin/utc");
 const Warehouse = require("../model/warehouse.model");
 const PurchaseInvoice = require("../model/purchaseinvoice.model");
 const StockIssue = require("../model/stockissue.model");
+const Stockissuedetail = require("../model/stockissuedetail.model");
+const Item = require("../model/item.model");
 
 dayjs.extend(utc);
 
@@ -7742,7 +7744,320 @@ module.exports = {
       });
     }
   },
+
   getStockIssueListPrint: async (req, res) => {
+    try {
+      const schoolId = req.user.schoolId;
+
+      const filterQuery = {
+        school: new mongoose.Types.ObjectId(schoolId),
+      };
+
+      const requesttype = req.query.requesttype || "";
+
+      // 1. Fetch Stock Issue master records
+      const stockIssues = await StockIssue.find(filterQuery)
+        .populate("school")
+        .sort({ createdAt: -1 })
+        .lean();
+
+      // 2. Get Stock Issue IDs
+      const stockIssueIds = stockIssues.map((item) => item._id);
+
+      // 3. Calculate Gross Amount from Stock Issue Details
+      const grossAmountData = stockIssueIds.length
+        ? await Stockissuedetail.aggregate([
+            {
+              $match: {
+                school: new mongoose.Types.ObjectId(schoolId),
+                siId: { $in: stockIssueIds },
+                status: "valid",
+              },
+            },
+            {
+              $group: {
+                _id: "$siId",
+                grossAmount: {
+                  $sum: {
+                    $ifNull: [
+                      "$grossAmount",
+                      {
+                        $multiply: [
+                          { $ifNull: ["$quantity", 0] },
+                          { $ifNull: ["$purchase_price", 0] },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ])
+        : [];
+
+      // 4. Create Gross Amount Lookup
+      const grossAmountMap = {};
+
+      grossAmountData.forEach((item) => {
+        grossAmountMap[item._id.toString()] = item.grossAmount || 0;
+      });
+
+      // 5. Attach Gross Amount to Master Records
+      const data = stockIssues.map((issue) => ({
+        ...issue,
+        grossAmount: grossAmountMap[issue._id.toString()] || 0,
+      }));
+
+      // 6. PDF REPORT
+      if (requesttype === "PDF") {
+        const doc = new PDFDocument({
+          size: "A4",
+          layout: "landscape",
+          margin: 30,
+        });
+
+        res.writeHead(200, {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "attachment; filename=stockissuelist.pdf",
+        });
+
+        doc.pipe(res);
+
+        const schoolInfo = data[0]?.school || {};
+
+        const logoX = 40;
+        const logoY = 30;
+        const logoWidth = 50;
+
+        const textStartX = logoX + logoWidth + 15;
+        const textWidth = 400;
+
+        // School Logo
+        if (schoolInfo?.school_image) {
+          try {
+            const img = await axios.get(schoolInfo.school_image, {
+              responseType: "arraybuffer",
+            });
+
+            doc.image(img.data, logoX, logoY, {
+              width: logoWidth,
+              height: 50,
+            });
+          } catch (err) {
+            console.log("Logo load failed");
+          }
+        }
+
+        if (data.length === 0) {
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(14)
+            .text("No Data Found", textStartX, logoY, {
+              width: textWidth,
+              align: "center",
+            });
+
+          doc.end();
+          return;
+        }
+
+        // School Name
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text(schoolInfo.school_name || "School Name", textStartX, logoY, {
+            width: textWidth,
+            align: "left",
+          });
+
+        // Address
+        doc
+          .font("Helvetica")
+          .fontSize(10)
+          .text(
+            `${schoolInfo.address || ""}, ${schoolInfo.city || ""}, ${schoolInfo.state || ""}`,
+            textStartX,
+            logoY + 20,
+            {
+              width: textWidth,
+              align: "left",
+            },
+          );
+
+        // Divider
+        const dividerY = logoY + 60;
+
+        doc
+          .moveTo(40, dividerY)
+          .lineTo(doc.page.width - 40, dividerY)
+          .stroke();
+
+        // Report Title
+        const titleY = dividerY + 15;
+
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .text("Stock Issue List Report", 0, titleY, {
+            align: "center",
+          });
+
+        let y = titleY + 25;
+
+        // Table Columns
+        const tableWidth = doc.page.width - 80;
+
+        const columns = [
+          {
+            label: "Stock Issue Code",
+            key: "siCode",
+            width: tableWidth * 0.25,
+          },
+          {
+            label: "Stock Issue Date",
+            key: "issueDate",
+            width: tableWidth * 0.2,
+          },
+          {
+            label: "Gross Amount",
+            key: "grossAmount",
+            width: tableWidth * 0.2,
+          },
+        ];
+
+        const getTextHeight = (doc, text, width) => {
+          return doc.heightOfString(String(text || "-"), {
+            width: width - 10,
+          });
+        };
+
+        // Draw Table Header
+        const drawHeader = () => {
+          let x = 40;
+
+          doc.font("Helvetica-Bold").fontSize(9);
+
+          columns.forEach((col) => {
+            doc.rect(x, y, col.width, 25).fill("#f2f2f2");
+            doc.rect(x, y, col.width, 25).stroke();
+
+            doc.fillColor("black");
+
+            doc.text(col.label, x + 5, y + 7, {
+              width: col.width - 10,
+              align: "center",
+            });
+
+            x += col.width;
+          });
+
+          y += 25;
+        };
+
+        // Draw Table Row
+        const drawRow = (row, index) => {
+          let maxHeight = 0;
+
+          // IMPORTANT: Get all three column values
+          const values = columns.map((col) => {
+            let value = "-";
+
+            switch (col.key) {
+              case "siCode":
+                value = row.siCode || "-";
+                break;
+
+              case "issueDate":
+                value = row.issueDate
+                  ? new Date(row.issueDate)
+                      .toLocaleDateString("en-GB")
+                      .replace(/\//g, "-")
+                  : "";
+
+                break;
+
+              case "grossAmount":
+                value = Number(row.grossAmount || 0).toFixed(2);
+                break;
+
+              default:
+                value = "-";
+            }
+
+            const height = getTextHeight(doc, value, col.width);
+
+            if (height > maxHeight) {
+              maxHeight = height;
+            }
+
+            return value;
+          });
+
+          const rowHeight = maxHeight + 10;
+
+          // Page Break
+          if (y + rowHeight > doc.page.height - 40) {
+            doc.addPage();
+            y = 50;
+            drawHeader();
+          }
+
+          // Zebra Row
+          if (index % 2 === 0) {
+            doc
+              .rect(40, y, tableWidth, rowHeight)
+              .fill("#fafafa")
+              .fillColor("black");
+          }
+
+          // Draw Cells
+          let x = 40;
+
+          values.forEach((value, i) => {
+            const col = columns[i];
+
+            doc.rect(x, y, col.width, rowHeight).stroke();
+
+            doc
+              .font("Helvetica")
+              .fontSize(9)
+              .fillColor("black")
+              .text(String(value), x + 5, y + 5, {
+                width: col.width - 10,
+                align: "left",
+              });
+
+            x += col.width;
+          });
+
+          y += rowHeight;
+        };
+
+        drawHeader();
+
+        data.forEach((row, index) => {
+          drawRow(row, index);
+        });
+
+        doc.end();
+      } else {
+        // EXCEL / JSON RESPONSE
+        return res.status(200).json({
+          success: true,
+          data: data,
+        });
+      }
+    } catch (err) {
+      console.error("Error generating StockIssueList:", err);
+
+      return res.status(500).json({
+        success: false,
+        message: "Error generating StockIssueList",
+      });
+    }
+  },
+
+  getInventoryBalanceListPrint: async (req, res) => {
     try {
       const filterQuery = {};
       const schoolId = req.user.schoolId;
@@ -7755,7 +8070,7 @@ module.exports = {
       }
 
       //
-      const data = await StockIssue.find(filterQuery).populate("school").lean();
+      const data = await Item.find(filterQuery).populate("school").lean();
 
       if (requesttype === "PDF") {
         const doc = new PDFDocument({
@@ -7767,7 +8082,8 @@ module.exports = {
         // ✅ SET HEADERS BEFORE PIPE
         res.writeHead(200, {
           "Content-Type": "application/pdf",
-          "Content-Disposition": "attachment; filename=stockissuelist.pdf",
+          "Content-Disposition":
+            "attachment; filename=inventorybalancelist.pdf",
         });
 
         doc.pipe(res);
@@ -7855,7 +8171,7 @@ module.exports = {
         doc
           .font("Helvetica-Bold")
           .fontSize(14)
-          .text("Stock Issue List Report", 0, titleY, {
+          .text("Inventory Balance List Report", 0, titleY, {
             align: "center",
           });
 
@@ -7869,13 +8185,33 @@ module.exports = {
 
         const columns = [
           {
-            label: "Stock Issue Code",
-            key: "siCode",
+            label: "Item Code",
+            key: "code",
+            width: tableWidth * 0.2,
+          },
+          {
+            label: "Item Name",
+            key: "name",
             width: tableWidth * 0.25,
           },
           {
-            label: "Stock Issue Date",
-            key: "issueDate",
+            label: "Opening Balance",
+            key: "openingbalance",
+            width: tableWidth * 0.2,
+          },
+          {
+            label: "Purchase",
+            key: "purchase",
+            width: tableWidth * 0.2,
+          },
+          {
+            label: "Stock Issue",
+            key: "stockissue",
+            width: tableWidth * 0.2,
+          },
+          {
+            label: "Balance",
+            key: "balance",
             width: tableWidth * 0.2,
           },
         ];
@@ -7926,11 +8262,23 @@ module.exports = {
             let value = "-";
 
             switch (col.key) {
-              case "siCode":
-                value = row.siCode;
+              case "code":
+                value = row.code;
                 break;
-              case "issueDate":
-                value = row.issueDate;
+              case "name":
+                value = row.name;
+                break;
+              case "openingbalance":
+                value = 0;
+                break;
+              case "purchase":
+                value = 0;
+                break;
+              case "stockissue":
+                value = 0;
+                break;
+              case "balance":
+                value = 0;
                 break;
             }
 
@@ -7993,10 +8341,10 @@ module.exports = {
     } catch (err) {
       console.error(err);
       // res.status(500).send("Error generating PDF");
-      console.error("Error generating StockIssuelist", err.message);
+      console.error("Error generating InventoryBalancelist", err.message);
       res.status(500).json({
         success: false,
-        message: "Error generating StockIssuelist",
+        message: "Error generating InventoryBalancelist",
       });
     }
   },
