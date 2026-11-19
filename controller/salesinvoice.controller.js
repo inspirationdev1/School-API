@@ -771,6 +771,7 @@ module.exports = {
         parent_address = req.query.parent_address;
       }
 
+      let totalAmount = 0;
       const invoiceList = [];
       // const schoolId = req.user.schoolId;
       for (const item of result) {
@@ -800,6 +801,7 @@ module.exports = {
         };
 
         invoiceList.push({ ...objInv });
+        totalAmount += item?.balanceAmount;
       }
 
       if (invoiceList.length == 0) {
@@ -816,9 +818,13 @@ module.exports = {
         const decryptedData = decryptData(encryptedData);
         console.log(decryptedData.length); // 11
 
+        const data = {
+          invoiceList: encryptedData,
+          totalAmount: totalAmount,
+        };
         res.status(200).json({
           success: true,
-          data: encryptedData, // contains invoice + invoiceDetails[]
+          data: data, // contains invoice + invoiceDetails[]
           message: "Invoices Found",
         });
       }
