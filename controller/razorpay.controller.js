@@ -1,4 +1,8 @@
 require("dotenv").config();
+const axios = require("axios");
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+
 const mongoose = require("mongoose");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
@@ -9,9 +13,16 @@ const Accountsetup = require("../model/accountsetup.model");
 const Receipt = require("../model/receipt.model");
 const Receiptdetail = require("../model/receiptdetail.model");
 const appsetting = require("../model/appsetting.model");
+const Salesinvoicedetail = require("../model/salesinvoicedetail.model");
 
 const SECRET_KEY = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
 const algorithm = "aes-256-gcm";
+
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const { stringify } = require("querystring");
+
+dayjs.extend(utc);
 
 const {
   getNumberseqWithScreenId,
@@ -703,7 +714,6 @@ module.exports = {
       const receiptData = await Receipt.find({
         school: schoolId,
         receiptNumber: receiptNumber,
-        status: "valid",
       }).lean();
       if (receiptData.length > 0) {
         return res.status(404).json({
@@ -762,14 +772,6 @@ module.exports = {
 
       const order = await razorpay.orders.create(options);
 
-      // image_url =
-      // 'https://res.cloudinary.com/da3dxqer8/image/upload/v1783417044/school/1783417042805_Inspiration_Academy_logo.png.png'
-      // owner_name =
-      // 'Mohammed Maroof Irfan'
-      // role =
-      // 'SCHOOL'
-      // school_name =
-      // 'Inspiration Academy and IT Training'
       return res.status(200).json({
         success: true,
         data: {
@@ -896,6 +898,404 @@ module.exports = {
       res.status(500).json({
         success: false,
         message: "Decryption Error " + error.message,
+      });
+    }
+  },
+  printReceipt: async (req, res) => {
+    try {
+      const filterQuery = {};
+      // const schoolId = req.user.schoolId;
+      // const recDetails = req.body.receiptDetails || [];
+      // const schoolId = recDetails[0].school || "";
+
+      let schoolId = "";
+      if (req.query.school) {
+        schoolId = req.query.school;
+      }
+      console.log(schoolId, "schoolId");
+
+      const appsettingData = await appsetting.findOne({ school: schoolId });
+      console.log("appsettingData", appsettingData);
+      const print_tax =
+        (appsettingData && appsettingData.appsettingData?.print_tax) || false;
+
+      filterQuery["school"] = new mongoose.Types.ObjectId(schoolId);
+
+      let id = "";
+      if (req.query.id) {
+        id = new mongoose.Types.ObjectId(req.query.id);
+        filterQuery._id = id;
+      }
+
+      const printReceipt = await Receipt.findById(filterQuery)
+        .populate("school")
+        .lean();
+
+      const printReceiptdetail = await Receiptdetail.find({
+        receiptId: id,
+      })
+        .populate("class")
+        .populate("section")
+        .populate("student")
+        .populate("parent")
+        .lean();
+      console.log(JSON.stringify(printReceiptdetail));
+
+      const siIds = [...new Set(printReceiptdetail.map((item) => item.siId))];
+      console.log(siIds);
+
+      const salesinvoiceDetails = await Salesinvoicedetail.find({
+        siId: { $in: siIds },
+      })
+        .populate("feestructure")
+        .lean();
+      // console.log(JSON.stringify(salesinvoiceDetails));
+
+      const feeNamesByStudent = salesinvoiceDetails.reduce((acc, item) => {
+        if (!acc[item.student]) {
+          acc[item.student] = [];
+        }
+
+        acc[item.student].push(item.feestructure.name);
+
+        return acc;
+      }, {});
+
+      // Convert arrays to comma-separated strings
+      Object.keys(feeNamesByStudent).forEach((studentId) => {
+        feeNamesByStudent[studentId] = feeNamesByStudent[studentId].join(", ");
+      });
+
+      console.log(feeNamesByStudent);
+
+      if (!printReceipt) {
+        return res.status(404).json({
+          success: false,
+          message: "Receipt not found",
+        });
+      }
+
+      // ==============================
+      // PDF INIT
+      // ==============================
+
+      const doc = new PDFDocument({
+        size: "A4",
+        layout: "landscape", // ✅ IMPORTANT
+        margin: 30,
+      });
+
+      res.writeHead(200, {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=Receipt-${printReceipt.receiptCode}.pdf`,
+      });
+
+      doc.pipe(res);
+
+      const schoolInfo = printReceipt?.school || {};
+
+      // ==============================
+      // HEADER WITH LOGO
+      // ==============================
+
+      const logoX = 40;
+      const logoY = 30;
+      const logoWidth = 55;
+
+      const textStartX = logoX + logoWidth + 15;
+
+      // LOGO
+      if (schoolInfo?.school_image) {
+        try {
+          const img = await axios.get(schoolInfo.school_image, {
+            responseType: "arraybuffer",
+          });
+
+          doc.image(img.data, logoX, logoY, {
+            width: logoWidth,
+            height: 55,
+          });
+        } catch (err) {
+          console.log("Logo load failed");
+        }
+      }
+
+      // SCHOOL NAME
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(16)
+        .text(schoolInfo.school_name || "School Name", textStartX, logoY, {
+          align: "left",
+        });
+
+      // ADDRESS
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .text(
+          `${schoolInfo.address || ""}, ${schoolInfo.city || ""}`,
+          textStartX,
+          logoY + 22,
+        );
+
+      doc.text(
+        `${schoolInfo.state || ""}, ${schoolInfo.country || ""}`,
+        textStartX,
+        logoY + 38,
+      );
+
+      // DIVIDER
+      const dividerY = logoY + 70;
+
+      doc
+        .moveTo(40, dividerY)
+        .lineTo(doc.page.width - 40, dividerY)
+        .stroke();
+
+      // ==============================
+      // REPORT TITLE
+      // ==============================
+
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(18)
+        .text("RECEIPT", 0, dividerY + 15, {
+          align: "center",
+        });
+
+      let y = dividerY + 55;
+
+      // ==============================
+      // RECEIPT DETAILS
+      // ==============================
+
+      const leftX = 50;
+      const rightX = 320;
+
+      const labelWidth = 110;
+      const valueWidth = 180;
+
+      const rowGap = 25;
+
+      const drawField = (label, value, x, currentY) => {
+        doc.font("Helvetica-Bold").fontSize(10).text(label, x, currentY, {
+          width: labelWidth,
+        });
+
+        doc.font("Helvetica").text(value || "-", x + labelWidth, currentY, {
+          width: valueWidth,
+        });
+      };
+
+      // ROW 1
+      drawField(
+        "Receipt # :",
+        printReceipt?.receiptCode + "/" + printReceipt?.receiptNumber,
+        leftX,
+        y,
+      );
+
+      drawField(
+        "Receipt Date :",
+        dayjs(printReceipt.receiptDate).format("DD/MM/YYYY"),
+        rightX,
+        y,
+      );
+
+      y += rowGap;
+
+      // ROW 2
+      drawField("Father Name :", printReceiptdetail[0].parent?.name, leftX, y);
+
+      drawField(
+        "Mother Name :",
+        printReceiptdetail[0].parent?.mother_name,
+        rightX,
+        y,
+      );
+
+      y += rowGap;
+
+      // ROW 3
+      drawField("Mode of Pay :", printReceipt?.paymentMethod, leftX, y);
+
+      drawField("Status :", printReceipt.status, rightX, y);
+
+      y += rowGap;
+      // ROW 3
+      drawField("Academic Year :", printReceipt?.academicyear, leftX, y);
+
+      y += 40;
+
+      // ==============================
+      // TABLE CONFIG
+      // ==============================
+
+      const tableX = 40;
+      const columns = [
+        { label: "S.No", width: 40 },
+        { label: "Student", width: 170 },
+        { label: "Invoice #", width: 90 },
+        { label: "Particulars", width: 220 },
+        { label: "For Month", width: 110 },
+        { label: "Amount", width: 100 },
+      ];
+
+      const availableWidth =
+        doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+      const totalWidth = columns.reduce((sum, c) => sum + c.width, 0);
+
+      if (totalWidth > availableWidth) {
+        const scale = availableWidth / totalWidth;
+
+        columns.forEach((col) => {
+          col.width = Math.floor(col.width * scale);
+        });
+      }
+
+      // ==============================
+      // DRAW TABLE HEADER
+      // ==============================
+
+      const drawTableHeader = () => {
+        let x = tableX;
+
+        doc.font("Helvetica-Bold").fontSize(9);
+
+        columns.forEach((col) => {
+          doc.rect(x, y, col.width, 25).fill("#f2f2f2");
+
+          doc.rect(x, y, col.width, 25).stroke();
+
+          doc.fillColor("black").text(col.label, x + 5, y + 8, {
+            width: col.width - 10,
+            align: "center",
+          });
+
+          x += col.width;
+        });
+
+        y += 25;
+      };
+
+      drawTableHeader();
+
+      // ==============================
+      // DRAW ROW
+      // ==============================
+
+      const drawRow = (item, index) => {
+        let x = tableX;
+
+        const rowHeight = 30;
+
+        // PAGE BREAK
+        if (y + rowHeight > doc.page.height - 50) {
+          doc.addPage();
+          y = 50;
+          drawTableHeader();
+        }
+
+        const studentId = item?.student?._id || "";
+        const particulars = feeNamesByStudent[studentId];
+
+        console.log(particulars);
+        const student_name =
+          (item?.student?.name || "-") + " " + (item?.class?.class_name || "-");
+        const row = [
+          index + 1,
+          student_name,
+          item?.siCode || "-",
+          particulars,
+          item?.monthname || "",
+          Number(item.paidAmount || 0).toFixed(0),
+        ];
+        row.forEach((cell, i) => {
+          const col = columns[i];
+
+          const isNumberColumn = ["Amount"].includes(col.label);
+
+          doc.rect(x, y, col.width, rowHeight).stroke();
+
+          doc
+            .font("Helvetica")
+            .fontSize(9)
+            .fillColor("black")
+            .text(String(cell), x + 5, y + 8, {
+              width: col.width - 10,
+              align: isNumberColumn ? "right" : "left",
+              // align: i >= 3 ? "right" : "left"
+            });
+
+          x += col.width;
+        });
+
+        y += rowHeight;
+      };
+
+      // ==============================
+      // TABLE ROWS
+      // ==============================
+
+      printReceiptdetail.forEach((item, index) => {
+        drawRow(item, index);
+      });
+
+      // ==============================
+      // TOTAL ROW
+      // ==============================
+
+      let x = tableX;
+
+      const totals = printReceiptdetail.reduce(
+        (acc, item) => {
+          acc.paidAmount += Number(item.paidAmount || 0);
+
+          return acc;
+        },
+        {
+          paidAmount: 0,
+        },
+      );
+
+      const totalRow = ["", "", "", "", "TOTAL", totals.paidAmount.toFixed(0)];
+      totalRow.forEach((cell, i) => {
+        const col = columns[i];
+
+        doc.rect(x, y, col.width, 30).fillAndStroke("#f9f9f9", "#000");
+
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(9)
+          .fillColor("black")
+          .text(String(cell), x + 5, y + 8, {
+            width: col.width - 10,
+            align: i >= 3 ? "right" : "center",
+          });
+
+        x += col.width;
+      });
+
+      y += 50;
+
+      // ==============================
+      // FOOTER
+      // ==============================
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .text("Authorized Signature", doc.page.width - 280, y);
+
+      // ==============================
+      // END PDF
+      // ==============================
+      doc.end();
+    } catch (err) {
+      console.error("Error generating invoice PDF", err);
+      res.status(500).json({
+        success: false,
+        message: "Error generating Receipt PDF",
       });
     }
   },
